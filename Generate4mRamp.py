@@ -48,38 +48,36 @@ def AverageDataCube(imglist,RampNDRsuffix,NoofNDRs=None,tile=FullTile):
     NoofNDRs is the number of NDRs to load into cube (type =int). By default everything is loaded."""
     imgcube=LoadDataCube(imglist[0],RampNDRsuffix,NoofNDRs=NoofNDRs,tile=tile)
     if len(imglist) > 1 :  #Then Average the cubes..
-        for img in imglist[1:]:  imgcube=imgcube+LoadDataCube(img,RampNDRsuffix,NoofNDRs=NoofNDRs,tile=tile)
+        for img in imglist[1:]:  imgcube+=LoadDataCube(img,RampNDRsuffix,NoofNDRs=NoofNDRs,tile=tile)
         imgcube=imgcube/len(imglist)
     return imgcube
 
-def CRhitslocation(imgcube,thresh=4):
+def CRhitslocation(imgcube,thresh=6):
     """ Returns the array of positions at which Cosmic Ray hits occurred.
     Input the  image data cube, and optional threshold (thresh= ) to detect the CR hit convolution image.
     The output of the locations of CR hit are in the tuple of 3 arrays format (Time,X,Y).
     """
-    convimg=imgcube[:-3,:,:] - 3*imgcube[1:-2,:,:]  #Convolution of image with [1,-3,3,-1] along time axis
-    convimg=convimg +3*imgcube[2:-1,:,:]
-    convimg=convimg -imgcube[3:,:,:]
+    convimg=imgcube[:-3,:,:] - 3*imgcube[1:-2,:,:] + 3*imgcube[2:-1,:,:] -imgcube[3:,:,:] #Convolution of image with [1,-3,3,-1] along time axis
     stdconv=np.std(convimg,axis=0)
     #Find the edges of ramp jumps.
-    (T,X,Y)=np.where(convimg > thresh*stdconv)
+    (T,X,Y)=np.ma.where(convimg > thresh*stdconv)
     T=T+2  #Converting to the original time coordinate of imgcube by correcting for the shifts. This T is the first pixel after CR hit
     return (T,X,Y)
 
-def ReplaceCRhits(imagelist,tile=FullTile):
+def ReplaceCRhits(imagelist,NoofNDRs=None,tile=FullTile):
     """ Outputs an image cube with of all pixels hit by Cosmic Rays in first image replaced with those from the next clean image"""
     if type(imagelist)==str : imglist=filelist(imagelist)   #List of images
     else : imglist=imagelist
-    imgcube=LoadDataCube(imglist[0],RampNDRsuffix,tile=tile)
-    T,X,Y=CRhitslocation(imgcube,thresh=4) #Locations of CR hit
+    imgcube=LoadDataCube(imglist[0],RampNDRsuffix,NoofNDRs=NoofNDRs,tile=tile)
+    T,X,Y=CRhitslocation(imgcube,thresh=6) #Locations of CR hit
     Tlength=imgcube.shape[0]
     XYlist=np.unique(zip(X,Y))
     for img in imglist[1:]:  
-        nextcube=LoadDataCube(img,RampNDRsuffix,tile=tile)
+        nextcube=LoadDataCube(img,RampNDRsuffix,NoofNDRs=NoofNDRs,tile=tile)
         foundk=[]
         for k in range(len(XYlist)) :
             i,j=XYlist[k]
-            t,junkx,junky=CRhitslocation(nextcube[:,i,j].reshape((Tlength,1,1)),thresh=4) #Locations of CR hit
+            t,junkx,junky=CRhitslocation(nextcube[:,i,j].reshape((Tlength,1,1)),thresh=6) #Locations of CR hit
             if len(t)==0 :  # no CR hits in this image at this i,j pixel
                 imgcube[:,i,j]=nextcube[:,i,j]
                 foundk.append(k)
@@ -91,19 +89,19 @@ def ReplaceCRhits(imagelist,tile=FullTile):
     
     return imgcube
         
-def AverageWithCRrej(imagelist,tile=FullTile):
+def AverageWithCRrej(imagelist,NoofNDRs=None,tile=FullTile):
     """ Outputs the average of all the data cubes after rejecting the pixels hit by Cosmic Rays"""
     if type(imagelist)==str : imglist=filelist(imagelist)   #List of images
     else : imglist=imagelist
     sumcube=0
     N=np.zeros((tile[1],tile[3]),dtype=np.int8)
     for img in imglist:
-        imgcube=LoadDataCube(img,RampNDRsuffix,tile=tile)
+        imgcube=LoadDataCube(img,RampNDRsuffix,NoofNDRs=NoofNDRs,tile=tile)
         imgcube=np.ma.array(imgcube,fill_value=0) #Keeping fill value to zero for removing the CR hit pixels
-        T,X,Y=CRhitslocation(imgcube,thresh=4) #Locations of CR hit
-        for i,j in np.unique(zip(X,Y)): imgcube[:,i,j].mask=np.ma.masked
+        T,X,Y=CRhitslocation(imgcube,thresh=6) #Locations of CR hit
+        for i,j in np.unique(zip(X,Y)): imgcube[:,i,j]=np.ma.masked
         sumcube+=imgcube.filled()
-        N[imgcube[0,:,:].mask]+=1
+        N[~imgcube[0,:,:].mask]+=1
     #If there are still some pixels which were hit by CR in every single frame we shall replace it with the last frame's values
     X,Y=np.where(N==0)
     for i,j in np.unique(zip(X,Y)):
@@ -167,7 +165,7 @@ def FitSlope(imgcube,time, CRcorr=False):
 
     #If cosmic ray hit correction is asked to do
     if CRcorr == True :
-        T,X,Y=CRhitslocation(imgcube,thresh=4)  #Locations of CR hit
+        T,X,Y=CRhitslocation(imgcube,thresh=6)  #Locations of CR hit
         #Masking the first pixel after a CR hit.
         imgcube[(T,X,Y)]=np.ma.masked
         #Loop over each pixel (X,Y) with cosmic ray hits
@@ -181,7 +179,7 @@ def FitSlope(imgcube,time, CRcorr=False):
             slices=np.ma.notmasked_contiguous(imgcube[:,i,j])
             for k in range(len(slices)) :
                 n=len(imgcube[:,i,j][slices[k]])
-                if  n > 2 : #At least 3 points are there to calculate slope
+                if  n > 3 : #At least 4 points are there to calculate slope
                     time=np.arange(slices[k].start,slices[k].stop)
                     Sx=time.sum(dtype=np.float64)
                     Sxx=(time**2).sum(dtype=np.float64)
@@ -190,7 +188,7 @@ def FitSlope(imgcube,time, CRcorr=False):
                     Sxy=(imgcube[:,i,j][slices[k]]*time).sum(dtype=np.float64)
                     #append localbeta, localalpha, localn and localsigma
                     localbeta.append((n*Sxy - Sx*Sy)/ (n*Sxx - Sx**2))
-                    localalpha.append(Sy/n - beta*Sx/n)
+                    localalpha.append(Sy/n - localbeta[-1]*Sx/n)
                     localn.append(n)
                     Se2=(n*Syy -Sy**2- localbeta[-1]**2 *(n*Sxx- Sx**2))/(n*(n-2))
                     localsigma.append(np.sqrt(n*Se2/(n*Sxx-Sx**2)))   #Std dev Error of slope beta
@@ -260,6 +258,7 @@ def Generate_DarkTemplate(longexp,shortexp,extent=35,LThresh=LinearThresh,output
 
     time=np.arange(imgcube.shape[0],dtype=np.int)  #1-D time axis in units of NDR number.
     #Subtracting the y = alpha + beta *x component from the dark cube.
+    #FUTURE WORK: To be split into -= and += lines if memory shortage is noticed.
     imgcube=(( imgcube-alpha[np.newaxis,:] ) - beta[np.newaxis,:]*time[:,np.newaxis,np.newaxis]).astype(np.float32)
     if outputfile == None: return imgcube
     else: 
@@ -272,7 +271,7 @@ def ApplyNLdarkcorr(image,darkcube,tile=FullTile):
 
     Parameters:
     -----------
-    image     : String 
+    image     : numpy 3d array cube / String 
                It is the file name of the fits image which has to be dark subtracted.
                Example: Objectframe.fits
 
@@ -296,7 +295,8 @@ def ApplyNLdarkcorr(image,darkcube,tile=FullTile):
             It returns the data cube for the image after subtracting the dark current Non-linear template.
             """
     
-    imgcube=LoadDataCube(image,RampNDRsuffix,tile=tile)
+    if type(image)==str : imgcube=LoadDataCube(image,RampNDRsuffix,tile=tile)
+    else : imgcube=image
     #We want to apply the NL dark correction only where there is an overlap of dark current template over the image.
     # It is expected from user side to make sure that the origin of dark template in X,Y plane is the same as the origin of the tile
     # requested in the tile input.
@@ -317,7 +317,7 @@ def ApplyNLdarkcorr(image,darkcube,tile=FullTile):
     yb=Ybegin-tile[2]
     ye=Yend-tile[2]
 
-    imgcube[tb:te,xb:xe,yb:ye]=imgcube[tb:te,xb:xe,yb:ye]-darkcube[tb:te,xb:xe,yb:ye]
+    imgcube[tb:te,xb:xe,yb:ye]-=darkcube[tb:te,xb:xe,yb:ye]
     
     return imgcube
 
@@ -393,13 +393,12 @@ def NonlinearityCorrCoeff(image,dark,order=3,LThreshFactor=0.7,UThresh=None,LThr
         return
 
     if UThresh == None : #No input Upper threshold given. So use the global minima of second derivative
-        imgcube=imgcube-darkcube  #Removing the dark current temporarily for now
-        imgcube2ndD=imgcube[:-2,:,:]-2*imgcube[1:-1,:,:]  #Convolving with [1,-2,1] for second derivative
-        imgcube2ndD=imgcube2ndD+imgcube[2:,:,:]
+        imgcube-=darkcube  #Removing the dark current temporarily for now
+        imgcube2ndD=imgcube[:-2,:,:]-2*imgcube[1:-1,:,:]+imgcube[2:,:,:]  #Convolving with [1,-2,1] for second derivative
         imgcube2ndD=imgcube2ndD[2:,:,:]  #removing the first two entries before finding minima
         Cuttoff=np.argmin(imgcube2ndD,axis=0)+2+2   #taking global minima
         del imgcube2ndD      #Delete to free memory
-        imgcube=imgcube+darkcube  #Putting back the dark current for finding upper threshold
+        imgcube+=darkcube  #Putting back the dark current for finding upper threshold
         i,j=np.ogrid[0:imgcube.shape[1],0:imgcube.shape[2]]
         UThresh=imgcube[Cuttoff,i,j]       #Extracting the threshold values by fancy indexing
         
@@ -434,7 +433,9 @@ def NonlinearityCorrCoeff(image,dark,order=3,LThreshFactor=0.7,UThresh=None,LThr
             if np.ma.count(imgcube[:,i,j]) > order +1 and imgcube[:,i,j].mask[-1] == True  :   
                 y=np.ma.array(time,mask=np.ma.getmaskarray(imgcube[:,i,j]))
                 y=(alpha[i,j] + beta[i,j]*y )+darkcube[:,i,j]  #Fitted slope + dark current
-                coeffs[:,i,j]=np.ma.polyfit(imgcube[:,i,j],y,order)
+                coeffoffit,residuals,rank,singular_values,rcond=np.ma.polyfit(imgcube[:,i,j],y,order,full=True)
+                if rank != order+1 : print("Polyfit may be poorly conditioned at pixel : (%d,%d)" %(i,j))
+                else : coeffs[:,i,j]=coeffoffit
                 # plt.plot(y,imgcube[:,i,j])  # Debuggg
                 # plt.show()                   #Debuggg 
             else: print("Non linear correction not applicable for pixel : (%d,%d)" %(i,j))   #For debugging 
@@ -496,7 +497,7 @@ def ApplyNonLinearityCorrection(image,NLcoeffs,LThresh,UThresh,tile=FullTile):
     summ=imgcube.copy()
     summ[~summ.mask]=0   #Setting all unmasked elements to zero
     for i in range(order+1):
-        summ=summ+NLcoeffs[i][np.newaxis,:,:]*(imgcube**(order-i))
+        summ+=NLcoeffs[i][np.newaxis,:,:]*(imgcube**(order-i))
 
     imgcube=summ
     #Removing all the maskes..
