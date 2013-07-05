@@ -5,12 +5,12 @@
 #----------------------------------------------------------
 
 from __future__ import division
-#import sys
 #import matplotlib.pyplot as plt  #Debugggg
 import numpy as np
 import numpy.ma
 import pyfits
 import glob
+import gc
 
 RampNDRsuffix='-debug*.fits'   # If changed, change in the function LoadDataCube() (line #38) also where we extract integer.
 FullTile=(0,1024,0,1024)
@@ -507,3 +507,65 @@ def ApplyNonLinearityCorrection(image,NLcoeffs,LThresh,UThresh,tile=FullTile):
     return imgcube
 
     
+def main():
+    import os
+    import os.path
+    import sys
+    import re
+    import pyfits.convenience
+
+    DarkNDRS=111    # Specify the number of NDRS to be loaded for average Dark cube HERE....
+    FullframeMax=44   # Maximum NDRS we can load as a single frame within memory constrains
+    UthreshFactor=0.9   #Fraction of Uthresh to be actually used as upper cuttoff
+    Uthreshnpyfile='/media/PlanetX/TIRSPEC1strun/ReductionWorkarea/20130620/UpperThreshold.npy'
+
+    if len(sys.argv) < 2 or not os.path.isdir(sys.argv[1]):
+        print("-"*30)
+        print("Usage  : "+sys.argv[0]+" Night_Directory")
+        print("Eg: "+sys.argv[0]+" /data/20130621/")
+        print("-"*30)
+        exit(1)
+    os.chdir(sys.argv[1])
+    listOFimgs= [f for f in os.listdir('.') if re.match(r'^(?!(.*debug.*|.*[Tt]est.*|.*[Ff]ocus.*)).*\.fits', f)]
+    Darklist=[f for f in listOFimgs if re.match(r'^[Dd]ark.*', f)]
+    Darks=[]
+    #For Specific NDR long darks
+    print('Darks with %d NDRS used for averaging'%DarkNDRS)
+    for i in Darklist :
+        if int(pyfits.convenience.getval(i,'NDRS'))>=DarkNDRS : 
+            Darks.append(i)
+            print(i,pyfits.convenience.getval(i,'NDRS'),pyfits.convenience.getval(i,'ITIME'))
+    DarkAvgcube=AverageWithCRrej(Darks,NoofNDRs=DarkNDRS) #Average Dark with CR hits rejected
+    #Load the latest saturation levels. (Upper threshold file)
+    Uthresh=np.load(Uthreshnpyfile)  
+    listwithoutdark=[f for f in listOFimgs if not re.match(r'^[Dd]ark.*', f) ]
+    sortedlist=sorted(listwithoutdark, key=lambda k: int(k[:-5].split('-')[-1]))
+    logfile=open('SlopeimagesLog.txt','w')
+    for img in sortedlist:
+        print(img)
+        hdulist=pyfits.open(img)
+        prihdr= hdulist[0].header
+        NDRS2read=min(prihdr['NDRS'],DarkNDRS)
+        logfile.write('%s %s "%s" %d %.2f %s %s %s %s %s %s \n'%('Slope-'+img,prihdr['TIME'],prihdr['TARGET'],prihdr['NDRS'],prihdr['ITIME'],prihdr['UPPER'],prihdr['LOWER'],prihdr['SLIT'],prihdr['CALMIR'],prihdr['DATE'],prihdr['TCOMMENT']))
+        if NDRS2read <= FullframeMax :
+            tilelist=[(0,1024,0,1024)]  #Loading out as a single frame ; else we load each quadrent seperately
+        else: tilelist=[(0,512,0,512),(0,512,512,1024),(512,1024,0,512),(512,1024,512,1024)]
+        for sec in tilelist:
+            gc.collect()
+            print("Working on tile :"+str(sec))
+            imgcube=LoadDataCube(img,RampNDRsuffix,NoofNDRs=NDRS2read,tile=sec)
+            imgcube=np.ma.masked_greater(imgcube,Uthresh[sec[0]:sec[1],sec[2]:sec[3]]*UthreshFactor)
+            imgcube-=DarkAvgcube[:NDRS2read,sec[0]:sec[1],sec[2]:sec[3]]  #Dark subtraction
+            time=np.arange(imgcube.shape[0],dtype=np.int)
+            beta,alpha=FitSlope(imgcube,time)#, CRcorr=True)
+            hdulist[0].data[sec[0]:sec[1],sec[2]:sec[3]]=beta.data
+            del imgcube
+        prihdr.add_history('Dark subtracted using:DarkAvgcube')
+        prihdr.add_history('Calculated slope removing saturation') #and CR hits
+        hdulist.writeto('Slope-'+img)
+    logfile.close()
+    print('Succesfully created slope images for this night \n Copy out all\033[91m Slope*\033[0m files')
+
+
+if __name__ == "__main__":
+    main()
