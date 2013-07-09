@@ -1,0 +1,15 @@
+#This gnuplot file should be called by the StarPolt.py
+Griddata='/tmp/gridtoplot.table'
+set multiplot layout 1,2
+set pm3d
+unset surface
+set key outside
+splot Griddata notitle
+unset surface
+set view map
+set contour
+set key outside
+set size ratio 1
+splot Griddata notitle
+unset multiplot
+pause -1
