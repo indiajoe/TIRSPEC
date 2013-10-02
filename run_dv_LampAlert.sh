@@ -1,0 +1,2 @@
+dv &
+./LampAlert.sh &

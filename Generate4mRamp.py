@@ -32,6 +32,16 @@ def filelist(inputstring):
     else : output=inputstring.split(',')
     return output
 
+def CheckNDRexist(imgname,RampNDRsuffix,NoofNDRs=None):
+    """ Checks the Non distructive Readouts (NDR) exists in the current directory for given image.
+        Only if they exist we should proceed with Slope calculation from them """
+    NDRfiles=glob.glob(imgname[:-5]+RampNDRsuffix)
+    if NoofNDRs==None : NoofNDRs=pyfits.convenience.getval(imgname,'NDRS')
+    if len(NDRfiles) == NoofNDRs :
+        return True
+    else:
+        return False
+
 def LoadDataCube(imgname,RampNDRsuffix,NoofNDRs=None,tile=FullTile):
     """ Loads the up-the-ramp readout of the input image tile to a single ndarray cube 
         Cube's coordinates are (time,X,Y)
@@ -514,9 +524,9 @@ def main():
     import re
     import pyfits.convenience
 
-    DarkNDRS=111    # Specify the number of NDRS to be loaded for average Dark cube HERE....
+    DarkNDRS=112    # Specify the number of NDRS to be loaded for average Dark cube HERE....
     FullframeMax=44   # Maximum NDRS we can load as a single frame within memory constrains
-    UthreshFactor=0.9   #Fraction of Uthresh to be actually used as upper cuttoff
+    UthreshFactor=0.7   #Fraction of Uthresh to be actually used as upper cuttoff
     Uthreshnpyfile='/media/PlanetX/TIRSPEC1strun/ReductionWorkarea/20130620/UpperThreshold.npy'
 
     if len(sys.argv) < 2 or not os.path.isdir(sys.argv[1]):
@@ -526,7 +536,11 @@ def main():
         print("-"*30)
         exit(1)
     os.chdir(sys.argv[1])
-    listOFimgs= [f for f in os.listdir('.') if re.match(r'^(?!(.*debug.*|.*[Tt]est.*|.*[Ff]ocus.*)).*\.fits', f)]
+    listOFimgsT= [f for f in os.listdir('.') if re.match(r'^(?!(.*debug.*|.*[Tt]est.*|.*[Ff]ocus.*)).*\.fits', f)]
+    listOFimgs= [f for f in listOFimgsT if CheckNDRexist(f,RampNDRsuffix)]
+    for lostimgs in list(set(listOFimgsT)-set(listOFimgs)) :
+        print('Warning: Discarded %s because of missing NDR files'%lostimgs)
+
     Darklist=[f for f in listOFimgs if re.match(r'^[Dd]ark.*', f)]
     Darks=[]
     #For Specific NDR long darks

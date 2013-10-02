@@ -6,17 +6,29 @@ import sys
 import os
 import os.path
 
-Xsizeby2=10  #The length of square box to plot will be double this size +1.
-Ysizeby2=10 #The width of square box to plot will be double this size +1.
+Xsizeby2=30  #The length of square box to plot will be double this size +1.
+Ysizeby2=30 #The width of square box to plot will be double this size +1.
 Gnuplotfile='./StarPlot.gnuplot'
 if len(sys.argv) < 2 or not os.path.isfile(sys.argv[1]):
     print("-"*30)
     print("Usage  : "+sys.argv[0]+" ImageName")
     print("Eg: "+sys.argv[0]+" /data/20130621/test-32.fits")
+    print("Eg: "+sys.argv[0]+" /data/20130621/test-{32..38}.fits")
     print("-"*30)
     exit(1)
 
 Fullimage=pyfits.getdata(sys.argv[1])
+imgcount=1
+print(sys.argv[1])
+if len(sys.argv) > 2 : #Then Average all the input frames
+    for img in sys.argv[2:] :
+        if os.path.isfile(img):
+            Fullimage+=pyfits.getdata(img)
+            imgcount+=1
+            print(img)
+        else: print ('Image '+img+' not found and not used for averaging.')
+    Fullimage/=float(imgcount)
+
 while 1 :
     try:
         XYcoords=raw_input('Center of Location to plot (Eg: X Y) :').strip(' ')
@@ -30,6 +42,7 @@ while 1 :
         for j in range(Ycenter-Ysizeby2,Ycenter+Ysizeby2 +1):
             outfile.write('%d %d %f \n'%(i,j,Fullimage[i,j]))
         outfile.write('\n')
+    outfile.close()
     os.system('gnuplot '+Gnuplotfile)
 
         
