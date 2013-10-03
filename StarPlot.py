@@ -35,8 +35,8 @@ while 1 :
     except (KeyboardInterrupt, EOFError):
         print("\n Exiting.. \n ")
         exit(0)
-    Xcenter=int(XYcoords.split()[1]) -1  #Python has opposite X and Y than ds9 or DV and starts at 0
-    Ycenter=int(XYcoords.split()[0]) -1
+    Xcenter=int(eval(XYcoords.split()[1])) -1  #Python has opposite X and Y than ds9 or DV and starts at 0
+    Ycenter=int(eval(XYcoords.split()[0])) -1
     outfile=open('/tmp/gridtoplot.table','w')
     for i in range(Xcenter-Xsizeby2,Xcenter+Xsizeby2 +1):
         for j in range(Ycenter-Ysizeby2,Ycenter+Ysizeby2 +1):
