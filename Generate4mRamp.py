@@ -525,8 +525,8 @@ def main():
     import pyfits.convenience
 
     DarkNDRS=112    # Specify the number of NDRS to be loaded for average Dark cube HERE....
-    FullframeMax=44   # Maximum NDRS we can load as a single frame within memory constrains
-    UthreshFactor=0.7   #Fraction of Uthresh to be actually used as upper cuttoff
+    FullframeMax=46   # Maximum NDRS we can load as a single frame within memory constrains
+    UthreshFactor=0.9   #Fraction of Uthresh to be actually used as upper cuttoff
     Uthreshnpyfile='/media/PlanetX/TIRSPEC1strun/ReductionWorkarea/20130620/UpperThreshold.npy'
 
     if len(sys.argv) < 2 or not os.path.isdir(sys.argv[1]):

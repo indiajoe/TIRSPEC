@@ -1,6 +1,7 @@
 #!/usr/bin/env python
-#This script takes current position of source and gives the input to be given to keystone telscope control for shifting star to slit.
-#---------------------------------------------------------indiajoe
+#This script takes current position of source and gives the input to be given to Observatory Server Telescope control for shifting star to slit or any other pixel.
+#-------------------------------------------------------------------indiajoe
+
 import readline
 
 S1p=(515,561.7)
@@ -18,10 +19,15 @@ defaultT='L1'
 
 SlitDict={'S1':S1p, 'S2':S2p, 'S3':S3p, 'S4':S4p, 'S5': S5p,'L1':L1p, 'L2':L2p, 'L3':L3p, 'L4':L4p, 'L5': L5p}
 
-def Moveinstruction(Start,Destination):
+OffsetRA=0
+OffsetDec=0
+def Moveinstruction(Start,Destination,OffsetRA,OffsetDec):
     """ Start is a tuple (X,Y) and Destination is the final position tuple (X,Y)"""
     PixelScale=0.3081
-    print('\033[94m>>\033[92m Along Axis (RA):\033[91m %f\033[0m arcsec \033[92m Across Axis (Dec):\033[91m %f\033[0m arcsec'%((Destination[0]-Start[0])*PixelScale,(Destination[1]-Start[1])*PixelScale))
+    RApos=OffsetRA+(Destination[0]-Start[0])*PixelScale*-1
+    DECpos=OffsetDec+(Destination[1]-Start[1])*PixelScale*-1
+    print('\033[94m>>\033[92m Along Axis (RA):\033[91m %f\033[0m arcsec \033[92m Across Axis (Dec):\033[91m %f\033[0m arcsec'%(RApos,DECpos))
+    return RApos,DECpos
 
 while 1 :
     try:
@@ -31,7 +37,11 @@ while 1 :
         print("\n Exiting.. \n ")
         exit(0)
     if not Target : Target=defaultT
-    else: defaultT=Target
+    else:
+        print('--Reseting telescope offsets to 0,0--')
+        OffsetRA=0
+        OffsetDec=0
+        defaultT=Target
 
     if len(Current.split()) != 2 : #Sanity check
         print('INPUT Error: Current pixel location should be in format "X Y"')
@@ -39,12 +49,13 @@ while 1 :
     currpix=tuple([float(x) for x in Current.split()])
     if Target in SlitDict.keys():
         print('To move to the slit %s '%Target +':'+str(SlitDict[Target]))
-        Moveinstruction(currpix,SlitDict[Target])
+        OffsetRA,OffsetDec=Moveinstruction(currpix,SlitDict[Target],OffsetRA,OffsetDec)
     elif len(Target.split()) == 2 :
         destpix=tuple([float(x) for x in Target.split()])
         print('To move to the pixel '+Target)
-        Moveinstruction(currpix,destpix)
+        OffsetRA,OffsetDec=Moveinstruction(currpix,destpix,OffsetRA,OffsetDec)
     else :
         print('INPUT Error: Target pixel location should be in format "X Y" or it should be name of a slit like S1,S2.. or L1,L2 etc..')
         continue
+        
         
