@@ -16,17 +16,18 @@ Webpage of this repository: http://indiajoe.github.io/TIRSPEC/
 Contents
 ================
 ###Major Scripts:###
-      Generate4mRamp.py  : This script generates the slope calculation from up-the-ramp readout raw data. It produces the dark subtracted final slope images. A log file is also generated. You can load this also as a module in IPython, and use the collection of functions in it for an interative analysis of tirspec's raw data.
-      TIRSPECdataReduction.py (needs TIRSPECscript.conf) : This script is to help the astronomer reduce tirspec data (output of Generate4mRamp.py) . It will semi-automate and guide the user through : image selection, flat correction, aligning and combining of NIR dithered frames for final photometry/spectroscopy.
-      AlignCombineImagesinDir.py : This is a stand alone script to help astronomer align and combine his fits images.
-###Minor Scripts:### (intented for use on tirspec machine while observing)
-      StarPlot.py (needs StarPlot.gnuplot) : This script is to quickly view the surface plot and contour of a star profile in fits file. 
-      DitherAssistant.py : To help in visualising Dither pattern and generating the commands to be given to Observatory Server.
-      TelescopeShift-4OS.py : To get the input to be given to Observatory Server to move star to slit or any other location in image.
-      TelescopeShift.py : To get the input to be given to Keystone Server to move star to slit or any other location in image.
-      lastNDR.sh : To quickly load the last NDR readout frame of the directory to DV.
-      Start_TIRSPEC.sh (needs: run_mkmac_h1_as.sh,run_dv_LampAlert.sh) : This script starts TIRSPEC software for starting observation in the night.
-      .dv-init : Some DV start up script to make life easier while observing.
+-*Generate4mRamp.py*  **:** This script generates the slope calculation from up-the-ramp readout raw data. It produces the dark subtracted final slope images. A log file is also generated. You can load this also as a module in IPython, and use the collection of functions in it for an interative analysis of tirspec's raw data.
+-*TIRSPECdataReduction.py* (needs *TIRSPECscript.conf*) **:** This script is to help the astronomer reduce tirspec data (output of Generate4mRamp.py) . It will semi-automate and guide the user through : image selection, flat correction, aligning and combining of NIR dithered frames for final photometry/spectroscopy.
+-*AlignCombineImagesinDir.py* **:** This is a stand alone script to help astronomer align and combine his fits images.
+###Minor Scripts:### 
+Intented for use on tirspec machine while observing.
+-*StarPlot.py* (needs *StarPlot.gnuplot*) **:** This script is to quickly view the surface plot and contour of a star profile in fits file. 
+-*DitherAssistant.py* **:** To help in visualising Dither pattern and generating the commands to be given to Observatory Server.
+-*TelescopeShift-4OS.py* **:** To get the input to be given to Observatory Server to move star to slit or any other location in image.
+-*TelescopeShift.py* **:** To get the input to be given to Keystone Server to move star to slit or any other location in image.
+-*lastNDR.sh* **:** To quickly load the last NDR readout frame of the directory to DV.
+-*Start_TIRSPEC.sh* (needs *run_mkmac_h1_as.sh,run_dv_LampAlert.sh*) **:** This script starts TIRSPEC software for starting observation in the night.
+-*.dv-init* **:** Some DV start up script to make life easier while observing.
       
 Module Dependencies
 -------------------
