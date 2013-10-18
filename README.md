@@ -21,7 +21,7 @@ Contents
 *    **AlignCombineImagesinDir.py** *:* This is a stand alone script to help astronomer align and combine his fits images.
 
 ### Minor Scripts:  
-Intented for use on tirspec machine while observing.
+Intended for use on tirspec machine while observing.
 *    **StarPlot.py** (needs **StarPlot.gnuplot**) *:* This script is to quickly view the surface plot and contour of a star profile in fits file. 
 *    **DitherAssistant.py** *:* To help in visualising Dither pattern and generating the commands to be given to Observatory Server.
 *    **TelescopeShift-4OS.py** *:* To get the input to be given to Observatory Server to move star to slit or any other location in image.
