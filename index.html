@@ -41,9 +41,38 @@ Codes are mostly in Python.</p>
 Make sure, you keep the modified scripts under a seperate directory of your name, 
 to prevent any conflict with default scripts for other users.</p>
 
-<p>You may also find some helpfull scripts in the following link: <a href="http://indiajoe.github.io/HandyTools4Astronomers/">http://indiajoe.github.io/HandyTools4Astronomers/</a></p>
+<p>You may also find some helpful scripts in the following link: <a href="http://indiajoe.github.io/HandyTools4Astronomers/">http://indiajoe.github.io/HandyTools4Astronomers/</a></p>
 
 <p>Webpage of this repository: <a href="http://indiajoe.github.io/TIRSPEC/">http://indiajoe.github.io/TIRSPEC/</a></p>
+
+<h1>
+<a name="contents" class="anchor" href="#contents"><span class="octicon octicon-link"></span></a>Contents</h1>
+
+<h3>
+<a name="major-scripts" class="anchor" href="#major-scripts"><span class="octicon octicon-link"></span></a>Major Scripts:</h3>
+
+<ul>
+<li>   <strong>Generate4mRamp.py</strong>  <em>:</em> This script generates the slope calculation from up-the-ramp readout raw data. It produces the dark subtracted final slope images. A log file is also generated. You can load this also as a module in IPython, and use the collection of functions in it for an interative analysis of tirspec's raw data.</li>
+<li>   <strong>TIRSPECdataReduction.py</strong> (needs <strong>TIRSPECscript.conf</strong>) <em>:</em> This script is to help the astronomer reduce tirspec data (output of <em>Generate4mRamp.py</em>) . It will semi-automate and guide the user through : <em>image selection, flat correction, aligning and combining of NIR dithered frames</em> for final photometry/spectroscopy.</li>
+<li>   <strong>AlignCombineImagesinDir.py</strong> <em>:</em> This is a stand alone script to help astronomer align and combine his fits images.</li>
+</ul><h3>
+<a name="minor-scripts" class="anchor" href="#minor-scripts"><span class="octicon octicon-link"></span></a>Minor Scripts:</h3>
+
+<p>Intented for use on tirspec machine while observing.</p>
+
+<ul>
+<li>   <strong>StarPlot.py</strong> (needs <strong>StarPlot.gnuplot</strong>) <em>:</em> This script is to quickly view the surface plot and contour of a star profile in fits file. </li>
+<li>   <strong>DitherAssistant.py</strong> <em>:</em> To help in visualising Dither pattern and generating the commands to be given to Observatory Server.</li>
+<li>   <strong>TelescopeShift-4OS.py</strong> <em>:</em> To get the input to be given to Observatory Server to move star to slit or any other location in image.</li>
+<li>   <strong>TelescopeShift.py</strong> <em>:</em> To get the input to be given to Keystone Server to move star to slit or any other location in image.</li>
+<li>   <strong>lastNDR.sh</strong> <em>:</em> To quickly load the last NDR readout frame of the directory to DV.</li>
+<li>   <strong>Start_TIRSPEC.sh</strong> (needs <strong>run_mkmac_h1_as.sh,run_dv_LampAlert.sh</strong>) <em>:</em> This script starts TIRSPEC software for starting observation in the night.</li>
+<li>   <strong>.dv-init</strong> <em>:</em> Some DV start up script to make life easier while observing.</li>
+</ul><h2>
+<a name="module-dependencies" class="anchor" href="#module-dependencies"><span class="octicon octicon-link"></span></a>Module Dependencies</h2>
+
+<p>First few lines of the script will tell you the required python modules for each script.
+Generaly speaking you will need: numpy, pyfits and pyraf</p>
 
 <h2>
 <a name="license" class="anchor" href="#license"><span class="octicon octicon-link"></span></a>License</h2>
