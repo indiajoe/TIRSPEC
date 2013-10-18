@@ -79,7 +79,7 @@ def AlignNcombine_subrout(method="average"):
                 imgs2alignOUT.close()
                 try :  #Now align and if succeded combine those images....
                     iraf.imalign(input='@'+alignInpfname, reference=night+'/'+Refimage, coords=night+'/'+OutCoofile, output='@'+alignOutfname, shifts=night+'/shifts.in', interp_type="nearest",boundary_type="constant",trimimages="no")
-                    iraf.imcombine(input=night+'/'+Refimage+','+'@'+alignOutfname, output=night+'/'+OutCombimg,combine=method,reject="avsigclip")
+                    iraf.imcombine(input=night+'/'+Refimage+','+'@'+alignOutfname, output=night+'/'+OutCombimg,combine=method,reject="sigclip")
                 except iraf.IrafError, e :
                     print ('IRAF ERROR : Some image might be having problem. Remove it and try later')
                     print e
@@ -124,7 +124,7 @@ def CombDith_FlatCorr_subrout(method="median",FlatStatSection='[200:800,200:800]
             elif len(imglist) > 1 :
                 OutCombimg=imglist[0][:-5]+'_'+method+'_'+imglist[-1][:-5]+'.fits'
                 inpVAR=','.join([night+'/'+img for img in imglist])
-                iraf.imcombine(input=inpVAR, output=night+'/'+OutCombimg,combine=method,reject="avsigclip")
+                iraf.imcombine(input=inpVAR, output=night+'/'+OutCombimg,combine=method,reject="sigclip")
             #Now make list of flats to be combined for this image set
             Flats2Comb=[]
             for img in imglist:
@@ -139,7 +139,7 @@ def CombDith_FlatCorr_subrout(method="median",FlatStatSection='[200:800,200:800]
 #To Do Later:: #If spectroscopy of cross disperse mode : change the FlatStatSection
             
             outflatname=night+'/'+OutCombimg[:-5]+'_flat.fits'
-            iraf.imcombine (input='@'+imgflatlistfname, output=outflatname, combine="median", scale="mode", statsec=FlatStatSection)
+            iraf.imcombine (input='@'+imgflatlistfname, output=outflatname, combine="median", scale="median",reject="sigclip", statsec=FlatStatSection)
             statout=iraf.imstatistics(outflatname+FlatStatSection,fields='mode',Stdout=1)
             mode=float(statout[1])
             #We will normalise this flat with the mode of pixels in FlatStatSection
