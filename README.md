@@ -19,6 +19,7 @@ Contents
 *    **Generate4mRamp.py**  *:* This script generates the slope calculation from up-the-ramp readout raw data. It produces the dark subtracted final slope images. A log file is also generated. You can load this also as a module in IPython, and use the collection of functions in it for an interative analysis of tirspec's raw data.
 *    **TIRSPECdataReduction.py** (needs **TIRSPECscript.conf**) *:* This script is to help the astronomer reduce tirspec data (output of Generate4mRamp.py) . It will semi-automate and guide the user through : image selection, flat correction, aligning and combining of NIR dithered frames for final photometry/spectroscopy.
 *    **AlignCombineImagesinDir.py** *:* This is a stand alone script to help astronomer align and combine his fits images.
+
 ###Minor Scripts:### 
 Intented for use on tirspec machine while observing.
 *    **StarPlot.py** (needs **StarPlot.gnuplot**) *:* This script is to quickly view the surface plot and contour of a star profile in fits file. 
