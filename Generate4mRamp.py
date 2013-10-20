@@ -111,7 +111,7 @@ def AverageWithCRrej(imagelist,NoofNDRs=None,tile=FullTile):
         T,X,Y=CRhitslocation(imgcube,thresh=6) #Locations of CR hit
         for i,j in np.unique(zip(X,Y)): imgcube[:,i,j]=np.ma.masked
         sumcube+=imgcube.filled()
-        N[~imgcube[0,:,:].mask]+=1
+        N[~np.ma.getmaskarray(imgcube[0,:,:])]+=1
     #If there are still some pixels which were hit by CR in every single frame we shall replace it with the last frame's values
     X,Y=np.where(N==0)
     for i,j in np.unique(zip(X,Y)):
@@ -505,7 +505,7 @@ def ApplyNonLinearityCorrection(image,NLcoeffs,LThresh,UThresh,tile=FullTile):
     imgcube=np.ma.array(imgcube,mask=np.ma.mask_or(UpperMask, LowerMask))
     
     summ=imgcube.copy()
-    summ[~summ.mask]=0   #Setting all unmasked elements to zero
+    summ[~np.ma.getmaskarray(summ)]=0   #Setting all unmasked elements to zero
     for i in range(order+1):
         summ+=NLcoeffs[i][np.newaxis,:,:]*(imgcube**(order-i))
 
