@@ -31,6 +31,9 @@ def AlignNcombine_subrout(method="average"):
         XYFILE=open(night+'/AllObjects2Combine.List','r')
         XYfiledic=dict([(XYset.split()[0],XYset.rstrip().split()[1:]) for XYset in XYFILE.readlines() if len(XYset.split()) == 3 ])  #Dictionary of XY coords for each image.
         XYFILE.close()
+        if len(XYfiledic) == 0 : #No images this night..
+            print('No images to work on this night. skipping...')
+            continue
 
         Obj2CombFILE=open(night+'/FirstoneANDcombinedImages.List','r')
         #Firstly generate the list of lists of images to combine. Also a dict which maps the combined images to first image.
@@ -92,6 +95,21 @@ def AlignNcombine_subrout(method="average"):
     print('All nights over...')             
                                 
                 
+def FixBadPixels(images,nightdir):
+    """ This will run iraf task proto.fixpix to interpolate badpixels """
+    if TODO=='P' : PixelMask=nightdir+'/'+PhotBadPixelMaskName
+    elif TODO=='S' : PixelMask=nightdir+'/'+SpecBadPixelMaskName
+    else : 
+        print("What are you doing? (S or P)")
+        return
+    if not os.path.isfile(PixelMask):
+        print("No Bad Pixel Mask file found by the name "+ PixelMask)
+        print("Hence skipping Bad pixel interpolation")
+        return
+
+    iraf.proto(_doprint=0)
+    iraf.fixpix.unlearn()
+    iraf.fixpix(images=images,masks=PixelMask)
 
 def CombDith_FlatCorr_subrout(method="median",FlatStatSection='[200:800,200:800]'):
     """ This will combine (default=median) with avsigclip the images in single dither and also create corresponding normalized flats and divide for flat correction """
@@ -103,6 +121,9 @@ def CombDith_FlatCorr_subrout(method="median",FlatStatSection='[200:800,200:800]
         FlatFILE=open(night+'/AllObjects-FinalFlat.List','r')
         Flatfiledic=dict([(flatset.split()[0],flatset.rstrip().split()[1:]) for flatset in FlatFILE.readlines()])  #Dictionary of flats list for each image.
         FlatFILE.close()
+        if len(Flatfiledic) == 0 : #No images this night..
+            print('No images to work on this night. skipping...')
+            continue
         if TODO=='P':  #Load all the FilterSet indexing file data
             FiltrFILE=open(night+'/AllObjects.List','r')
             Filtrfiledic=dict([(filtset.split()[0],shlex.split(filtset.rstrip())[1]) for filtset in FiltrFILE.readlines()])  #Dictionary of filterset for each image.
@@ -148,6 +169,8 @@ def CombDith_FlatCorr_subrout(method="median",FlatStatSection='[200:800,200:800]
             #Now divide by flat...
             OutFCimg=OutCombimg[:-5]+'_FC.fits'
             iraf.imarith(operand1=night+'/'+OutCombimg,op="/",operand2=Noutflatname,result=night+'/'+OutFCimg)
+            #Now interpolate the bad pixels in the final image.
+            FixBadPixels(night+'/'+OutFCimg,night)
             if TODO=='P':
                 Oldfiltset=NewFiltSet
                 NewFiltSet=Filtrfiledic[imglist[0]]
@@ -262,6 +285,7 @@ def SelectionofFrames_subrout():
     regexpObj= re.compile(r''+ObjRE)
     #Generating list of objects frames
     for night in directories:
+        print("Working on night : "+night)
         slopeimgFILE=open(night+'/SlopeimagesLog.txt')
         slopeimgFILElines=slopeimgFILE.readlines()
         slopeimgFILE.close()
@@ -372,7 +396,11 @@ for con in configfile.readlines():
         elif con.split()[0] == "DITHERCOMB=" :
             DITHERCOMBMETHOD=con.split()[1]
 
-
+        elif con.split()[0] == "BPMPHOTO=" :
+            PhotBadPixelMaskName=con.split()[1]
+        elif con.split()[0] == "BPMSPEC=" :
+            SpecBadPixelMaskName=con.split()[1]
+        
         elif con.split()[0] == "THRESHOLD=" :
             threshold=con.split()[1]
         elif con.split()[0] == "EPADU=" :
@@ -419,7 +447,7 @@ print("0  Backup files in current directory to ../"+BACKUPDIR+"\n")
 print("1  Selection of object frames to reduce \n")
 print("2  Manually inspect and reject object images by displaying one by one to classify \n")
 print("3  Manually inspect and reject Flats/Argons by displaying one by one\n")
-print("4  Combine images in a Dither and apply Flat Correction \n")
+print("4  Combine images in a Dither, apply Flat Correction and Bad pixel interpolation\n")
 print("5  Align and combine combined images of each Dither in Photometry data \n")
 #print("5  Make the list of images, Images4Photo.in to do Photometry \n")
 print("6  Select Stars and Sky region of the field on first image \n")
