@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+# The faster version of the Generate4mRamp script uses the module numexpr
+# So you need to install this module before using this script.
+#-----------------------------
 # This code is to generate a clean slope image from up-the-ramp readout images.
 # Feel free to modify and share. Code is under GNU GPL v3 or higher versions.
 # Author: J. P. Ninan (indiajoe@gmail.com)
@@ -11,6 +14,11 @@ import numpy.ma
 import pyfits
 import glob
 import gc
+import numexpr as ne
+
+# By default it will use minnimum of 8 or number of cores you have on your machine for evaluations
+# Or you can change to any number of cores by uncommenting the line below
+# ne.set_num_threads(16)  
 
 RampNDRsuffix='-debug*.fits'   # If changed, change in the function LoadDataCube() (line #38) also where we extract integer.
 FullTile=(0,1024,0,1024)
@@ -67,15 +75,20 @@ def CRhitslocation(imgcube,thresh=10):
     Input the  image data cube, and optional threshold (thresh= ) to detect the CR hit convolution image.
     The output of the locations of CR hit are in the tuple of 3 arrays format (Time,X,Y).
     """
+    term1=imgcube[:-3,:,:]
+    term2=imgcube[1:-2,:,:]
+    term3=imgcube[2:-1,:,:]
+    term4=imgcube[3:,:,:]
+    convimg=ne.evaluate("term1 - 3*term2 + 3*term3 - term4") #Convolution of image with [1,-3,3,-1] along time axis
     RN=4.3   #ReadNoise
-    if np.ma.isMaskedArray(imgcube) :
-        convimg=imgcube.data[:-3,:,:] -3*imgcube.data[1:-2,:,:] +3*imgcube.data[2:-1,:,:] -imgcube.data[3:,:,:]
-    else:
-        convimg=imgcube[:-3,:,:] -3*imgcube[1:-2,:,:] +3*imgcube[2:-1,:,:] -imgcube[3:,:,:] #Convolution of image with [1,-3,3,-1] along time axis
-
+    # if np.ma.isMaskedArray(imgcube) :
+    #     convimg=imgcube.data[:-3,:,:] -3*imgcube.data[1:-2,:,:] +3*imgcube.data[2:-1,:,:] -imgcube.data[3:,:,:]
+    # else:
+    #     convimg=imgcube[:-3,:,:] -3*imgcube[1:-2,:,:] +3*imgcube[2:-1,:,:] -imgcube[3:,:,:] #Convolution of image with [1,-3,3,-1] along time axis
 #    stdconv=np.std(convimg,axis=0)
-    stdconv=np.median(convimg,axis=0)  #Wrongly nameing the variable now itself to conserve memory
+    stdconv=np.median(convimg,axis=0)  #Nameing the variable now itself to conserve memory
     np.median(np.abs(convimg-stdconv),axis=0,out=stdconv)  # MAD for robustnus
+#    stdconv=np.ma.median(np.abs(convimg-np.ma.median(convimg,axis=0)),axis=0)  # MAD for robustnus
     thresh*=1.4826
     #We should remove all the points where number of data points were less than 5
     stdconv[np.where(np.ma.count(imgcube,axis=0) < 5)]=99999
@@ -180,8 +193,8 @@ def FitSlope(imgcube,time, CRcorr=False):
     Sxy=(imgcube*time[:,np.newaxis,np.newaxis]).sum(axis=0,dtype=np.float64)
     n=np.ma.count(imgcube,axis=0)   #number of points used in fitting slope of a pixel
     
-    beta= (n*Sxy - Sx*Sy)/ (n*Sxx - Sx**2)
-    alpha= Sy/n - beta*Sx/n
+    beta= ne.evaluate("(n*Sxy - Sx*Sy)/ (n*Sxx - Sx*Sx)")
+    alpha= ne.evaluate("Sy/n - beta*Sx/n ")
 
     #mask beta and alpha where n < 2
     beta=np.ma.masked_where(n<2,beta)
@@ -229,6 +242,8 @@ def FitSlope(imgcube,time, CRcorr=False):
 #            except ZeroDivisionError :
             else :
                 print('Couldnot remove CR hit (insufficent data) at %d %d '%(i,j))
+#                print("LocalSigma:",localsigma)
+#                print("Localbeta:",localbeta)
 
     return (beta,alpha)
 
@@ -427,12 +442,15 @@ def NonlinearityCorrCoeff(image,dark,order=3,LThreshFactor=0.7,UThresh=None,LThr
         return
 
     if UThresh == None : #No input Upper threshold given. So use the global minima of second derivative
-        imgcube-=darkcube  #Removing the dark current temporarily for now
-        imgcube2ndD=imgcube[:-2,:,:]-2*imgcube[1:-1,:,:]+imgcube[2:,:,:]  #Convolving with [1,-2,1] for second derivative
+        ne.evaluate("imgcube-darkcube",out=imgcube)  #Removing the dark current temporarily for now
+        term1=imgcube[:-2,:,:]
+        term2=imgcube[1:-1,:,:]
+        term3=imgcube[2:,:,:]
+        imgcube2ndD=ne.evaluate("term1 -2*term2 + term3")  #Convolving with [1,-2,1] for second derivative
         imgcube2ndD=imgcube2ndD[2:,:,:]  #removing the first two entries before finding minima
         Cuttoff=np.argmin(imgcube2ndD,axis=0)+2+2   #taking global minima
         del imgcube2ndD      #Delete to free memory
-        imgcube+=darkcube  #Putting back the dark current for finding upper threshold
+        ne.evaluate("imgcube+darkcube",out=imgcube)  #Putting back the dark current for finding upper threshold
         i,j=np.ogrid[0:imgcube.shape[1],0:imgcube.shape[2]]
         UThresh=imgcube[Cuttoff,i,j]       #Extracting the threshold values by fancy indexing
         
@@ -574,6 +592,8 @@ def main():
             Darks.append(i)
             print(i,pyfits.convenience.getval(i,'NDRS'),pyfits.convenience.getval(i,'ITIME'))
     DarkAvgcube=AverageWithCRrej(Darks,NoofNDRs=DarkNDRS) #Average Dark with CR hits rejected
+#    np.save('AVGdarkforthenight',DarkAvgcube)    #Saving to save time later
+#    DarkAvgcube=np.load('AVGdarkforthenight.npy')
     #Load the latest saturation levels. (Upper threshold file)
     Uthresh=np.load(Uthreshnpyfile)  
     listwithoutdark=[f for f in listOFimgs if not re.match(r'^[Dd]ark.*', f) ]
@@ -608,7 +628,7 @@ def main():
             hdulist[0].data[sec[0]:sec[1],sec[2]:sec[3]]=beta.data
             del imgcube
         prihdr.add_history('Dark subtracted using:DarkAvgcube')
-        prihdr.add_history('Calculated slope removing saturation') #and CR hits
+        prihdr.add_history('Calculated slope removing saturation')# and CR hits')
         hdulist.writeto('Slope-'+img)
     logfile.close()
     print('Succesfully created slope images for this night \n Copy out all\033[91m Slope*\033[0m files')
