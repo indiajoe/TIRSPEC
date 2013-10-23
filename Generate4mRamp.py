@@ -62,15 +62,29 @@ def AverageDataCube(imglist,RampNDRsuffix,NoofNDRs=None,tile=FullTile):
         imgcube=imgcube/len(imglist)
     return imgcube
 
-def CRhitslocation(imgcube,thresh=6):
+def CRhitslocation(imgcube,thresh=10):
     """ Returns the array of positions at which Cosmic Ray hits occurred.
     Input the  image data cube, and optional threshold (thresh= ) to detect the CR hit convolution image.
     The output of the locations of CR hit are in the tuple of 3 arrays format (Time,X,Y).
     """
-    convimg=imgcube[:-3,:,:] - 3*imgcube[1:-2,:,:] + 3*imgcube[2:-1,:,:] -imgcube[3:,:,:] #Convolution of image with [1,-3,3,-1] along time axis
-    stdconv=np.std(convimg,axis=0)
+    RN=4.3   #ReadNoise
+    if np.ma.isMaskedArray(imgcube) :
+        convimg=imgcube.data[:-3,:,:] -3*imgcube.data[1:-2,:,:] +3*imgcube.data[2:-1,:,:] -imgcube.data[3:,:,:]
+    else:
+        convimg=imgcube[:-3,:,:] -3*imgcube[1:-2,:,:] +3*imgcube[2:-1,:,:] -imgcube[3:,:,:] #Convolution of image with [1,-3,3,-1] along time axis
+
+#    stdconv=np.std(convimg,axis=0)
+    stdconv=np.median(convimg,axis=0)  #Wrongly nameing the variable now itself to conserve memory
+    np.median(np.abs(convimg-stdconv),axis=0,out=stdconv)  # MAD for robustnus
+    thresh*=1.4826
+    #We should remove all the points where number of data points were less than 5
+    stdconv[np.where(np.ma.count(imgcube,axis=0) < 5)]=99999
+    MinNoise=3*np.sqrt(RN**2 +(3*RN)**2 +(3*RN)**2 + RN**2) # 3 Sigma from ReadNoise
+    stdconv[np.where(stdconv < MinNoise/thresh)]= MinNoise/thresh   #This is 3 sigma limit of RN
     #Find the edges of ramp jumps.
-    (T,X,Y)=np.ma.where(convimg > thresh*stdconv)
+    if np.ma.isMaskedArray(imgcube) :
+        (T,X,Y)=np.ma.where(np.ma.array(convimg,mask=np.ma.getmaskarray(imgcube[3:,:,:])) > thresh*stdconv) 
+    else: (T,X,Y)=np.ma.where(convimg > thresh*stdconv)
     T=T+2  #Converting to the original time coordinate of imgcube by correcting for the shifts. This T is the first pixel after CR hit
     return (T,X,Y)
 
@@ -79,7 +93,7 @@ def ReplaceCRhits(imagelist,NoofNDRs=None,tile=FullTile):
     if type(imagelist)==str : imglist=filelist(imagelist)   #List of images
     else : imglist=imagelist
     imgcube=LoadDataCube(imglist[0],RampNDRsuffix,NoofNDRs=NoofNDRs,tile=tile)
-    T,X,Y=CRhitslocation(imgcube,thresh=6) #Locations of CR hit
+    T,X,Y=CRhitslocation(imgcube,thresh=10) #Locations of CR hit
     Tlength=imgcube.shape[0]
     XYlist=np.unique(zip(X,Y))
     for img in imglist[1:]:  
@@ -87,7 +101,7 @@ def ReplaceCRhits(imagelist,NoofNDRs=None,tile=FullTile):
         foundk=[]
         for k in range(len(XYlist)) :
             i,j=XYlist[k]
-            t,junkx,junky=CRhitslocation(nextcube[:,i,j].reshape((Tlength,1,1)),thresh=6) #Locations of CR hit
+            t,junkx,junky=CRhitslocation(nextcube[:,i,j].reshape((Tlength,1,1)),thresh=10) #Locations of CR hit
             if len(t)==0 :  # no CR hits in this image at this i,j pixel
                 imgcube[:,i,j]=nextcube[:,i,j]
                 foundk.append(k)
@@ -108,7 +122,7 @@ def AverageWithCRrej(imagelist,NoofNDRs=None,tile=FullTile):
     for img in imglist:
         imgcube=LoadDataCube(img,RampNDRsuffix,NoofNDRs=NoofNDRs,tile=tile)
         imgcube=np.ma.array(imgcube,fill_value=0) #Keeping fill value to zero for removing the CR hit pixels
-        T,X,Y=CRhitslocation(imgcube,thresh=6) #Locations of CR hit
+        T,X,Y=CRhitslocation(imgcube,thresh=10) #Locations of CR hit
         for i,j in np.unique(zip(X,Y)): imgcube[:,i,j]=np.ma.masked
         sumcube+=imgcube.filled()
         N[~np.ma.getmaskarray(imgcube[0,:,:])]+=1
@@ -159,10 +173,10 @@ def FitSlope(imgcube,time, CRcorr=False):
     # Sx=np.ma.array(np.ones(imgcube.shape,dtype=np.int)*time[:,np.newaxis,np.newaxis],mask=np.ma.getmaskarray(imgcube)).sum(axis=0)
     # Sxx=np.ma.array(np.ones(imgcube.shape,dtype=np.int)*(time**2)[:,np.newaxis,np.newaxis],mask=np.ma.getmaskarray(imgcube)).sum(axis=0)
     Sx=np.ma.array(np.transpose(np.resize(time,tshape),(2,0,1)),mask=np.ma.getmaskarray(imgcube)).sum(axis=0,dtype=np.float64)
-    Sxx=np.ma.array(np.transpose(np.resize(time**2,tshape),(2,0,1)),mask=np.ma.getmaskarray(imgcube)).sum(axis=0,dtype=np.float64)
+    Sxx=np.ma.array(np.transpose(np.resize(np.square(time),tshape),(2,0,1)),mask=np.ma.getmaskarray(imgcube)).sum(axis=0,dtype=np.float64)
 
     Sy=imgcube.sum(axis=0,dtype=np.float64)
-    Syy=(imgcube**2).sum(axis=0,dtype=np.float64)
+    Syy=(np.square(imgcube)).sum(axis=0,dtype=np.float64)
     Sxy=(imgcube*time[:,np.newaxis,np.newaxis]).sum(axis=0,dtype=np.float64)
     n=np.ma.count(imgcube,axis=0)   #number of points used in fitting slope of a pixel
     
@@ -173,13 +187,16 @@ def FitSlope(imgcube,time, CRcorr=False):
     beta=np.ma.masked_where(n<2,beta)
     alpha=np.ma.array(alpha,mask=np.ma.getmaskarray(beta))
 
-    #If cosmic ray hit correction is asked to do
-    if CRcorr == True :
-        T,X,Y=CRhitslocation(imgcube,thresh=6)  #Locations of CR hit
+    #If cosmic ray hit correction is asked to do and total exposure of image was more than 4 sec
+    if CRcorr == True and imgcube.shape[0] > 5 :
+        T,X,Y=CRhitslocation(imgcube,thresh=10)  #Locations of CR hit
         #Masking the first pixel after a CR hit.
         imgcube[(T,X,Y)]=np.ma.masked
         #Loop over each pixel (X,Y) with cosmic ray hits
         print("Number of Cosmic Ray hits : %d " %(len(T)))
+        if len(T) > 1000 :  #Sanity check
+            print("More than 1000 CR hits are not possible and worth removing. \n So better discard this image. Skipping CR hit removal.")
+            return (beta,alpha)   #Exiting this function skipping CR hit removal...
         for i,j in np.unique(zip(X,Y)):
             localbeta=[]
             localalpha=[]
@@ -187,14 +204,17 @@ def FitSlope(imgcube,time, CRcorr=False):
             localsigma=[]
             #loop over each sections of the ramp.
             slices=np.ma.notmasked_contiguous(imgcube[:,i,j])
+            if slices is None :  #When no unmasked pixels exist
+                print('Couldnot remove CR (insufficent data) at %d %d '%(i,j))
+                continue 
             for k in range(len(slices)) :
                 n=len(imgcube[:,i,j][slices[k]])
                 if  n > 3 : #At least 4 points are there to calculate slope
                     time=np.arange(slices[k].start,slices[k].stop)
                     Sx=time.sum(dtype=np.float64)
-                    Sxx=(time**2).sum(dtype=np.float64)
+                    Sxx=(np.square(time)).sum(dtype=np.float64)
                     Sy=imgcube[:,i,j][slices[k]].sum(dtype=np.float64)
-                    Syy=(imgcube[:,i,j][slices[k]]**2).sum(dtype=np.float64)
+                    Syy=(np.square(imgcube[:,i,j][slices[k]])).sum(dtype=np.float64)
                     Sxy=(imgcube[:,i,j][slices[k]]*time).sum(dtype=np.float64)
                     #append localbeta, localalpha, localn and localsigma
                     localbeta.append((n*Sxy - Sx*Sy)/ (n*Sxx - Sx**2))
@@ -203,8 +223,12 @@ def FitSlope(imgcube,time, CRcorr=False):
                     Se2=(n*Syy -Sy**2- localbeta[-1]**2 *(n*Sxx- Sx**2))/(n*(n-2))
                     localsigma.append(np.sqrt(n*Se2/(n*Sxx-Sx**2)))   #Std dev Error of slope beta
             #calculate the average beta with weights 1/localsigma 
-            beta[i,j]=np.average(localbeta,weights=1.0/np.asarray(localsigma))
-            alpha[i,j]=localalpha[0]
+	    if len(localsigma) > 0 : 
+                beta[i,j]=np.average(localbeta,weights=1.0/np.asarray(localsigma))
+                alpha[i,j]=localalpha[0]
+#            except ZeroDivisionError :
+            else :
+                print('Couldnot remove CR hit (insufficent data) at %d %d '%(i,j))
 
     return (beta,alpha)
 
@@ -507,7 +531,7 @@ def ApplyNonLinearityCorrection(image,NLcoeffs,LThresh,UThresh,tile=FullTile):
     summ=imgcube.copy()
     summ[~np.ma.getmaskarray(summ)]=0   #Setting all unmasked elements to zero
     for i in range(order+1):
-        summ+=NLcoeffs[i][np.newaxis,:,:]*(imgcube**(order-i))
+        summ+=NLcoeffs[i][np.newaxis,:,:]*(np.power(imgcube,(order-i)))
 
     imgcube=summ
     #Removing all the maskes..
@@ -570,6 +594,15 @@ def main():
             imgcube=LoadDataCube(img,RampNDRsuffix,NoofNDRs=NDRS2read,tile=sec)
             imgcube=np.ma.masked_greater(imgcube,Uthresh[sec[0]:sec[1],sec[2]:sec[3]]*UthreshFactor)
             imgcube-=DarkAvgcube[:NDRS2read,sec[0]:sec[1],sec[2]:sec[3]]  #Dark subtraction
+            if imgcube.shape[0] >= 60 :  #Throw away first 5 pixels before fitting dlope
+                imgcube=imgcube[5:,:,:]
+                prihdr.add_history('Discarded first 5 NDRS')
+            elif imgcube.shape[0] >= 20 and prihdr['LOWER']=='G' : #Spectras more than 20 NDRS
+                imgcube=imgcube[5:,:,:]
+                prihdr.add_history('Discarded first 5 NDRS') 
+	    elif imgcube.shape[0] >= 15 : #Atleast 15 NDRS are there...
+                imgcube[:5,np.ma.count(imgcube,axis=0) >= 15]=np.ma.masked
+                prihdr.add_history('Discarded first 5 NDRS of non saturating pixels')
             time=np.arange(imgcube.shape[0],dtype=np.int)
             beta,alpha=FitSlope(imgcube,time)#, CRcorr=True)
             hdulist[0].data[sec[0]:sec[1],sec[2]:sec[3]]=beta.data
