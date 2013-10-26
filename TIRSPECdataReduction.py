@@ -19,10 +19,182 @@ import shutil
 # Other modules inserted inside the code are
 # pyraf.iraf
 # from astropy.io import ascii
-# import astropy.table as table  #IMP: Requires astropy version >= 0.3 for vstack function in Task #9 Photmetry
+# import astropy.table as table  #IMP: Requires astropy version >= 0.3 for vstack function in Task #9 Photometry
+def SpectralExtraction_subrout():
+    """ Extracts spectra from 2d image and also applies wavelength calibration """
+    iraf.noao(_doprint=0) 
+    iraf.twodspec(_doprint=0) 
+    iraf.onedspec(_doprint=0) 
+    iraf.apextract(_doprint=0)
+    iraf.apextract.unlearn()
+    iraf.apall.unlearn()
+    iraf.apsum.unlearn()
+    iraf.reidentify.unlearn()
+    iraf.dispcor.unlearn()
+    iraf.scombine.unlearn()
+
+    iraf.apextract.setParam('dispaxis',DISPAXIS) # Always 2 for TIRSPEC
+    iraf.cd(MotherDIR)
+    directories=LoadDirectories(CONF=False)
+    for night in directories:
+        print('Working on night: '+night)
+        iraf.cd(MotherDIR+'/'+night)        
+        try:
+            #First we load the Spectrastoextract_Argon_BandFilter.txt
+            SpecslistFILE=open('Spectrastoextract_Argon_BandFilter.txt','r')
+        except IOError:
+            print('Could not fine Spectrastoextract_Argon_BandFilter.txt in this directory. Hence skipping %s directory'%(night))
+            continue
+        #Image to Argon file dictinoary
+        Img2Argon=[]  #They are first born as lists...
+        Img2Filt=[]
+        AllImglist=[]
+        for line in SpecslistFILE.readlines():
+            line=line.rstrip().split()
+            Img2Argon.append((line[0],line[1]))
+            Img2Filt.append((line[0],line[2]))
+            AllImglist.append(line[0])
+        SpecslistFILE.close()
+        Img2Argon=dict(Img2Argon)
+        Img2Filt=dict(Img2Filt)
+        #Initialising an empty dictionary for storing spectras of each filter
+        Filt2finalspecs=dict()
+        for filt in set(Img2Filt.values()) : Filt2finalspecs[filt]=[]
+
+        for img in AllImglist:
+            print("Working on image "+night+" "+img)
+            leftover=glob.glob(img[:-5]+'_*.fits')  #Clean up of some previous attempts if any..
+            leftover+=glob.glob(img[:-5]+'.ms.fits')
+            if len(leftover) > 0 :
+                os.system('mkdir -p Leftover')
+                for lft in leftover :
+                    os.system('mv '+lft+' Leftover/ ')
+
+            # Running apall
+            iraf.apall(input=img,nfind=1,lower=-15,upper=15,llimit=-15,ulimit=15,b_sample=BACKGROUND,background ='fit',weights ='variance',readnoi=READNOISE,gain=EPADU,t_function=TRACEFUNC,t_order=TRACEORDER,t_niterate=1,ylevel=SPECAPPERTURE,interactive=VER)
+            #Extracting the Argon arc for this spectra as img_arc.fits
+            iraf.apall(input=Img2Argon[img],reference=img,out=img[:-5]+'_arc',recenter='no',trace='no',background='none',interactive='no')
+            #Now reidentify the lines in this spectra
+            RepoLamp='RepoArgon_'+Img2Filt[img]+'.fits'
+            iraf.reidentify(reference=RepoLamp, images=img[:-5]+'_arc',verbose='yes',interactive=VER)
+            #Edit the header of img to add ref lamp
+            iraf.hedit(img[:-4]+'ms.fits', "REFSPEC1",img[:-5]+'_arc.fits', add=1, ver=0)
+            # dispcor to apply the calibration
+            iraf.dispcor(input=img[:-4]+'ms.fits',output=img[:-5]+'_wc.ms.fits')
+            #Saving the output file for future
+            Filt2finalspecs[Img2Filt[img]].append(img[:-5]+'_wc.ms.fits')
+        
+        #At the end of the night Appending the name to the final spectra list of each band
+        for filt in Filt2finalspecs.keys():
+            foo=open('FinalwcSpectralistin_'+filt+'.txt','w')
+            foo.write(' \n'.join(Filt2finalspecs[filt])+' \n')
+            foo.close()
+            print('List of final spectras in FinalwcSpectralistin_'+filt+'.txt')
+            if SCOMBINE=='YES':
+                try:
+                    iraf.scombine(input='@FinalwcSpectralistin_'+filt+'.txt',output=filt+'_avg_'+Filt2finalspecs[filt][0],combine='average',scale='median')
+                    print('Averaging the spectras to final output '+filt+'_avg_'+Filt2finalspecs[filt][0])
+                except iraf.IrafError, e :
+                    print(e)
+                    print('ERROR: Could not scombine images in FinalwcSpectralistin_'+filt+'.txt')
+
+            
+    print('All nights over...')            
+            
+
+        
+            
+
+def SpectralPairSubtraction_subrout():
+    """ This will display all the spectra to be extracted to choose the mutual subtraction pairs """
+    directories=LoadDirectories(CONF=False)
+    for night in directories:
+        print('Working on night: '+night)
+        try:
+            #First we load a dictionary of raw images to their filters
+            FiltrFILE=open(night+'/AllObjects.List','r')
+            Filtrfiledic=dict([(filtset.split()[0],shlex.split(filtset.rstrip())[1]) for filtset in FiltrFILE.readlines()])  #Dictionary of filterset for each image.
+            FiltrFILE.close()
+            #Secondly we load a dictionary of raw images to their Calibration Argon lamb file
+            ArgonFILE=open(night+'/AllObjects-FinalArgon.List','r')
+            Argonfiledic=dict([(Argonset.split()[0],shlex.split(Argonset.rstrip())[1]) for Argonset in ArgonFILE.readlines()])  #Dictionary of Argon file for each image.
+            ArgonFILE.close()
+
+            #Secondly, we load a dictionary of Dither Frame to first Raw images
+            DitherFILE=open(night+'/FirstoneANDcombinedImages.List','r')
+            DitherFILElines=DitherFILE.readlines()
+            DitherFILE.close()            
+            Ditherfiledic=dict([(ditherset.rstrip().split()[1],ditherset.split()[0]) for ditherset in DitherFILElines if len(ditherset.split()) == 2])  #Dictionary of First image of each Dither set.
+            #We shall also keep a list of images in proper order.
+            Allimglist=[ditherset.rstrip().split()[1]  for ditherset in DitherFILElines if len(ditherset.split()) == 2]
+
+        except IOError,e:
+            print('Cannot open the image file list.')
+            print(e)
+            print('So skipping this directory.')
+            print('-'*60)
+            continue
+        #Output file to write the table of final image, argon and filter band
+        outlog=open(night+'/Spectrastoextract_Argon_BandFilter.txt','w')
+        #First Lets create the list of filters to iterate through
+        FilterList=list(set([eval(filtset)[0] for filtset in Filtrfiledic.values()]))
+        print("You have %d orders of spectra for this object on this night %s"%(len(FilterList),night))
+        OutFilePrefix=raw_input('Enter the prefix of you want for reduced 1d spectra: ')
+        for filt in FilterList:
+            #List of images with this filter.
+            Imglist=[img for img in Allimglist if eval(Filtrfiledic[Ditherfiledic[img]])[0] == filt ]
+            if len(Imglist) < 16 :
+                for i,img in enumerate(Imglist): iraf.display(night+'/'+img,i+1)
+            else : print('Number of images more that 16, Hence not displaying in ds9')
+            if len(Imglist) <= 26 :
+                ABCDtoimg=dict()
+                Anumb=ord('A')
+                AlphatoFILE=open(night+'/ABCDtoImageTable_'+filt+'.txt','w')
+                for i,img in enumerate(Imglist):
+                    alpha=chr(Anumb+i)
+                    ABCDtoimg[alpha]=img
+                    print("%s : %s"%(alpha,img))
+                    AlphatoFILE.write("%s  %s"%(alpha,img)+' \n')
+                AlphatoFILE.close()
+                print("Enter the pairs to subtract in space seperated form ")
+                print("For Example an input: AB BC CB D")
+                print("Corresponding images produced by subtraction or not are : A-B, B-C, C-B and D")
+                print("Note: the final D is not a subtracted image ")
+                subpairs=raw_input('Pairs to process: ')
+                subpairs=subpairs.split()
+                for instr in subpairs:
+                    instr=instr.upper()
+                    if len(instr) == 2 :
+                        Outimg=OutFilePrefix+'_'+filt+'_'+instr[0]+'-'+instr[1]+'.fits'
+                        try:
+                            iraf.imarith(operand1=night+'/'+ABCDtoimg[instr[0]],op="-",operand2=night+'/'+ABCDtoimg[instr[1]],result=night+'/'+Outimg)
+                        except iraf.IrafError, e :
+                            print(e)
+                            print('Skipping to next instruction')
+                            continue
+                    elif len(instr) == 1 : 
+                        Outimg=OutFilePrefix+'_'+filt+'_'+instr[0]+'.fits'
+                    else : 
+                        print("Could not understand "+instr)
+                        continue
+                    
+                    outlog.write(Outimg+' '+Argonfiledic[Ditherfiledic[ABCDtoimg[instr[0]]]]+' '+filt+' \n')
+                #Now Copy the already identified Repository Lamps to this directory.
+                print("Copying already identified lines of this filter %s from Repository.."%(filt))
+                os.system('mkdir -p '+night+'/database/')
+                shutil.copy(LAMPREPODIR+'/RepoArgon_'+filt+'.fits',night+'/RepoArgon_'+filt+'.fits')
+                shutil.copy(LAMPREPODIR+'/database/idRepoArgon_'+filt,night+'/database/idRepoArgon_'+filt)
+
+            else:
+                print("More than 26 images in single filter? Sorry, you should consider combining them somehow. Or split into two nights directory")
+        #End of all filters of this night.
+        outlog.close()
+    print('All nights over...')                    
+        
 
 
 def Photometry():
+    """ Does the photometry of images in MotherDIR/Images4Photo.in """
     iraf.noao(_doprint=0)     #Loading packages noao digiohot apphot daophot
     iraf.digiphot(_doprint=0)
     iraf.apphot(_doprint=0)
@@ -921,6 +1093,26 @@ for con in configfile.readlines():
         elif con.split()[0] == "DOPSF=" :
             DOPSF=con.split()[1]
 
+        elif con.split()[0] == "ARGONDIRECTORY=" :
+            LAMPREPODIR=con.split()[1]
+        elif con.split()[0] == "SPECAPPERTURE=" :
+            SPECAPPERTURE=con.split()[1]
+        elif con.split()[0] == "BACKGROUND=" :
+            BACKGROUND=con.split()[1]
+        elif con.split()[0] == "TRACEFUNC=" :
+            TRACEFUNC=con.split()[1]
+        elif con.split()[0] == "TRACEORDER=" :
+            TRACEORDER=con.split()[1]
+        elif con.split()[0] == "NORMFUNC=" :
+            NORMFUNC=con.split()[1]
+        elif con.split()[0] == "NORMORDER=" :
+            NORMORDER=con.split()[1]
+        elif con.split()[0] == "SCOMBINE=" :
+            SCOMBINE=con.split()[1]
+        elif con.split()[0] == "DISPAXIS=" :
+            DISPAXIS=con.split()[1]
+
+
 configfile.close()
 MotherDIR=os.getcwd()
 #    OUTPUTfilePATH=MotherDIR+'/'+OUTPUTfile
@@ -938,7 +1130,9 @@ print("2  Manually inspect and reject object images by displaying one by one to 
 print("3  Manually inspect and reject Flats/Argons by displaying one by one\n")
 print("4  Combine images in a Dither, apply Flat Correction and Bad pixel interpolation\n")
 if TODO=='P':print("5  Align and combine combined images of each Dither in Photometry data \n")
+elif TODO=='S':print("5  Give Spectrum pair subtraction input \n")
 if TODO=='P':print("6  Make the list of images, Images4Photo.in to do Photometry \n")
+elif TODO=='S':print("6  Extract wavelength calibrated 1D spectra from image \n")
 if TODO=='P':print("7  Select Stars and Sky region of the field on first image \n")
 #print("7  Remove Cosmic Rays on all the images in Images4Photo.in. IMP:It will OVERWRITE original images.\n")
 if TODO=='P':print("8  Create Sextracter config file & coordinate output of first image in this directory \n")
@@ -946,7 +1140,7 @@ if TODO=='P':print("9  Do Photometry \n")
 print("--------------------------------------------------------------- \n")
 todo=raw_input('Enter the list : ')
 todo=todo.split()
-if ("2" in todo) or ("3" in todo) or ("4" in todo) or ("5" in todo) or ("7" in todo) or ("8" in todo) or ("9" in todo) :
+if ("2" in todo) or ("3" in todo) or ("4" in todo) or ("5" in todo) or ("7" in todo) or ("8" in todo) or ("9" in todo) or (("6" in todo) and (TODO=='S')):
     from pyraf import iraf
 if ("9" in todo) :
     from astropy.io import ascii
@@ -964,10 +1158,10 @@ for task in todo :
         CombDith_FlatCorr_subrout(method=IMGCOMBMETHOD)
     elif task == "5" :
         if TODO=='P': AlignNcombine_subrout(method=DITHERCOMBMETHOD)
-
+        elif TODO=='S': SpectralPairSubtraction_subrout()
     elif task == "6" :
         if TODO=='P': Createlist_subrout()
-
+        elif TODO=='S': SpectralExtraction_subrout()
     elif task == "7" :
         if TODO=='P': Star_sky_subrout()
 
