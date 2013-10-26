@@ -27,7 +27,7 @@ print("Give suffix .pl only if you want to generate a binary mask file using ira
 Outfile=raw_input("Output mask name : ")
 if Outfile[-3:] == '.pl' :
     from pyraf import iraf
-    Outfname=Outfile[-3:]+".txt"
+    Outfname=Outfile[:-3]+".txt"
     Createpl=True
 else:
     Outfname=Outfile
