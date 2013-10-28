@@ -970,33 +970,42 @@ def SelectionofFrames_subrout():
         ObjFILE.close()
         #Now ask for flats in each filters
         Flatlistdic=dict()
+        print("Below in addition to regexp, if needed you can enter the starting and ending filenumbers separated by space also.")
         for filt in FiltList:
+            filenumbregexp=re.compile(r'.*')
             if filt not in FiltREdic.keys() : 
-                FiltREdic[filt]=ObjRE  #Setting default to self
+                if TODO=='P': FiltREdic[filt]=ObjRE  #Setting default to self for photometry
+                elif TODO=='S': FiltREdic[filt]='.*Continu.*'
             #Ask user again to confirm or change if he/she needs to
             InpfiltRE=raw_input("Enter Regular Expression for the flat of filters %s (default: %s) : "%(str(filt),FiltREdic[filt])).strip(' ')
             if InpfiltRE :
                 FiltREdic[filt]=InpfiltRE
+                if len(InpfiltRE.split())==3 and is_number(InpfiltRE.split()[1]) and is_number(InpfiltRE.split()[2]):
+                    filenumbregexp=re.compile('|'.join(['.*'+str(i)+'.*' for i in range(int(InpfiltRE.split()[1]), int(InpfiltRE.split()[2])+1)]))
+                    FiltREdic[filt]=InpfiltRE.split()[0]
+                    
             regexpFilt= re.compile(r''+FiltREdic[filt])
-            FlatList=[imgline.split()[0] for imgline in slopeimgFILElines if (regexpFilt.search(imgline.split()[0]) is not None) and (filt == tuple([pos.upper() for pos in shlex.split(imgline)[5:8]])) ]
+            FlatList=[imgline.split()[0] for imgline in slopeimgFILElines if (regexpFilt.search(imgline.split()[0]) is not None) and (filt == tuple([pos.upper() for pos in shlex.split(imgline)[5:8]])) and filenumbregexp.search(imgline.split()[0]) ]
             Flatlistdic[filt]=FlatList  #Saving flat list for this filter set
         
-        #What is happening here is very dumb.. I am taking all pattern matching images with same filter combination.
-        #It is maximally dumb thing to do for spectra's Continuum and Argon. We should be selecting only contemporary Continuum flats and Argon.
-        #I'm feeling brain dead now to implement it. // To Do later...
-
         #Now if We are doing Spectroscopy, Find the corresponding Argon lamps also
         if TODO=='S':
             Argonlistdic=dict()
+            print("Below in addition, if needed you can enter the starting and ending filenumbers separated by space.")
             for filt in FiltList:
+                filenumbregexp=re.compile(r'.*')
                 if filt not in ArgonREdic.keys() : 
                     ArgonREdic[filt]='.*Argon.*'  #Setting default to *Argon*
                 #Ask user again to confirm or change if he/she needs to
                 InpfiltRE=raw_input("Enter Regular Expression for the Argon of filters %s (default: %s) : "%(str(filt),ArgonREdic[filt])).strip(' ')
                 if InpfiltRE :
                     ArgonREdic[filt]=InpfiltRE
+                    if len(InpfiltRE.split())==3 and is_number(InpfiltRE.split()[1]) and is_number(InpfiltRE.split()[2]):
+                        filenumbregexp=re.compile('|'.join(['.*'+str(i)+'.*' for i in range(int(InpfiltRE.split()[1]), int(InpfiltRE.split()[2])+1)]))
+                        ArgonREdic[filt]=InpfiltRE.split()[0]
+
                 regexpArg= re.compile(r''+ArgonREdic[filt])
-                ArgonList=[imgline.split()[0] for imgline in slopeimgFILElines if (regexpArg.search(imgline.split()[0]) is not None) and (filt == tuple([pos.upper() for pos in shlex.split(imgline)[5:8]])) ]
+                ArgonList=[imgline.split()[0] for imgline in slopeimgFILElines if (regexpArg.search(imgline.split()[0]) is not None) and (filt == tuple([pos.upper() for pos in shlex.split(imgline)[5:8]])) and filenumbregexp.search(imgline.split()[0]) ]
                 Argonlistdic[filt]=ArgonList  #Saving Argon list for this filter set
             
         #Now, load the Object list and write to a file the Obj and corresponding flats/Argons
