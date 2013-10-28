@@ -885,20 +885,30 @@ def Manual_InspectFlat_subrout():
 def Manual_InspectObj_subrout():
     """ This will display one image after other, and based on user input classify images of each dither position """
     directories=LoadDirectories(CONF=True)
-    print("Press _a_ and then _q_ over a good central star for selecting image")
+    if TODO=='P': print("Press _a_ and then _q_ over a good central star for selecting image")
+    if TODO=='S': print("Press _j_ and then _q_ over a good part of spectra for selecting image")
     for night in directories:
         ObjFILE=open(night+'/AllObjects.List','r')
         Obj2CombFILE=open(night+'/AllObjects2Combine.List','w')
         newX=0
         newY=0
+        newsX=0
+        FWHM=4.0  #Not important what number you give here...
         newU_L_Sfilter='(Blah,Blah,Blah)'
         for objline in ObjFILE.readlines():
             img=objline.split()[0]
             iraf.display(night+'/'+img,1)
             print(objline)
-            print('\n To discard this image press _q_ without pressing _a_')
-            imx=iraf.imexam(Stdout=1)
-            if len(imx) <= 1 : #Then discard this image
+            if TODO=='P':print('\n To discard this image press _q_ without pressing _a_')
+            if TODO=='S':print('\n To discard this image press _q_ without pressing _j_')
+            try:
+                imx=iraf.imexam(Stdout=1)
+            except iraf.IrafError, e :
+                print ('IRAF ERROR : This image %s might be having problem, still choosing it'%(night+'/'+img))
+                print e
+                if len(imx) < 1 :imx=['center= %f  peak fwhm= %f bkg'%(newsX,FWHM)]  #A dummy entry..
+                
+            if len(imx) < 1 : #Then discard this image
                 print('Discarding image :'+night+'/'+img)
                 continue
             #Else, continue below
@@ -912,12 +922,19 @@ def Manual_InspectObj_subrout():
                 newY=eval(imx[2].split()[1])
                 #Print blank enter in the output file if the star has shifted
                 StarShifted= np.sqrt((newX-oldX)**2 +(newY-oldY)**2) > 1*FWHM
-                # or filter wheels have changed.
-                FiltersChanged= newU_L_Sfilter != oldU_L_Sfilter 
-                if StarShifted or FiltersChanged : Obj2CombFILE.write('\n')
-
             elif TODO=='S' : #If doing spectroscopy
-                Obj2CombFILE.write('\n')   #Enter a blank line anyway. We can ask user to remove it if he/she needs to combine frames.
+                oldsX=newsX
+                oldU_L_Sfilter=newU_L_Sfilter
+                newU_L_Sfilter=shlex.split(objline)[1]
+                s=imx[-1]
+                FWHM=eval(s[s.rfind('fwhm=')+5:s.rfind('bkg')])
+                newsX=eval(s[s.rfind('center=')+7:s.rfind('peak')])
+                #Print blank enter in the output file if the star has shifted
+                StarShifted= np.abs(newsX-oldsX) > 1*FWHM
+                
+            # or filter wheels have changed.
+            FiltersChanged= newU_L_Sfilter != oldU_L_Sfilter 
+            if StarShifted or FiltersChanged : Obj2CombFILE.write('\n')
 
             #Now, add this img name to dither image list
             Obj2CombFILE.write(img+' '+str(newX)+' '+str(newY)+'\n')
