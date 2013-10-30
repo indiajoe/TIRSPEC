@@ -854,7 +854,8 @@ def Manual_InspectFlat_subrout():
             AlwaysAccept=[]
             for inpline in inFILE.readlines():
                 inplinelist=inpline.rstrip().split()
-                ScienceImg=inplinelist[0]
+                if len(inplinelist) > 1 : ScienceImg=inplinelist[0]
+                else : continue   #Skipping to next line
                 CalImgs=[imgs for imgs in inplinelist[1:] if imgs not in AlwaysRemove]
                 FinalCalImgs=CalImgs[:]
                 print('For the science image: '+ScienceImg)
@@ -963,6 +964,8 @@ def SelectionofFrames_subrout():
         FiltList=set()  #Set to store the list of filters needed to find flat/Argon for
         ObjFILE=open(night+'/AllObjects.List','w')
         for Objline in ObjList:
+            if (TODO=='P' and shlex.split(Objline)[6].upper() =='G') or (TODO=='S' and shlex.split(Objline)[6].upper() !='G') :
+                continue    #Skip this and go to the next object.
             Name=shlex.split(Objline)[0]
             U_L_Sfilter=tuple([pos.upper() for pos in shlex.split(Objline)[5:8]])  #(UPPER,LOWER,SLIT) filters in Uppercase
             FiltList.add(U_L_Sfilter)
@@ -1012,6 +1015,8 @@ def SelectionofFrames_subrout():
         ObjFlatFILE=open(night+'/AllObjects-Flat.List','w')
         if TODO=='S': ObjArgonFILE=open(night+'/AllObjects-Argon.List','w')
         for Objline in ObjList:
+            if (TODO=='P' and shlex.split(Objline)[6].upper() =='G') or (TODO=='S' and shlex.split(Objline)[6].upper() !='G') :
+                continue    #Skip this and go to the next object.
             Name=shlex.split(Objline)[0]
             U_L_Sfilter=tuple([pos.upper() for pos in shlex.split(Objline)[5:8]])  #(UPPER,LOWER,SLIT) filters in UPPERCASE
             ObjFlatFILE.write(Name+'  '+' '.join(Flatlistdic[U_L_Sfilter])+'\n')
