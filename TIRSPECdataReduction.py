@@ -174,6 +174,7 @@ def SpectralPairSubtraction_subrout():
                             continue
                     elif len(instr) == 1 : 
                         Outimg=OutFilePrefix+'_'+filt+'_'+instr[0]+'.fits'
+                        shutil.copy(night+'/'+ABCDtoimg[instr[0]],night+'/'+Outimg)
                     else : 
                         print("Could not understand "+instr)
                         continue
