@@ -49,19 +49,23 @@ do
     case $choice in
 	0) 
 	    MachineIP='NIL' 
+	    echo
 	    echo "No downloading of data wil be done." 
 	    break ;;
 	
 	1) 
 	    MachineIP='192.168.1.23' 
+	    echo
 	    echo "Final Data will be downloaded to $MachineIP"
 	    break ;;	
 	2) 
 	    MachineIP='192.168.1.14' 
+	    echo
 	    echo "Final Data will be downloaded to $MachineIP"
 	    echo "Sorry: Not yet setup. cannot be done..."
 	    break ;;
 	*)
+	    echo
 	    echo "Pls enter a valid choice: 0,1, or 2" 
 	    ;;
     esac
