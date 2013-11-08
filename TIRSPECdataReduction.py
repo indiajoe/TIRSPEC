@@ -985,7 +985,7 @@ def SelectionofFrames_subrout():
             if InpfiltRE :
                 FiltREdic[filt]=InpfiltRE
                 if len(InpfiltRE.split())==3 and is_number(InpfiltRE.split()[1]) and is_number(InpfiltRE.split()[2]):
-                    filenumbregexp=re.compile('|'.join(['.*'+str(i)+'.*' for i in range(int(InpfiltRE.split()[1]), int(InpfiltRE.split()[2])+1)]))
+                    filenumbregexp=re.compile('|'.join(['.*-'+str(i)+'\..*' for i in range(int(InpfiltRE.split()[1]), int(InpfiltRE.split()[2])+1)]))
                     FiltREdic[filt]=InpfiltRE.split()[0]
                     
             regexpFilt= re.compile(r''+FiltREdic[filt])
@@ -1005,7 +1005,7 @@ def SelectionofFrames_subrout():
                 if InpfiltRE :
                     ArgonREdic[filt]=InpfiltRE
                     if len(InpfiltRE.split())==3 and is_number(InpfiltRE.split()[1]) and is_number(InpfiltRE.split()[2]):
-                        filenumbregexp=re.compile('|'.join(['.*'+str(i)+'.*' for i in range(int(InpfiltRE.split()[1]), int(InpfiltRE.split()[2])+1)]))
+                        filenumbregexp=re.compile('|'.join(['.*-'+str(i)+'\..*' for i in range(int(InpfiltRE.split()[1]), int(InpfiltRE.split()[2])+1)]))
                         ArgonREdic[filt]=InpfiltRE.split()[0]
 
                 regexpArg= re.compile(r''+ArgonREdic[filt])
