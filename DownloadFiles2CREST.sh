@@ -101,4 +101,6 @@ if [[ $MachineIP != 'NIL' ]] ; then
     echo "All uploads to CREST over..."
 fi
 echo "Thanks for using TIRSPEC."
-	
+echo
+echo "Press Enter to close."
+read junk	
