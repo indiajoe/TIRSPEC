@@ -141,12 +141,13 @@ def SpectralPairSubtraction_subrout():
         print("You have %d orders of spectra for this object on this night %s"%(len(FilterList),night))
         OutFilePrefix=raw_input('Enter the prefix of you want for reduced 1d spectra: ')
         for filt in FilterList:
+            print("Working on filter : "+filt)
             #List of images with this filter.
             Imglist=[img for img in Allimglist if eval(Filtrfiledic[Ditherfiledic[img]])[0] == filt ]
             if len(Imglist) < 16 :
                 for i,img in enumerate(Imglist): iraf.display(night+'/'+img,i+1)
             else : print('Number of images more that 16, Hence not displaying in ds9')
-            if len(Imglist) <= 26 :
+            if len(Imglist) <= 26 and len(Imglist) != 0:
                 ABCDtoimg=dict()
                 Anumb=ord('A')
                 AlphatoFILE=open(night+'/ABCDtoImageTable_'+filt+'.txt','w')
@@ -187,7 +188,7 @@ def SpectralPairSubtraction_subrout():
                 shutil.copy(LAMPREPODIR+'/database/idRepoArgon_'+filt,night+'/database/idRepoArgon_'+filt)
 
             else:
-                print("More than 26 images in single filter? Sorry, you should consider combining them somehow. Or split into two nights directory")
+                print("More than 26 images (or no images!!) in single filter? Sorry, you should consider combining them somehow. Or split into two nights directory")
         #End of all filters of this night.
         outlog.close()
     print('All nights over...')                    
