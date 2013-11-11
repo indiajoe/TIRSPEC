@@ -93,6 +93,7 @@ def ContinuumNormSpec(Inspec):
             print("Mask away the regions which are not part of continuum")
             continuum=AskAndMaskSpectra(continuum)
             Domask=False
+            plt.close()
         l=np.ma.count(continuum,axis=0)[1]  #Number of points to fit continuum
         sm=(l+np.sqrt(2*l))*6+useradd   #Smoothing factor for fitting.
         cont_tck=interp.splrep(np.ma.compressed(continuum[:,0]),np.ma.compressed(continuum[:,1]),s=sm)
@@ -153,7 +154,7 @@ def InterpolateRemoveFringes(InNspec,norm=True):
         avgFringe/=count
         avgFringe[avgFringe==0]=1  #Replace all zeros with 1...
         #Plot the Fringe normalised spectrum
-        plt.plot(range(L),Nspec[:,1]/avgFringe,'--',color='black')
+        plt.plot(range(L),Nspec[:,1]/avgFringe,'--',color='black',label='Result')
         plt.grid(True)
         plt.legend()
         plt.show(block=False)
@@ -243,7 +244,8 @@ def FindConvolutionKernel(InSpec1,InSpec2,wlshift=0,Ratio=1):
     Spec2=InSpec2.copy()
     #First we have to sample the second spectra exactly to same axis of first spectra
     tck2=interp.splrep(Spec2[:,0],Spec2[:,1],s=0)
-    Spec2=interp.splev(Spec1[:,0]-WLshift,tck2,der=0)
+    Spec2=Spec1.copy()  #Making the array same size of first spectra
+    Spec2[:,1]=interp.splev(Spec1[:,0]-wlshift,tck2,der=0)
     #We have to normalise the continuum of Second spectra. (First is believed to be already normalised).
     Spec2,flux2,continuum2=ContinuumNormSpec(Spec2)
     #We also have to scale the flux of the line spectra to Ratio
@@ -298,6 +300,7 @@ def FindConvolutionKernel(InSpec1,InSpec2,wlshift=0,Ratio=1):
             elif is_number(choice) : # Run RL more times
                 RLtorun=int(choice)
                 Kernel=RichardsonLucy(Spec2[:,1],Spec1[:,1],Kernel,RLtorun)
+                RLcount+=RLtorun
             else :
                 print("Error: Unknown choice, please retype correctly.")
         except (IndexError,ValueError):
@@ -309,11 +312,12 @@ def FindConvolutionKernel(InSpec1,InSpec2,wlshift=0,Ratio=1):
 def AskAndCleanStellarLines(Inspec):  
     """ Interactively helps user to fit a convolved function of standard star spectral line and remove it """
     spec=Inspec.copy() #Copying to protect input
+    spec[:,1]/=np.median(spec[:,1])  #Scaling for neatness of plot.
     Star='A0'
     StdNormSpecdic=dict([('A0','Vega_R2000_WR9000to30000_RS10_Norm.txt')])
     StdContBreakdic=dict([('A0','Cont_break_Vega_R2000_WR9000to30000_RS10_Norm.txt')])
     StdNorm=np.loadtxt(StdNormSpecdic[Star])
-    StdContBreak=np.loadtxt(StdContBreakdic[Star])
+#    StdContBreak=np.loadtxt(StdContBreakdic[Star])
     StdConvolved=False
     WLshift=0.0
     ratio=1
@@ -326,8 +330,8 @@ def AskAndCleanStellarLines(Inspec):
         fig = plt.figure()
         ax1 = fig.add_subplot(111)
         ax1.plot(spec[:,1],marker='.')    
-        ax1.plot(Std4Spec[:,1])
-        if StdConvolved : ax1.plot(spec[:,1]/Std4Spec[:,1],'--',drawstyle='steps',color='black')
+        ax1.plot(Std4Spec)
+        if StdConvolved : ax1.plot(spec[:,1]/Std4Spec,'--',drawstyle='steps',color='black')
         ax1.grid(True)
         ax2 = ax1.twiny()   # Adding the wavelength axis at top of the plot.
         ax2.plot(spec[:,0],spec[:,1],alpha=0)
@@ -350,7 +354,7 @@ def AskAndCleanStellarLines(Inspec):
             elif choice[0] == 'm' and len(choice.split())==3: #Match equivalent width
                 start=int(choice.split()[1])
                 end=int(choice.split()[2])
-                ratio=RatioToScaleEQW(Std4Spec[start:end,:],spec[start:end,:])
+                ratio=RatioToScaleEQW(Std4Spec[start:end],spec[start:end,:])
             elif choice[0] == 'f' and len(choice.split())==3: #Find the instrumental convolution kernel
                 start=int(choice.split()[1])
                 end=int(choice.split()[2])
@@ -363,7 +367,7 @@ def AskAndCleanStellarLines(Inspec):
                 confirm=raw_input("Do you want to apply the newly made kernel? (Enter y to apply) : ").strip(' ')
                 if confirm.lower() == 'y' :
                     print("Convolving the line profiles with newly made kernal")
-                    StdNorm[:,1]=np.convolve(StdNorm[:,1],kernel)
+                    StdNorm[:,1]=np.convolve(StdNorm[:,1],kernel,mode='same')
                     StdConvolved=True
                 else : print("Discarding the kernel generated for convolution.")
             elif choice[0] == 's': #Shifting of Telluric spectra
@@ -371,7 +375,7 @@ def AskAndCleanStellarLines(Inspec):
                 WLshift+=float(choice.split()[1])
                 print("New spectral shift is %f points"%(WLshift))
             elif choice[0:2] == 'wq' :  # Exit returning the Spectral line removed profile
-                spec[:,1]=spec[:,1]/Std4Spec[:,1]
+                spec[:,1]=spec[:,1]/Std4Spec
                 break
             else :
                 print("Error: Unknown choice, please retype correctly.")
@@ -427,6 +431,7 @@ def TelluricCorrect(InSci,InStd):
                 break
             elif choice[0] == 'f': #Stellar line fitting..
                 Std=AskAndCleanStellarLines(Std)
+                ScaleStd=1.0/np.median(Std[:,1])
             elif choice[0] == 'm': #Masking of unwanted region in std spectra
                 Std=AskAndMaskSpectra(Std)
             elif choice[0:2] == 'sc': #Scaling of Telluric spectra
@@ -437,7 +442,7 @@ def TelluricCorrect(InSci,InStd):
             elif choice[0:2] == 'sh': #Shifting of Telluric spectra
                 print("Previous spectral shift was %f Angstrom"%(StdWLshift))
                 StdWLshift+=float(choice.split()[1])
-                print("New spectral shift is %f Angstrom"%(ScaleWLshift))
+                print("New spectral shift is %f Angstrom"%(StdWLshift))
             else :
                 print("Error: Unknown choice, please retype correctly.")
         except (IndexError,ValueError):
