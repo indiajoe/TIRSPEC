@@ -14,7 +14,7 @@ def RichardsonLucy(Signal,PSF,IniKernel,niter):
            IniKernel: 1d numpy array, which is the initial guess of original signal
            niter    : integer, Number of iterations of RL deconvolution steps to be run """
     signal=Signal.copy()   #Copying to protect input
-    psf=PSF.copy()
+    psf=PSF/np.sum(PSF)   #Normalised PSF
     inikernel=IniKernel.copy()
     # Algorithm and syntax based on http://en.wikipedia.org/wiki/Richardson-Lucy_deconvolution
     psf_hat=psf[::-1] #psf hat, following wikipedia's syntax
@@ -28,7 +28,7 @@ def RichardsonLucy(Signal,PSF,IniKernel,niter):
     
 
 def BlackBodyFlux(InWavelengths,Temp):
-    """ Returns an array of median scaled flux from balckbody correponding to the input list of wavelengths, and given Temperature 
+    """ Returns an array of median scaled flux from blackbody corresponding to the input list of wavelengths, and given Temperature 
     Input InWavelengths : a list or  numpy array of wavelengths in Angstrom
           Temp        : Temperature of black body in Kelvin  """
     Wavelengths=InWavelengths.copy() #Copying to protect input
@@ -47,13 +47,23 @@ def AskAndMaskSpectra(Inspec):
     """ Displays the spectra in index coordinates and masks user requested points """
     spec=Inspec.copy() #Copying to protect input
     if not np.ma.isMaskedArray(spec): spec=np.ma.array(spec)
-
+    fig = plt.figure()
+    ax=fig.add_subplot(1,1,1)
+    fullline,=ax.plot(spec[:,1],marker='.',alpha=0.5)  #Saving the input full plot
+    plt.close()  #Close any previous windows and clear fig
     while True:
-        plt.close()
-        plt.plot(spec[:,1])    
-        plt.plot(spec[:,1],'.')
-        plt.grid(True)
-        plt.show(block=False)
+        if not plt.get_fignums():  #If window is not open
+            fig = plt.figure()
+            ax=fig.add_subplot(1,1,1)
+            fig.canvas.set_window_title('Masking')
+            ax.lines.append(fullline)  #Adding the original line.
+            ax.grid(True)
+            line,=ax.plot(spec[:,1],marker='.')
+            plt.show(block=False)
+        
+        ax.lines.remove(line)
+        line,=ax.plot(spec[:,1],marker='.')
+        plt.draw()
         print('M'+'-'*30+'M')
         print("Following example shows various input option available to you.")
         print(" 215 218    #This will remove points from 215 to 217. (including 215 and 217)")
@@ -77,8 +87,28 @@ def AskAndMaskSpectra(Inspec):
         except (IndexError,ValueError):
             print("Error: Unknown choice, please retype correctly..")
     #Now return the masked array.
+    plt.close()  #close window 
     return spec
 
+def AdjustAlphaPlots(ax,linelist,PlotHistLength,OnlyOneLabel=False):
+    """ In plot axis ax, this subroutine adjusts the transparency (alpha) of lines in linelist in increasing order.
+    It will also reduce the linelist to size of PlotHistLength by removing from beginning of list.
+    Those removed lines will also be removed from ax plot.
+    If OnlyOneLabel = True, then the labels of lines except the last one will be removed."""
+    if len(linelist) > PlotHistLength : 
+        for line in linelist[:-1*PlotHistLength] : 
+            ax.lines.remove(line)  #Removing older plots
+        linelist=linelist[-1*PlotHistLength:]   #Removing old lines from list also
+    #Adjusting the alpha of lines in decreasing order.
+    Nooflines=len(linelist)
+    for i,line in enumerate(linelist) :  
+        line.set_alpha((1.0+i)/Nooflines)
+    
+    if OnlyOneLabel :  #If all the labels except last one is asked to be removed
+        for line in linelist[:-1] : line.set_label('')
+    #Return the modified plots and line list
+    return ax,linelist
+    
 
 def ContinuumNormSpec(Inspec):
     """ Returns the continuum normalised spectra by interactively masking lines
@@ -87,23 +117,39 @@ def ContinuumNormSpec(Inspec):
     spec=Inspec.copy() #Copying to protect input
     continuum=np.ma.array(spec)
     useradd=0
+    scale=np.median(spec[:,1])
+    PlotHistLength=3   #Number of previous history plots to show.
     Domask=True
+    plt.close()
     while True:
         if Domask : 
             print("Mask away the regions which are not part of continuum")
             continuum=AskAndMaskSpectra(continuum)
             Domask=False
-            plt.close()
         l=np.ma.count(continuum,axis=0)[1]  #Number of points to fit continuum
         sm=(l+np.sqrt(2*l))*6+useradd   #Smoothing factor for fitting.
         cont_tck=interp.splrep(np.ma.compressed(continuum[:,0]),np.ma.compressed(continuum[:,1]),s=sm)
         CleanCont=interp.splev(spec[:,0],cont_tck,der=0)
-        scale=np.median(spec[:,1])
-        plt.plot(spec[:,0],spec[:,1]/scale)
-        plt.plot(spec[:,0],CleanCont/scale)
-        plt.plot(spec[:,0],spec[:,1]/CleanCont)
-        plt.grid(True)
-        plt.show(block=False)
+
+        if not plt.get_fignums():  #If window is not already open
+            fig = plt.figure()
+            ax=fig.add_subplot(1,1,1)
+            fig.canvas.set_window_title('Normalising Continuum')
+            ax.plot(spec[:,0],spec[:,1]/scale)
+            ax.grid(True)
+            plt.show(block=False)
+            ContPlotlist=[]
+            NspecPlotlist=[]
+
+        NewContPlotline,=ax.plot(spec[:,0],CleanCont/scale)
+        NewNspecPlotline,=ax.plot(spec[:,0],spec[:,1]/CleanCont)
+        ContPlotlist.append(NewContPlotline)
+        NspecPlotlist.append(NewNspecPlotline)
+        # Adjust the transparencies and remove old plots
+        ax,ContPlotlist=AdjustAlphaPlots(ax,ContPlotlist,PlotHistLength)
+        ax,NspecPlotlist=AdjustAlphaPlots(ax,NspecPlotlist,PlotHistLength)
+
+        plt.draw()
         print('-'*10)
         print("Present smoothing factor was %f "%(sm))
         print("Following example shows various input options available for you.")
@@ -123,6 +169,8 @@ def ContinuumNormSpec(Inspec):
                 print("Error: Unknown choice, please retype correctly.")
         except(IndexError,ValueError):
             print("Error: Unknown choice, please retype correctly..")
+
+    plt.close()
     #Calculate the flux inside the masked areas of continuum
     spec[:,1]=spec[:,1]/CleanCont   #Normalised spectrum
     flux=np.sum(spec[np.ma.getmaskarray(continuum[:,1]),1]-1)
@@ -138,14 +186,24 @@ def InterpolateRemoveFringes(InNspec,norm=True):
     else : continuum=np.ones(len(Nspec[:,1]))  # Continuum to return is just 1.
     FringeDic=dict()  #Dictionary to store fringe template arrays
     ShiftDic=dict()  #Dictionary to store shifts in each fringe templates
+    plt.close()
+    PlotHistLength=3   #Number of previous history plots to show.
+    L=len(Nspec[:,1])
     while True:
-        plt.close()
-        L=len(Nspec[:,1])
-        plt.plot(range(L),Nspec[:,1],marker='o',alpha=0.5)
+        if not plt.get_fignums():  #If window is not already open
+            fig = plt.figure()
+            ax=fig.add_subplot(1,1,1)
+            fig.canvas.set_window_title('Fringe Removal')
+            ax.plot(range(L),Nspec[:,1],marker='o',alpha=0.5)
+            ax.grid(True)
+            plt.show(block=False)
+            ResultPlotlist=[]
+
         avgFringe=np.zeros(L)
         count=np.zeros(L)
         for i in FringeDic:   #Ploting all the fringe templates
-            plt.plot(range(ShiftDic[i],ShiftDic[i]+len(FringeDic[i])),FringeDic[i],'-.',label=i)
+            ax.lines = [ line for line in ax.lines if line.get_label() != i ]  #Removing any previous plots of this label
+            ax.plot(range(ShiftDic[i],ShiftDic[i]+len(FringeDic[i])),FringeDic[i],'-.',label=i)
             #Add to the combined fringe template to divide the original spectra
             avgFringe[ShiftDic[i]:ShiftDic[i]+len(FringeDic[i])]+=FringeDic[i]
             count[ShiftDic[i]:ShiftDic[i]+len(FringeDic[i])]+=1
@@ -154,10 +212,11 @@ def InterpolateRemoveFringes(InNspec,norm=True):
         avgFringe/=count
         avgFringe[avgFringe==0]=1  #Replace all zeros with 1...
         #Plot the Fringe normalised spectrum
-        plt.plot(range(L),Nspec[:,1]/avgFringe,'--',color='black',label='Result')
-        plt.grid(True)
-        plt.legend()
-        plt.show(block=False)
+        NewResultline,=ax.plot(range(L),Nspec[:,1]/avgFringe,'--',color='black',label='Result')
+        ResultPlotlist.append(NewResultline)
+        ax,ResultPlotlist=AdjustAlphaPlots(ax,ResultPlotlist,PlotHistLength,OnlyOneLabel=True)
+        ax.legend()
+        plt.draw()
         print('-'*25)
         print("Following example shows various input option available to you.")
         print(" n a 10 41  #Selects the region 10 to 40 as new fringe template with label 'a' ")
@@ -193,7 +252,7 @@ def InterpolateRemoveFringes(InNspec,norm=True):
         except (IndexError,ValueError):
             print("Error: Unknown choice, please retype correctly..")
     #Return the fringe removed (or not!) Nspec
-
+    plt.close()
     return Nspec,continuum
         
 
@@ -211,14 +270,24 @@ def RatioToScaleEQW(InSpec1,InSpec2):
     ORatio=flux1/flux2
     Ratio=ORatio
     print("Recommended Ratio of them : %f"%(Ratio)) 
+    plt.close()
+    PlotHistLength=3   #Number of previous history plots to show.
     while True:
-        plt.close()
-        plt.plot(Nspec1[:,0],Nspec1[:,1])
-        plt.plot(Nspec2[:,0],Nspec2[:,1])
+        if not plt.get_fignums():  #If window is not already open
+            fig = plt.figure()
+            ax=fig.add_subplot(1,1,1)
+            fig.canvas.set_window_title('EQW Ratio')
+            ax.plot(Nspec1[:,0],Nspec1[:,1])
+            ax.plot(Nspec2[:,0],Nspec2[:,1])
+            ax.grid(True)
+            plt.show(block=False)
+            RatioPlotlist=[]
+
         #Plot the ratio of the Second spectra by first spectra after scaling with the Ratio
-        plt.plot(Nspec1[:,0],(((Nspec2[:,1]-1)*Ratio)+1)/Nspec1[:,1],'--',drawstyle='steps',color='black')
-        plt.grid(True)
-        plt.show(block=False)
+        NewRatioline,=ax.plot(Nspec1[:,0],(((Nspec2[:,1]-1)*Ratio)+1)/Nspec1[:,1],'--',drawstyle='steps',color='black')
+        RatioPlotlist.append(NewRatioline)
+        ax,RatioPlotlist=AdjustAlphaPlots(ax,RatioPlotlist,PlotHistLength)
+        plt.draw()
         print('-'*10)
         print("Following example shows various input option available to you.")
         print(" 1.5 Change the ratio of equivalent with to 1.5 instead of original %f"%(ORatio))
@@ -235,6 +304,7 @@ def RatioToScaleEQW(InSpec1,InSpec2):
         except(IndexError,ValueError):
             print("Error: Unknown choice, please retype correctly..")
     #Return the finally accepted Ratio
+    plt.close()
     return Ratio
 
 def FindConvolutionKernel(InSpec1,InSpec2,wlshift=0,Ratio=1):
@@ -263,26 +333,41 @@ def FindConvolutionKernel(InSpec1,InSpec2,wlshift=0,Ratio=1):
     Kernel=FirstKernel.copy()
     CSpec1=Spec1.copy()
     RLcount=0
+    plt.close()
+    PlotHistLength=3   #Number of previous history plots to show.
     while True:
         CSpec1[:,1]=np.convolve(Spec1[:,1],Kernel,mode='same')
-        plt.close()
-        plt.figure(1)
-        plt.subplot(211) #Top plot in the two layer subplot window
-        plt.plot(Spec2[:,0],Spec2[:,1],label='Star')
-        plt.plot(CSpec1[:,0],CSpec1[:,1],label='Convolved profile')
-        plt.plot(Spec1[:,0],Spec2[:,1]/CSpec1[:,1],'--',drawstyle='steps',color='black', label='Ratio')
-        plt.grid(True)
-        plt.legend()
-        plt.subplot(212) #And plot latest Kernel in the second subplot.
-        plt.plot(Kernel,label='Kernel iter='+str(RLcount))
-        plt.legend()
-        plt.grid(True)
-        plt.show(block=False)
+        if not plt.get_fignums():  #If window is not already open
+            fig = plt.figure()
+            fig.canvas.set_window_title('Convolution Kernel')
+            ax1 = fig.add_subplot(211) #Top plot in the two layer subplot window
+            ax1.plot(Spec2[:,0],Spec2[:,1],label='Star')
+            Convplotline,=ax1.plot(CSpec1[:,0],CSpec1[:,1],label='Convolved profile')
+            ax1.grid(True)
+            ax1.legend()
+            ax2= fig.add_subplot(212) #For ploting latest Kernel in the second subplot.            
+            ax2.grid(True)
+            plt.show(block=False)
+            RatioPlotlist=[]
+            KernelPlotlist=[]
+
+        ax1.lines.remove(Convplotline)  #Removing previous convoluted line plot
+        Convplotline,=ax1.plot(CSpec1[:,0],CSpec1[:,1],label='Convolved profile')  #New one
+        NewRatioLine,=ax1.plot(Spec1[:,0],Spec2[:,1]/CSpec1[:,1],'--',drawstyle='steps',color='black', label='Ratio')
+        RatioPlotlist.append(NewRatioLine)
+        ax1,RatioPlotlist=AdjustAlphaPlots(ax1,RatioPlotlist,PlotHistLength,OnlyOneLabel=True)
+        ax1.legend()
+        #And plot latest Kernel in the second subplot.
+        NewKernelline,=ax2.plot(Kernel,label='Kernel iter='+str(RLcount))
+        KernelPlotlist.append(NewKernelline)
+        ax2,KernelPlotlist=AdjustAlphaPlots(ax2,KernelPlotlist,PlotHistLength)
+        ax2.legend()
+        plt.draw()
         print('**'+'-'*20)
         print("No of Lucy iterations done so far = %d"%(RLcount))
         print("Following example shows various input option available to you.")
         print(" 5   #Run 5 more iterations of Richardson-Lucy deconvolution to generate a new kernel from present one.")
-        print(" n   #Normalise the kernel.")
+#        print(" n   #Normalise the kernel.")
         print(" r   #Reset the kernel to the Initial one.")
         print(" q   #Exit returning the latest generated kernel for convolution.")
         choice=raw_input("Enter your option : ").strip(' ')
@@ -294,18 +379,20 @@ def FindConvolutionKernel(InSpec1,InSpec2,wlshift=0,Ratio=1):
                 print("Reseting the kernel to first one.")
                 Kernel=FirstKernel.copy()
                 RLcount=0
-            elif choice[0] == 'n': #Normalsing the kernel. 
-                print("Normalising the kernel to unit flux.")
-                Kernel/=np.sum(Kernel)
+            # elif choice[0] == 'n': #Normalsing the kernel. 
+            #     print("Normalising the kernel to unit flux.")
+            #     Kernel/=np.sum(Kernel)
             elif is_number(choice) : # Run RL more times
                 RLtorun=int(choice)
                 Kernel=RichardsonLucy(Spec2[:,1],Spec1[:,1],Kernel,RLtorun)
+                Kernel/=np.sum(Kernel) # "Normalising the kernel to unit flux."                 
                 RLcount+=RLtorun
             else :
                 print("Error: Unknown choice, please retype correctly.")
         except (IndexError,ValueError):
             print("Error: Unknown choice, please retype correctly..")
-        
+    
+    plt.close()
     return Kernel
         
               
@@ -321,21 +408,33 @@ def AskAndCleanStellarLines(Inspec):
     StdConvolved=False
     WLshift=0.0
     ratio=1
+    plt.close()
+    PlotHistLength=3   #Number of previous history plots to show.
     while True:
         #First we generate a spline interpolation of True standard star spectra
         Std_tck=interp.splrep(StdNorm[:,0]+WLshift,((StdNorm[:,1]-1)*ratio)+1,s=0)
         #Now we generate the sampled values of std spectra for input spectra.
         Std4Spec=interp.splev(spec[:,0],Std_tck,der=0)
-        plt.close()
-        fig = plt.figure()
-        ax1 = fig.add_subplot(111)
-        ax1.plot(spec[:,1],marker='.')    
-        ax1.plot(Std4Spec)
-        if StdConvolved : ax1.plot(spec[:,1]/Std4Spec,'--',drawstyle='steps',color='black')
-        ax1.grid(True)
-        ax2 = ax1.twiny()   # Adding the wavelength axis at top of the plot.
-        ax2.plot(spec[:,0],spec[:,1],alpha=0)
-        plt.show(block=False)
+        if not plt.get_fignums():  #If window is not already open
+            fig = plt.figure()
+            ax1=fig.add_subplot(1,1,1)
+            fig.canvas.set_window_title('Spectral Line Removal')
+            ax1.plot(spec[:,1],marker='.')
+            stdspecplotline,=ax1.plot(Std4Spec)
+            ax1.grid(True)
+            ax2 = ax1.twiny()   # Adding the wavelength axis at top of the plot.
+            ax2.plot(spec[:,0],spec[:,1],alpha=0)
+            plt.show(block=False)
+            RatioPlotlist=[]
+
+        ax1.lines.remove(stdspecplotline)  #Removing previous spectral line plot
+        stdspecplotline,=ax1.plot(Std4Spec)
+        if StdConvolved : 
+            NewRatioLine,=ax1.plot(spec[:,1]/Std4Spec,'--',drawstyle='steps',color='black')
+            RatioPlotlist.append(NewRatioLine)
+            ax1,RatioPlotlist=AdjustAlphaPlots(ax1,RatioPlotlist,PlotHistLength)
+            
+        plt.draw()
         print('-'*20)
         print("Following example shows various input option available to you.")
         print(" me 210 251  #Select region from 210 to 250 for matching the equivalent width of line")
@@ -382,6 +481,7 @@ def AskAndCleanStellarLines(Inspec):
         except (IndexError,ValueError):
             print("Error: Unknown choice, please retype correctly..")
 
+    plt.close()
     return spec
 
 def TelluricCorrect(InSci,InStd):
@@ -395,27 +495,39 @@ def TelluricCorrect(InSci,InStd):
     Sci=np.ma.array(Sci)  #Converting to masked array for future
     Std=np.ma.array(Std)
     StdWLshift=0  # Wavelength shift in Standard star spectra
+    plt.close() #Close any previously open plot window
+    PlotHistLength=3   #Number of previous history plots to show.
     while True:
         #First we generate a spline interpolation of standard star spectra
         Std_tck=interp.splrep(np.ma.compressed(Std[:,0])+StdWLshift,np.ma.compressed(Std[:,1])*ScaleStd,s=0)
         #Now we generate the binned values of std spectra for science star.
         Std4Sci=interp.splev(Sci[:,0],Std_tck,der=0)
-        
-        plt.close() #Close any previously open plot window
-        plt.figure(1)
-        plt.subplot(211) #Top plot in the two layer subplot window
-        plt.plot(Sci[:,0],Sci[:,1]*ScaleSci,label="Science")
-        plt.plot(Sci[:,0],Std4Sci,label="Telluric Std")
-        plt.legend()
-        plt.grid(True)
+        if not plt.get_fignums():  #If window is not already open
+            fig = plt.figure()
+            fig.canvas.set_window_title('Telluric Line Removal')
+            ax1 = fig.add_subplot(211) #Top plot in the two layer subplot window
+            ax1.plot(Sci[:,0],Sci[:,1]*ScaleSci,label="Science")
+            Stdplotline,=ax1.plot(Sci[:,0],Std4Sci,label="Telluric Std")
+            ax1.grid(True)
+            ax1.legend()
+            ax2= fig.add_subplot(212) #For ploting latest ratio in second subplot.            
+            ax2.grid(True)
+            plt.show(block=False)
+            RatioPlotlist=[]
+
+
+        ax1.lines.remove(Stdplotline)  #Removing previous standard star line plot        
+        Stdplotline,=ax1.plot(Sci[:,0],Std4Sci,label="Telluric Std")
+        ax1.legend()
         # Now generate the divided spectra
         CorrectedSci=(Sci[:,1]*ScaleSci)/Std4Sci
-        plt.subplot(212) #And plot in the second subplot
-        plt.plot(Sci[:,0],CorrectedSci,label=r'$\frac{Science}{Telluric}$')
-        plt.legend()
-        plt.grid(True)
+
+        NewRatioLine,=ax2.plot(Sci[:,0],CorrectedSci,label=r'$\frac{Science}{Telluric}$')
+        RatioPlotlist.append(NewRatioLine)
+        ax2,RatioPlotlist=AdjustAlphaPlots(ax2,RatioPlotlist,PlotHistLength,OnlyOneLabel=True)
+        ax2.legend()
         #Display
-        plt.show(block=False)
+        plt.draw()
         
         print('-'*40)
         print("Following examples shows the options to chose :")
@@ -447,6 +559,7 @@ def TelluricCorrect(InSci,InStd):
                 print("Error: Unknown choice, please retype correctly.")
         except (IndexError,ValueError):
             print("Error: Unknown choice, please retype correctly..")
+    plt.close()
     #Return the cleaned spectra
     return CorrectedSci,Sci[:,0],Std
             
@@ -492,9 +605,13 @@ def main():
     else:
         print("Not doing continuum correction using BB curve.")
     plt.close()
-    plt.plot(CorrSciWL/10000.0,CorrSci,drawstyle='steps',color='black')
-    plt.xlabel(r'Wavelength ($\mu m$)')
-    plt.ylabel('Normalised counts')
+    fig=plt.figure()
+    fig.canvas.set_window_title('Final Spectrum')
+    ax = fig.add_subplot(1,1,1)
+    ax.plot(CorrSciWL/10000.0,CorrSci,drawstyle='steps',color='black')
+    ax.set_xlabel(r'Wavelength ($\mu m$)')
+    ax.set_ylabel('Normalised counts')
+    print("Final spectrum will be saved after window is closed.")
     plt.show()
     #Save the generated spectras values as numpy arrays
     scifname=scifname.split('.')[0]
