@@ -584,6 +584,9 @@ def main():
         hdulist=pyfits.open(img)
         prihdr= hdulist[0].header
         NDRS2read=min(prihdr['NDRS'],DarkNDRS)
+        for hkeys in  ['TARGET','TCOMMENT']:   #To capture bug of these keywords missing in header
+            if hkeys not in prihdr : prihdr.update(hkeys,'-NA-')
+
         logfile.write('%s %s "%s" %d %.2f %s %s %s %s %s %s \n'%('Slope-'+img,prihdr['TIME'],prihdr['TARGET'],prihdr['NDRS'],prihdr['ITIME'],prihdr['UPPER'],prihdr['LOWER'],prihdr['SLIT'],prihdr['CALMIR'],prihdr['DATE'],prihdr['TCOMMENT']))
         if NDRS2read <= FullframeMax :
             tilelist=[(0,1024,0,1024)]  #Loading out as a single frame ; else we load each quadrent seperately
