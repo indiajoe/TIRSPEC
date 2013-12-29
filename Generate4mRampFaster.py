@@ -32,7 +32,7 @@ def filelist(inputstring):
     if inputstring[0] == "@" : 
         try :
             infile=open(inputstring[1:],'r')
-            output=[fls.rstrip() for fls in infile.readlines()]
+            output=[fls.rstrip() for fls in infile]
             infile.close()
         except IOError :
             print("Error: Cannot open the file "+inputstring[1:]) 

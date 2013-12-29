@@ -49,7 +49,7 @@ def SpectralExtraction_subrout():
         Img2Argon=[]  #They are first born as lists...
         Img2Filt=[]
         AllImglist=[]
-        for line in SpecslistFILE.readlines():
+        for line in SpecslistFILE:
             line=line.rstrip().split()
             Img2Argon.append((line[0],line[1]))
             Img2Filt.append((line[0],line[2]))
@@ -113,16 +113,16 @@ def SpectralPairSubtraction_subrout():
         try:
             #First we load a dictionary of raw images to their filters
             FiltrFILE=open(night+'/AllObjects.List','r')
-            Filtrfiledic=dict([(filtset.split()[0],shlex.split(filtset.rstrip())[1]) for filtset in FiltrFILE.readlines()])  #Dictionary of filterset for each image.
+            Filtrfiledic=dict([(filtset.split()[0],shlex.split(filtset.rstrip())[1]) for filtset in FiltrFILE])  #Dictionary of filterset for each image.
             FiltrFILE.close()
             #Secondly we load a dictionary of raw images to their Calibration Argon lamb file
             ArgonFILE=open(night+'/AllObjects-FinalArgon.List','r')
-            Argonfiledic=dict([(Argonset.split()[0],shlex.split(Argonset.rstrip())[1]) for Argonset in ArgonFILE.readlines()])  #Dictionary of Argon file for each image.
+            Argonfiledic=dict([(Argonset.split()[0],shlex.split(Argonset.rstrip())[1]) for Argonset in ArgonFILE])  #Dictionary of Argon file for each image.
             ArgonFILE.close()
 
             #Secondly, we load a dictionary of Dither Frame to first Raw images
             DitherFILE=open(night+'/FirstoneANDcombinedImages.List','r')
-            DitherFILElines=DitherFILE.readlines()
+            DitherFILElines=list(DitherFILE)
             DitherFILE.close()            
             Ditherfiledic=dict([(ditherset.rstrip().split()[1],ditherset.split()[0]) for ditherset in DitherFILElines if len(ditherset.split()) == 2])  #Dictionary of First image of each Dither set.
             #We shall also keep a list of images in proper order.
@@ -232,7 +232,7 @@ def Photometry():
 
 
     imgNo=0
-    for imgline in imgfile.readlines() :
+    for imgline in imgfile :
         imgline=imgline.rstrip()
         imgline=shlex.split(imgline)
         wdir=imgline[0].split('/')[-2]
@@ -299,7 +299,7 @@ def Photometry():
         for coofile in coofileLIST :
             fooIN=open(img+coofile,'r')
             fooOUT=open(img+coofile+'TEMP','w')
-            for star in fooIN.readlines():
+            for star in fooIN:
                 if float(star.split()[0]) > 1 and float(star.split()[0]) < yxdim[1] and float(star.split()[1]) > 1 and float(star.split()[1]) < yxdim[0] : fooOUT.write(star)
                 else: print(star +": Outside the image field \n")
             fooIN.close()
@@ -414,7 +414,7 @@ def Photometry():
             magtable=ascii.read(img+'.mag.1')
             goodstarsFILE=open(OriginalIMG+'GoodStars.coo','r')
             tablelist=[]
-            for goodstarXY in goodstarsFILE.readlines():
+            for goodstarXY in goodstarsFILE:
                 gsX,gsY=goodstarXY.rstrip().split()
                 gsX=eval(gsX)
                 gsY=eval(gsY)
@@ -449,7 +449,7 @@ def Photometry():
             #Doing qphot at all the points in qphotinput.txt with the corresponding parameters.
             if QPHOT_todo=='Y' :  #If there exist some qphot sources
                 foo=open(OriginalIMG+"qphotinput.txt",'r')
-                for qphotobj in foo.readlines():
+                for qphotobj in foo:
                     qphotobj=qphotobj.rstrip()
                     obj=qphotobj.split()
                     foo2=open('qphotSource.Tcoo','w')
@@ -476,7 +476,7 @@ def Photometry():
                 alstable=ascii.read(img+'.als.1')
                 SourcestarsFILE=open(OriginalIMG+'Source.coo','r')
                 tablelist=[]
-                for sourstarXY in SourcestarsFILE.readlines():
+                for sourstarXY in SourcestarsFILE:
                     ssX,ssY=sourstarXY.rstrip().split()
                     ssX=eval(ssX)
                     ssY=eval(ssY)
@@ -489,7 +489,7 @@ def Photometry():
                 #Now the psf magnitudes of the good stars
                 goodstarsFILE=open(OriginalIMG+'GoodStars.coo','r')
                 tablelist=[]
-                for goodstarXY in goodstarsFILE.readlines():
+                for goodstarXY in goodstarsFILE:
                     gsX,gsY=goodstarXY.rstrip().split()
                     gsX=eval(gsX)
                     gsY=eval(gsY)
@@ -556,7 +556,7 @@ def Sextractor_subrout(img=None,N=30):
             print('-'*60)
             exit
 
-        imgline=imgfile.readlines()[0]
+        imgline=imgfile.readline()  #First line only
         imgline=imgline.rstrip()
         img=imgline.split()[0]
         imgfile.close()
@@ -584,7 +584,7 @@ def Star_sky_subrout(img=None) :
             print('-'*60)
             exit
 
-        imgline=imgfile.readlines()[0]
+        imgline=imgfile.readline()  #First line only
         imgline=imgline.rstrip()
         img=imgline.split()[0]
         imgfile.close()
@@ -647,11 +647,11 @@ def Createlist_subrout():
         try:
             #First we load a dictionary of raw images to their filters
             FiltrFILE=open(night+'/AllObjects.List','r')
-            Filtrfiledic=dict([(filtset.split()[0],shlex.split(filtset.rstrip())[1]) for filtset in FiltrFILE.readlines()])  #Dictionary of filterset for each image.
+            Filtrfiledic=dict([(filtset.split()[0],shlex.split(filtset.rstrip())[1]) for filtset in FiltrFILE])  #Dictionary of filterset for each image.
             FiltrFILE.close()
             #Secondly, we load a dictionary of Dither Frame to Raw images
             DitherFILE=open(night+'/FirstoneANDcombinedImages.List','r')
-            Ditherfiledic=dict([(ditherset.rstrip().split()[1],ditherset.split()[0]) for ditherset in DitherFILE.readlines() if len(ditherset.split()) == 2])  #Dictionary of First image of each Dither set.
+            Ditherfiledic=dict([(ditherset.rstrip().split()[1],ditherset.split()[0]) for ditherset in DitherFILE if len(ditherset.split()) == 2])  #Dictionary of First image of each Dither set.
             DitherFILE.close()
             #Now Read and write the images to do photometry one by one.
             ImgsFILE=open(night+'/FirstoneANDalignNcombinedImages.List','r')
@@ -662,7 +662,7 @@ def Createlist_subrout():
             print('-'*60)
             continue
 
-        for imgline in ImgsFILE.readlines():
+        for imgline in ImgsFILE:
             img=imgline.rstrip().split()[1]
             imgfilter=Filtrfiledic[Ditherfiledic[imgline.split()[0]]]
             fooOUT.write(night+'/'+img+'  "'+imgfilter+'"  '+str(Exptime)+'  '+str(threshold)+' \n')
@@ -684,7 +684,7 @@ def AlignNcombine_subrout(method="average"):
 
         #Load all the X,Y coords of star indexed for every file already
         XYFILE=open(night+'/AllObjects2Combine.List','r')
-        XYfiledic=dict([(XYset.split()[0],XYset.rstrip().split()[1:]) for XYset in XYFILE.readlines() if len(XYset.split()) == 3 ])  #Dictionary of XY coords for each image.
+        XYfiledic=dict([(XYset.split()[0],XYset.rstrip().split()[1:]) for XYset in XYFILE if len(XYset.split()) == 3 ])  #Dictionary of XY coords for each image.
         XYFILE.close()
         if len(XYfiledic) == 0 : #No images this night..
             print('No images to work on this night. skipping...')
@@ -694,7 +694,7 @@ def AlignNcombine_subrout(method="average"):
         #Firstly generate the list of lists of images to combine. Also a dict which maps the combined images to first image.
         ListofLists=[[]]
         Comb2Firstdic=dict()
-        for imgline in Obj2CombFILE.readlines():
+        for imgline in Obj2CombFILE:
             if len(imgline.split()) == 0 and len(ListofLists[-1]) != 0 :  ListofLists.append([])  #Start a new list at end
             elif len(imgline.split()) > 0 : 
                 ListofLists[-1].append(imgline.rstrip().split()[1]) #Append to the last list
@@ -774,21 +774,21 @@ def CombDith_FlatCorr_subrout(method="median",FlatStatSection='[200:800,200:800]
         print('Working on night: '+night)
         #Load all the Flat indexing file data
         FlatFILE=open(night+'/AllObjects-FinalFlat.List','r')
-        Flatfiledic=dict([(flatset.split()[0],flatset.rstrip().split()[1:]) for flatset in FlatFILE.readlines()])  #Dictionary of flats list for each image.
+        Flatfiledic=dict([(flatset.split()[0],flatset.rstrip().split()[1:]) for flatset in FlatFILE])  #Dictionary of flats list for each image.
         FlatFILE.close()
         if len(Flatfiledic) == 0 : #No images this night..
             print('No images to work on this night. skipping...')
             continue
         if TODO=='P':  #Load all the FilterSet indexing file data
             FiltrFILE=open(night+'/AllObjects.List','r')
-            Filtrfiledic=dict([(filtset.split()[0],shlex.split(filtset.rstrip())[1]) for filtset in FiltrFILE.readlines()])  #Dictionary of filterset for each image.
+            Filtrfiledic=dict([(filtset.split()[0],shlex.split(filtset.rstrip())[1]) for filtset in FiltrFILE])  #Dictionary of filterset for each image.
             FiltrFILE.close()
             NewFiltSet='(Blah,Blah,Blah)'
 
         Obj2CombFILE=open(night+'/AllObjects2Combine.List','r')
         #Secondly generate the list of lists of images to combine.
         ListofLists=[[]]
-        for imgline in Obj2CombFILE.readlines():
+        for imgline in Obj2CombFILE:
             if len(imgline.split()) == 0 and len(ListofLists[-1]) != 0 :  ListofLists.append([])  #Start a new list at end
             elif len(imgline.split()) > 0 : ListofLists[-1].append(imgline.split()[0]) #Append to the last list
         Obj2CombFILE.close()
@@ -854,7 +854,7 @@ def Manual_InspectFlat_subrout():
             ouFILE=open(night+'/'+outfile,'w')
             AlwaysRemove=[]
             AlwaysAccept=[]
-            for inpline in inFILE.readlines():
+            for inpline in inFILE:
                 inplinelist=inpline.rstrip().split()
                 if len(inplinelist) > 1 : ScienceImg=inplinelist[0]
                 else : continue   #Skipping to next line
@@ -898,7 +898,7 @@ def Manual_InspectObj_subrout():
         newsX=0
         FWHM=4.0  #Not important what number you give here...
         newU_L_Sfilter='(Blah,Blah,Blah)'
-        for objline in ObjFILE.readlines():
+        for objline in ObjFILE:
             img=objline.split()[0]
             iraf.display(night+'/'+img,1)
             print(objline)
@@ -960,7 +960,7 @@ def SelectionofFrames_subrout():
     for night in directories:
         print("Working on night : "+night)
         slopeimgFILE=open(night+'/SlopeimagesLog.txt')
-        slopeimgFILElines=slopeimgFILE.readlines()
+        slopeimgFILElines=list(slopeimgFILE)
         slopeimgFILE.close()
         ObjList=[imgline.rstrip() for imgline in slopeimgFILElines if regexpObj.search(imgline.split()[0]) is not None ]
         FiltList=set()  #Set to store the list of filters needed to find flat/Argon for
@@ -1040,7 +1040,7 @@ def LoadDirectories(CONF=False):
         #Creating a text file containg the directories to visit if it doesn't already exist
         os.system('find . -type d -maxdepth 1 -mindepth 1 | sort > directories ')
         directoriesF=open(MotherDIR+'/directories','r')
-    directories=[dirs.rstrip() for dirs in directoriesF.readlines()]
+    directories=[dirs.rstrip() for dirs in directoriesF]
     directoriesF.close()
     if CONF == True :
         #Ask user again to confirm or change if he/she needs to
@@ -1070,7 +1070,7 @@ try :
 except IOError :
     print ("Error: Copy the TIRSPECscript.conf into this directory contianing folders of each night data, before running the script.")
     exit(1)
-for con in configfile.readlines():
+for con in configfile:
     con=con.rstrip()
     if len(con.split()) >= 2 :
         if con.split()[0] == "VERBOSE=" :
