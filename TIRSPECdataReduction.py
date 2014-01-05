@@ -875,6 +875,8 @@ def Manual_InspectFlat_subrout():
                         elif verdict== 'aa' :
                             AlwaysAccept.append(img)
                             print("Always accept this image forever this night (Dangerous): "+img)
+
+                if not FinalCalImgs : print('ALERT: No Calibration Images for {0} {1}'.format(night,ScienceImg))
                 #Writing the final surviving calibration files to output file
                 ouFILE.write(' '.join([ScienceImg]+FinalCalImgs)+'\n')
             ouFILE.close()
