@@ -86,9 +86,9 @@ def SpectralExtraction_subrout():
         
         #At the end of the night Appending the name to the final spectra list of each band
         for filt in Filt2finalspecs.keys():
-            foo=open('FinalwcSpectralistin_'+filt+'.txt','w')
-            foo.write(' \n'.join(Filt2finalspecs[filt])+' \n')
-            foo.close()
+            with open('FinalwcSpectralistin_'+filt+'.txt','w') as foo:
+                foo.write(' \n'.join(Filt2finalspecs[filt])+' \n')
+
             print('List of final spectras in FinalwcSpectralistin_'+filt+'.txt')
             if SCOMBINE=='YES':
                 try:
@@ -112,18 +112,17 @@ def SpectralPairSubtraction_subrout():
         print('Working on night: '+night)
         try:
             #First we load a dictionary of raw images to their filters
-            FiltrFILE=open(night+'/AllObjects.List','r')
-            Filtrfiledic=dict([(filtset.split()[0],shlex.split(filtset.rstrip())[1]) for filtset in FiltrFILE])  #Dictionary of filterset for each image.
-            FiltrFILE.close()
+            with open(night+'/AllObjects.List','r') as FiltrFILE :
+                Filtrfiledic=dict([(filtset.split()[0],shlex.split(filtset.rstrip())[1]) for filtset in FiltrFILE])  #Dictionary of filterset for each image.
+
             #Secondly we load a dictionary of raw images to their Calibration Argon lamb file
-            ArgonFILE=open(night+'/AllObjects-FinalArgon.List','r')
-            Argonfiledic=dict([(Argonset.split()[0],shlex.split(Argonset.rstrip())[1]) for Argonset in ArgonFILE])  #Dictionary of Argon file for each image.
-            ArgonFILE.close()
+            with open(night+'/AllObjects-FinalArgon.List','r') as ArgonFILE :
+                Argonfiledic=dict([(Argonset.split()[0],shlex.split(Argonset.rstrip())[1]) for Argonset in ArgonFILE])  #Dictionary of Argon file for each image.
 
             #Secondly, we load a dictionary of Dither Frame to first Raw images
-            DitherFILE=open(night+'/FirstoneANDcombinedImages.List','r')
-            DitherFILElines=list(DitherFILE)
-            DitherFILE.close()            
+            with open(night+'/FirstoneANDcombinedImages.List','r') as DitherFILE :
+                DitherFILElines=list(DitherFILE)
+
             Ditherfiledic=dict([(ditherset.rstrip().split()[1],ditherset.split()[0]) for ditherset in DitherFILElines if len(ditherset.split()) == 2])  #Dictionary of First image of each Dither set.
             #We shall also keep a list of images in proper order.
             Allimglist=[ditherset.rstrip().split()[1]  for ditherset in DitherFILElines if len(ditherset.split()) == 2]
@@ -150,13 +149,13 @@ def SpectralPairSubtraction_subrout():
             if len(Imglist) <= 26 and len(Imglist) != 0:
                 ABCDtoimg=dict()
                 Anumb=ord('A')
-                AlphatoFILE=open(night+'/ABCDtoImageTable_'+filt+'.txt','w')
-                for i,img in enumerate(Imglist):
-                    alpha=chr(Anumb+i)
-                    ABCDtoimg[alpha]=img
-                    print("%s : %s"%(alpha,img))
-                    AlphatoFILE.write("%s  %s"%(alpha,img)+' \n')
-                AlphatoFILE.close()
+                with open(night+'/ABCDtoImageTable_'+filt+'.txt','w') as AlphatoFILE :
+                    for i,img in enumerate(Imglist):
+                        alpha=chr(Anumb+i)
+                        ABCDtoimg[alpha]=img
+                        print("%s : %s"%(alpha,img))
+                        AlphatoFILE.write("%s  %s"%(alpha,img)+' \n')
+
                 print("Enter the pairs to subtract in space seperated form ")
                 print("For Example an input: AB BC CB D")
                 print("Corresponding images produced by subtraction or not are : A-B, B-C, C-B and D")
@@ -240,9 +239,8 @@ def Photometry():
             iraf.cd(MotherDIR)  #Going back to parent directory
             DIRtogo="/".join(imgline[0].split('/')[:-1]) #Now going to dir of img
             iraf.cd(DIRtogo)
-            foo=open(MotherDIR+'/'+OUTPUTfile,'a')    #Appending into tbe log file The begining of a new directory
-            foo.write(DIRtogo+' ---------------------------------------- \n')  # '-'*40  To mark begining of a DIrectory
-            foo.close()
+            with open(MotherDIR+'/'+OUTPUTfile,'a') as foo:    #Appending into tbe log file The begining of a new directory
+                foo.write(DIRtogo+' ---------------------------------------- \n')  # '-'*40  To mark begining of a DIrectory
 
         
         img=imgline[0].split('/')[-1]
@@ -325,12 +323,12 @@ def Photometry():
             imx=iraf.imexam(input=img,frame=1,use_display=0,defkey='a',imagecur=img+'SourceT.coo',Stdout=1)
             Xprim=eval(imx[2].split()[0])  
             Yprim=eval(imx[2].split()[1])
-            foo=open(img+'Source.coo','w')    #Creating text file contiaing coords of v1647
-            i=2
-            while i < len(imx) :
-                foo.write(imx[i].split()[0] +'  '+imx[i].split()[1]+'\n')
-                i=i+2
-            foo.close()
+            with open(img+'Source.coo','w') as foo :    #Creating text file contiaing coords of v1647
+                i=2
+                while i < len(imx) :
+                    foo.write(imx[i].split()[0] +'  '+imx[i].split()[1]+'\n')
+                    i=i+2
+
         except iraf.IrafError, e :
             print('Iraf Error: going forward with first estimated Source.coo')
             shutil.copy(img+'SourceT.coo',img+'Source.coo')
@@ -377,9 +375,9 @@ def Photometry():
             print('Mean sigma = '+str(sigma))
             print('Datamin = '+str(datamin))
 
-            foo=open(MotherDIR+'/'+OUTPUTfile,'a')    #Appending into the log file to write output of photometry
-            foo.write(img +'  '+str(round(fwhm,2)) + '  "'+filterr+'"  '+str(intime) +'  '+str(StartUT)+'  '+ str(round(mean,3)) +'  ' + str(round(sigma,3)) +'  '+str(round(datamin,3)) + ' | ')
-            foo.close()
+            with open(MotherDIR+'/'+OUTPUTfile,'a') as foo:    #Appending into the log file to write output of photometry
+                foo.write(img +'  '+str(round(fwhm,2)) + '  "'+filterr+'"  '+str(intime) +'  '+str(StartUT)+'  '+ str(round(mean,3)) +'  ' + str(round(sigma,3)) +'  '+str(round(datamin,3)) + ' | ')
+
             #Now starts photometry processes....
             # First is daopar, Press :w then :q to continue if everything is fine
             psfradi= 4*fwhm +1
@@ -412,22 +410,22 @@ def Photometry():
             iraf.phot(image=img,coords="default",output="default",verify=VER)
 
             magtable=ascii.read(img+'.mag.1')
-            goodstarsFILE=open(OriginalIMG+'GoodStars.coo','r')
-            tablelist=[]
-            for goodstarXY in goodstarsFILE:
-                gsX,gsY=goodstarXY.rstrip().split()
-                gsX=eval(gsX)
-                gsY=eval(gsY)
-                tablelist.append(magtable[((magtable['XCENTER']-gsX)**2<4) & ((magtable['YCENTER']-gsY)**2<4)]['XCENTER','YCENTER','MAG','ID'])
-            goodstarsFILE.close()
+            with open(OriginalIMG+'GoodStars.coo','r') as goodstarsFILE :
+                tablelist=[]
+                for goodstarXY in goodstarsFILE:
+                    gsX,gsY=goodstarXY.rstrip().split()
+                    gsX=eval(gsX)
+                    gsY=eval(gsY)
+                    tablelist.append(magtable[((magtable['XCENTER']-gsX)**2<4) & ((magtable['YCENTER']-gsY)**2<4)]['XCENTER','YCENTER','MAG','ID'])
+
             goodstarsTable=table.vstack(tablelist)
             if DOPSF == 'YES' :  # IF PSF photometry has to be done...
                 #Creating the imcommands file by finding Star IDs
 #                os.system(MotherDIR+'/Finding_StarID_Curser_File.sh ' + img +' '+OriginalIMG+'GoodStars.coo' )  #OLD Way...
-                icomFILE=open('icommands.in','w')
-                icomFILE.write(':a '+'\n:a '.join([str(sid) for sid in goodstarsTable['ID']])+'\n')
-                icomFILE.write('f \nw \nq \n') # Adding lines f w q at the end.
-                icomFILE.close()
+                with open('icommands.in','w') as icomFILE :
+                    icomFILE.write(':a '+'\n:a '.join([str(sid) for sid in goodstarsTable['ID']])+'\n')
+                    icomFILE.write('f \nw \nq \n') # Adding lines f w q at the end.
+
                 print ("Doing psf, Non-interactively.. Using Coords of good star")
                 iraf.psf(image=img, pstfile="", photfile="default", psfimage="default", opstfile="default", groupfil="default", icommands='icommands.in', verify=VER)
             #    print ("Doing psf, Interactively.. Use the a a ... f w q  sequence..")
@@ -452,9 +450,9 @@ def Photometry():
                 for qphotobj in foo:
                     qphotobj=qphotobj.rstrip()
                     obj=qphotobj.split()
-                    foo2=open('qphotSource.Tcoo','w')
-                    foo2.write(obj[0]+'  '+obj[1])
-                    foo2.close()
+                    with open('qphotSource.Tcoo','w') as foo2 :
+                        foo2.write(obj[0]+'  '+obj[1])
+
                     iraf.qphot(image=img , coords='qphotSource.Tcoo', cbox=5, annulus=obj[3], dannulus=obj[4], aperture=obj[2], exposur="intime", epadu=EPADU ,interactive=0 )
                 
                 foo.close()
@@ -474,27 +472,26 @@ def Photometry():
             if DOPSF == 'YES' :  # IF PSF photometry was done...
                 #First the mags of Source stars
                 alstable=ascii.read(img+'.als.1')
-                SourcestarsFILE=open(OriginalIMG+'Source.coo','r')
-                tablelist=[]
-                for sourstarXY in SourcestarsFILE:
-                    ssX,ssY=sourstarXY.rstrip().split()
-                    ssX=eval(ssX)
-                    ssY=eval(ssY)
-                    tablelist.append(alstable[((alstable['XCENTER']-ssX)**2<4) & ((alstable['YCENTER']-ssY)**2<4)]['XCENTER','YCENTER','MAG'])
-                SourcestarsFILE.close()
+                with open(OriginalIMG+'Source.coo','r') as SourcestarsFILE :
+                    tablelist=[]
+                    for sourstarXY in SourcestarsFILE:
+                        ssX,ssY=sourstarXY.rstrip().split()
+                        ssX=eval(ssX)
+                        ssY=eval(ssY)
+                        tablelist.append(alstable[((alstable['XCENTER']-ssX)**2<4) & ((alstable['YCENTER']-ssY)**2<4)]['XCENTER','YCENTER','MAG'])
                 SourcestarsALSTable=table.vstack(tablelist)
                 for rows in SourcestarsALSTable: 
                     foo.write(' %f %f %f'%(rows['XCENTER'],rows['YCENTER'],rows['MAG']))
                 foo.write(' | ')  #Adding a seperator after Source Mags
                 #Now the psf magnitudes of the good stars
-                goodstarsFILE=open(OriginalIMG+'GoodStars.coo','r')
-                tablelist=[]
-                for goodstarXY in goodstarsFILE:
-                    gsX,gsY=goodstarXY.rstrip().split()
-                    gsX=eval(gsX)
-                    gsY=eval(gsY)
-                    tablelist.append(alstable[((alstable['XCENTER']-gsX)**2<4) & ((alstable['YCENTER']-gsY)**2<4)]['XCENTER','YCENTER','MAG'])
-                goodstarsFILE.close()
+                with open(OriginalIMG+'GoodStars.coo','r') as goodstarsFILE :
+                    tablelist=[]
+                    for goodstarXY in goodstarsFILE:
+                        gsX,gsY=goodstarXY.rstrip().split()
+                        gsX=eval(gsX)
+                        gsY=eval(gsY)
+                        tablelist.append(alstable[((alstable['XCENTER']-gsX)**2<4) & ((alstable['YCENTER']-gsY)**2<4)]['XCENTER','YCENTER','MAG'])
+
                 goodstarsALSTable=table.vstack(tablelist)
                 for rows in goodstarsALSTable:
                     foo.write(' %f %f %f'%(rows['XCENTER'],rows['YCENTER'],rows['MAG']))
@@ -517,9 +514,9 @@ def Photometry():
             print ("Photometry of "+img+" over. \n Now proceeding to next image")
             #END of the photometry of convolved images set..
         imgNo=imgNo+1
-        foo=open(MotherDIR+'/'+OUTPUTfile,'a')    #Appending into the log file to write output of photometry
-        foo.write('-------------------------------------------- \n')  # '-'*44  To mark end of an image
-        foo.close()
+        with open(MotherDIR+'/'+OUTPUTfile,'a') as foo :    #Appending into the log file to write output of photometry
+            foo.write('-------------------------------------------- \n')  # '-'*44  To mark end of an image
+
 
     #All photometry over
     imgfile.close()
@@ -593,44 +590,44 @@ def Star_sky_subrout(img=None) :
         iraf.display(img,1)
         print ('\n For taking coordinates of Source. Press _a_ over Primary Sources.')
         imx=iraf.imexam(Stdout=1)
-        foo=open('Source.coo','w')    #Creating text file contiaing coords of v1647
-        i=2
-        while i < len(imx) :               
-            foo.write(imx[i].split()[0] +'  '+imx[i].split()[1]+'\n')
-            i=i+2
-        foo.close()
+        with open('Source.coo','w') as foo :    #Creating text file contiaing coords of v1647
+            i=2
+            while i < len(imx) :               
+                foo.write(imx[i].split()[0] +'  '+imx[i].split()[1]+'\n')
+                i=i+2
+
         print ('\n For taking coordinates of good stars. Press _a_ over some good stars. \n Nonsaturated among them will be used for psf fitting.')
         print ('IMP: Press coordinate of Stars in standard required order')
         imx=iraf.imexam(Stdout=1)
-        foo=open('GoodStars.coo','w')    #Creating good stars coords files
-        i=2
-        while i < len(imx) :               
-            foo.write(imx[i].split()[0] +'  '+imx[i].split()[1]+'\n')
-            i=i+2
-        foo.close()
+        with open('GoodStars.coo','w') as foo :    #Creating good stars coords files
+            i=2
+            while i < len(imx) :               
+                foo.write(imx[i].split()[0] +'  '+imx[i].split()[1]+'\n')
+                i=i+2
+
         shutil.copy('GoodStars.coo','GoodStars.cooORIGINAL')   #Keeping BACKUP....
         shutil.copy('Source.coo','Source.cooORIGINAL')   #Keeping BACKUP....
         print ('\n For taking coordinates of good sky. Press _x_ over blank sky areas.')
         imx=iraf.imexam(Stdout=1)
-        foo=open('BlankSky.coo','w')    #Creating blank sky coords files
-        i=0
-        while i < len(imx) :               
-            foo.write(imx[i].split()[0] +'  '+imx[i].split()[1]+'\n')
-            i=i+1
-        foo.close()
+        with open('BlankSky.coo','w') as foo :    #Creating blank sky coords files
+            i=0
+            while i < len(imx) :               
+                foo.write(imx[i].split()[0] +'  '+imx[i].split()[1]+'\n')
+                i=i+1
+
         print('\n Use the ds9 to Mark circles centered at locations to do qphot.')
         print('Enter the center X Y and radius of apperture for qphot annulus and dannulus for sky')
         print('Enter values space seperated in the format below. Enter "q" to exit')
         print('X   Y   Apperture  Annulus  Dannulus ')
-        foo=open('qphotinput.txt','w')    #Creating the qphot partameter file
-        qphot_inp="junk"
-        while (qphot_inp != "q") :
-            qphot_inp=raw_input("|> ")
-            boolvar=True
-            for i in qphot_inp.split() : boolvar = boolvar and is_number(i)
-            if boolvar and (len(qphot_inp.split()) == 5) : foo.write(qphot_inp+' \n')
-            elif (qphot_inp != "q") : print("Wrong Entry. Please enter properly the 5 values. q is to stop.")
-        foo.close()
+        with open('qphotinput.txt','w') as foo:    #Creating the qphot partameter file
+            qphot_inp="junk"
+            while (qphot_inp != "q") :
+                qphot_inp=raw_input("|> ")
+                boolvar=True
+                for i in qphot_inp.split() : boolvar = boolvar and is_number(i)
+                if boolvar and (len(qphot_inp.split()) == 5) : foo.write(qphot_inp+' \n')
+                elif (qphot_inp != "q") : print("Wrong Entry. Please enter properly the 5 values. q is to stop.")
+
     #Finished all first images data collection. Now going forward..
 
     print("\n All required human input of coordinates taken..")
@@ -646,13 +643,13 @@ def Createlist_subrout():
         print('Working on night: '+night)
         try:
             #First we load a dictionary of raw images to their filters
-            FiltrFILE=open(night+'/AllObjects.List','r')
-            Filtrfiledic=dict([(filtset.split()[0],shlex.split(filtset.rstrip())[1]) for filtset in FiltrFILE])  #Dictionary of filterset for each image.
-            FiltrFILE.close()
+            with open(night+'/AllObjects.List','r') as FiltrFILE:
+                Filtrfiledic=dict([(filtset.split()[0],shlex.split(filtset.rstrip())[1]) for filtset in FiltrFILE])  #Dictionary of filterset for each image.
+
             #Secondly, we load a dictionary of Dither Frame to Raw images
-            DitherFILE=open(night+'/FirstoneANDcombinedImages.List','r')
-            Ditherfiledic=dict([(ditherset.rstrip().split()[1],ditherset.split()[0]) for ditherset in DitherFILE if len(ditherset.split()) == 2])  #Dictionary of First image of each Dither set.
-            DitherFILE.close()
+            with open(night+'/FirstoneANDcombinedImages.List','r') as DitherFILE:
+                Ditherfiledic=dict([(ditherset.rstrip().split()[1],ditherset.split()[0]) for ditherset in DitherFILE if len(ditherset.split()) == 2])  #Dictionary of First image of each Dither set.
+
             #Now Read and write the images to do photometry one by one.
             ImgsFILE=open(night+'/FirstoneANDalignNcombinedImages.List','r')
         except IOError,e:
@@ -683,23 +680,23 @@ def AlignNcombine_subrout(method="average"):
         print('Working on night: '+night)
 
         #Load all the X,Y coords of star indexed for every file already
-        XYFILE=open(night+'/AllObjects2Combine.List','r')
-        XYfiledic=dict([(XYset.split()[0],XYset.rstrip().split()[1:]) for XYset in XYFILE if len(XYset.split()) == 3 ])  #Dictionary of XY coords for each image.
-        XYFILE.close()
+        with open(night+'/AllObjects2Combine.List','r') as XYFILE :
+            XYfiledic=dict([(XYset.split()[0],XYset.rstrip().split()[1:]) for XYset in XYFILE if len(XYset.split()) == 3 ])  #Dictionary of XY coords for each image.
+
         if len(XYfiledic) == 0 : #No images this night..
             print('No images to work on this night. skipping...')
             continue
 
-        Obj2CombFILE=open(night+'/FirstoneANDcombinedImages.List','r')
-        #Firstly generate the list of lists of images to combine. Also a dict which maps the combined images to first image.
-        ListofLists=[[]]
-        Comb2Firstdic=dict()
-        for imgline in Obj2CombFILE:
-            if len(imgline.split()) == 0 and len(ListofLists[-1]) != 0 :  ListofLists.append([])  #Start a new list at end
-            elif len(imgline.split()) > 0 : 
-                ListofLists[-1].append(imgline.rstrip().split()[1]) #Append to the last list
-                Comb2Firstdic[imgline.rstrip().split()[1]]=imgline.split()[0] #Adding the mapping to the dictionary
-        Obj2CombFILE.close()
+        with open(night+'/FirstoneANDcombinedImages.List','r') as Obj2CombFILE :
+            #Firstly generate the list of lists of images to combine. Also a dict which maps the combined images to first image.
+            ListofLists=[[]]
+            Comb2Firstdic=dict()
+            for imgline in Obj2CombFILE:
+                if len(imgline.split()) == 0 and len(ListofLists[-1]) != 0 :  ListofLists.append([])  #Start a new list at end
+                elif len(imgline.split()) > 0 : 
+                    ListofLists[-1].append(imgline.rstrip().split()[1]) #Append to the last list
+                    Comb2Firstdic[imgline.rstrip().split()[1]]=imgline.split()[0] #Adding the mapping to the dictionary
+
         #Now iterate through every list of images to combine
         outlogFILE=open(night+'/FirstoneANDalignNcombinedImages.List','w')
         for imglist in ListofLists:
@@ -714,25 +711,25 @@ def AlignNcombine_subrout(method="average"):
                 iraf.display(night+'/'+Refimage,1) 
                 print ('Press _a_ over some good stars to align, u can press s also, but DONT press r \n')
                 imx=iraf.imexam(Stdout=1)
-                foo=open(night+'/'+OutCoofile,'w')
-                i=2
-                while i < len(imx) :               
-                    foo.write(imx[i].split()[0] +'  '+imx[i].split()[1]+'\n')
-                    i=i+2
-                foo.close()
+                with open(night+'/'+OutCoofile,'w') as foo :
+                    i=2
+                    while i < len(imx) :               
+                        foo.write(imx[i].split()[0] +'  '+imx[i].split()[1]+'\n')
+                        i=i+2
+
                 #Now enter the crude shifts for other images from our dic in the file. And also create text files containing images to align and aligned output
-                foo2=open(night+'/shifts.in','w')
-                alignInpfname=night+'/'+OutCombimg[:-5]+'.ditherList'
-                alignOutfname=night+'/'+OutCombimg[:-5]+'.AlignedditherList'
-                imgs2align=open(alignInpfname,'w')
-                imgs2alignOUT=open(alignOutfname,'w')
-                for img in imglist[1:]:
-                    Xin=eval(XYfiledic[Comb2Firstdic[img]][0])  
-                    Yin=eval(XYfiledic[Comb2Firstdic[img]][1])
-                    foo2.write(str(Xref-Xin)+'   '+str(Yref-Yin)+'\n')
-                    imgs2align.write(night+'/'+img+'\n')
-                    imgs2alignOUT.write(night+'/'+'s'+img+'\n')
-                foo2.close()
+                with open(night+'/shifts.in','w') as foo2 :
+                    alignInpfname=night+'/'+OutCombimg[:-5]+'.ditherList'
+                    alignOutfname=night+'/'+OutCombimg[:-5]+'.AlignedditherList'
+                    imgs2align=open(alignInpfname,'w')
+                    imgs2alignOUT=open(alignOutfname,'w')
+                    for img in imglist[1:]:
+                        Xin=eval(XYfiledic[Comb2Firstdic[img]][0])  
+                        Yin=eval(XYfiledic[Comb2Firstdic[img]][1])
+                        foo2.write(str(Xref-Xin)+'   '+str(Yref-Yin)+'\n')
+                        imgs2align.write(night+'/'+img+'\n')
+                        imgs2alignOUT.write(night+'/'+'s'+img+'\n')
+
                 imgs2align.close()
                 imgs2alignOUT.close()
                 try :  #Now align and if succeded combine those images....
@@ -773,25 +770,25 @@ def CombDith_FlatCorr_subrout(method="median",FlatStatSection='[200:800,200:800]
     for night in directories:
         print('Working on night: '+night)
         #Load all the Flat indexing file data
-        FlatFILE=open(night+'/AllObjects-FinalFlat.List','r')
-        Flatfiledic=dict([(flatset.split()[0],flatset.rstrip().split()[1:]) for flatset in FlatFILE])  #Dictionary of flats list for each image.
-        FlatFILE.close()
+        with open(night+'/AllObjects-FinalFlat.List','r') as FlatFILE :
+            Flatfiledic=dict([(flatset.split()[0],flatset.rstrip().split()[1:]) for flatset in FlatFILE])  #Dictionary of flats list for each image.
+
         if len(Flatfiledic) == 0 : #No images this night..
             print('No images to work on this night. skipping...')
             continue
         if TODO=='P':  #Load all the FilterSet indexing file data
-            FiltrFILE=open(night+'/AllObjects.List','r')
-            Filtrfiledic=dict([(filtset.split()[0],shlex.split(filtset.rstrip())[1]) for filtset in FiltrFILE])  #Dictionary of filterset for each image.
-            FiltrFILE.close()
+            with open(night+'/AllObjects.List','r') as FiltrFILE :
+                Filtrfiledic=dict([(filtset.split()[0],shlex.split(filtset.rstrip())[1]) for filtset in FiltrFILE])  #Dictionary of filterset for each image.
+
             NewFiltSet='(Blah,Blah,Blah)'
 
-        Obj2CombFILE=open(night+'/AllObjects2Combine.List','r')
-        #Secondly generate the list of lists of images to combine.
-        ListofLists=[[]]
-        for imgline in Obj2CombFILE:
-            if len(imgline.split()) == 0 and len(ListofLists[-1]) != 0 :  ListofLists.append([])  #Start a new list at end
-            elif len(imgline.split()) > 0 : ListofLists[-1].append(imgline.split()[0]) #Append to the last list
-        Obj2CombFILE.close()
+        with open(night+'/AllObjects2Combine.List','r') as Obj2CombFILE :
+            #Secondly generate the list of lists of images to combine.
+            ListofLists=[[]]
+            for imgline in Obj2CombFILE:
+                if len(imgline.split()) == 0 and len(ListofLists[-1]) != 0 :  ListofLists.append([])  #Start a new list at end
+                elif len(imgline.split()) > 0 : ListofLists[-1].append(imgline.split()[0]) #Append to the last list
+
         #Now iterate through every list of images to combine
         outlogFILE=open(night+'/FirstoneANDcombinedImages.List','w')
         for imglist in ListofLists:
@@ -959,20 +956,19 @@ def SelectionofFrames_subrout():
     #Generating list of objects frames
     for night in directories:
         print("Working on night : "+night)
-        slopeimgFILE=open(night+'/SlopeimagesLog.txt')
-        slopeimgFILElines=list(slopeimgFILE)
-        slopeimgFILE.close()
+        with open(night+'/SlopeimagesLog.txt','r') as slopeimgFILE :
+            slopeimgFILElines=list(slopeimgFILE)
         ObjList=[imgline.rstrip() for imgline in slopeimgFILElines if regexpObj.search(imgline.split()[0]) is not None ]
         FiltList=set()  #Set to store the list of filters needed to find flat/Argon for
-        ObjFILE=open(night+'/AllObjects.List','w')
-        for Objline in ObjList:
-            if (TODO=='P' and shlex.split(Objline)[6].upper() =='G') or (TODO=='S' and shlex.split(Objline)[6].upper() !='G') :
-                continue    #Skip this and go to the next object.
-            Name=shlex.split(Objline)[0]
-            U_L_Sfilter=tuple([pos.upper() for pos in shlex.split(Objline)[5:8]])  #(UPPER,LOWER,SLIT) filters in Uppercase
-            FiltList.add(U_L_Sfilter)
-            ObjFILE.write(Name+'    "'+str(U_L_Sfilter)+'"\n')
-        ObjFILE.close()
+        with open(night+'/AllObjects.List','w') as ObjFILE :
+            for Objline in ObjList:
+                if (TODO=='P' and shlex.split(Objline)[6].upper() =='G') or (TODO=='S' and shlex.split(Objline)[6].upper() !='G') :
+                    continue    #Skip this and go to the next object.
+                Name=shlex.split(Objline)[0]
+                U_L_Sfilter=tuple([pos.upper() for pos in shlex.split(Objline)[5:8]])  #(UPPER,LOWER,SLIT) filters in Uppercase
+                FiltList.add(U_L_Sfilter)
+                ObjFILE.write(Name+'    "'+str(U_L_Sfilter)+'"\n')
+
         #Now ask for flats in each filters
         Flatlistdic=dict()
         print("Below in addition to regexp, if needed you can enter the starting and ending filenumbers separated by space also.")
@@ -1047,9 +1043,9 @@ def LoadDirectories(CONF=False):
         InpList=raw_input('Enter the directories to analyse (default: %s) :'%','.join(directories)).strip(' ')
         if InpList : 
             directories=InpList.split(',')
-            directoriesF=open(MotherDIR+'/directories','w') #Updateing directories file
-            directoriesF.write('\n'.join(directories))
-            directoriesF.close()
+            with open(MotherDIR+'/directories','w') as directoriesF : #Updateing directories file
+                directoriesF.write('\n'.join(directories))
+
     if len(directories) == 0 : 
         print('Atleast one directory containing data to be given as input')
         exit(1)
