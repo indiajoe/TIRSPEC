@@ -969,6 +969,10 @@ def SelectionofFrames_subrout():
                 FiltList.add(U_L_Sfilter)
                 ObjFILE.write(Name+'    "'+str(U_L_Sfilter)+'"\n')
 
+        if not FiltList : #No files in this directory
+            print('No Images to reduce found in directory : {0}'.format(night))
+            print('Please remove {0} from directory list next time.'.format(night))
+            continue
         #Now ask for flats in each filters
         Flatlistdic=dict()
         print("Below in addition to regexp, if needed you can enter the starting and ending filenumbers separated by space also.")
