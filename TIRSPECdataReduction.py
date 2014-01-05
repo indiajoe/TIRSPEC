@@ -845,6 +845,7 @@ def Manual_InspectFlat_subrout():
         filelist.append('AllObjects-Argon.List')
         outfilelist.append('AllObjects-FinalArgon.List')
     for night in directories:
+        print("Working on night : "+night)
         for inpfile,outfile in zip(filelist,outfilelist):
             print('Files in:'+night+'/'+inpfile)
             inFILE=open(night+'/'+inpfile,'r')
@@ -888,6 +889,7 @@ def Manual_InspectObj_subrout():
     if TODO=='P': print("Press _a_ and then _q_ over a good central star for selecting image")
     if TODO=='S': print("Press _j_ and then _q_ over a good part of spectra for selecting image")
     for night in directories:
+        print("Working on night : "+night)
         ObjFILE=open(night+'/AllObjects.List','r')
         Obj2CombFILE=open(night+'/AllObjects2Combine.List','w')
         newX=0
@@ -1040,13 +1042,13 @@ def LoadDirectories(CONF=False):
         #Creating a text file containg the directories to visit if it doesn't already exist
         os.system('find . -type d -maxdepth 1 -mindepth 1 | sort > directories ')
         directoriesF=open(MotherDIR+'/directories','r')
-    directories=[dirs.rstrip() for dirs in directoriesF]
+    directories=[dirs.rstrip().strip(' ').rstrip('/') for dirs in directoriesF] #Removing spaces or trailing /
     directoriesF.close()
     if CONF == True :
         #Ask user again to confirm or change if he/she needs to
         InpList=raw_input('Enter the directories to analyse (default: %s) :'%','.join(directories)).strip(' ')
         if InpList : 
-            directories=InpList.split(',')
+            directories=[dirs.rstrip().strip(' ').rstrip('/') for dirs in InpList.split(',')] #Removing spaces or trailing /
             with open(MotherDIR+'/directories','w') as directoriesF : #Updateing directories file
                 directoriesF.write('\n'.join(directories))
 
