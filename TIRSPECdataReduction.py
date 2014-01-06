@@ -763,7 +763,7 @@ def FixBadPixels(images,nightdir):
     iraf.fixpix.unlearn()
     iraf.fixpix(images=images,masks=PixelMask)
 
-def CombDith_FlatCorr_subrout(method="median",FlatStatSection='[200:800,200:800]'):
+def CombDith_FlatCorr_subrout(method="median",FullFlatStatSection='[200:800,200:800]',YJFlatStatSection='[200:800,200:800]',HKFlatStatSection='[307:335,658:716]',SSFlatStatSection='[200:800,200:800]'):
     """ This will combine (default=median) with avsigclip the images in single dither and also create corresponding normalized flats and divide for flat correction """
     iraf.imcombine.unlearn()
     directories=LoadDirectories(CONF=False)
@@ -776,11 +776,11 @@ def CombDith_FlatCorr_subrout(method="median",FlatStatSection='[200:800,200:800]
         if len(Flatfiledic) == 0 : #No images this night..
             print('No images to work on this night. skipping...')
             continue
-        if TODO=='P':  #Load all the FilterSet indexing file data
-            with open(night+'/AllObjects.List','r') as FiltrFILE :
-                Filtrfiledic=dict([(filtset.split()[0],shlex.split(filtset.rstrip())[1]) for filtset in FiltrFILE])  #Dictionary of filterset for each image.
+        #Load all the FilterSet indexing file data
+        with open(night+'/AllObjects.List','r') as FiltrFILE :
+            Filtrfiledic=dict([(filtset.split()[0],shlex.split(filtset.rstrip())[1]) for filtset in FiltrFILE])  #Dictionary of filterset for each image.
 
-            NewFiltSet='(Blah,Blah,Blah)'
+        NewFiltSet='(Blah,Blah,Blah)'
 
         with open(night+'/AllObjects2Combine.List','r') as Obj2CombFILE :
             #Secondly generate the list of lists of images to combine.
@@ -805,12 +805,21 @@ def CombDith_FlatCorr_subrout(method="median",FlatStatSection='[200:800,200:800]
             Flats2Comb=set(Flats2Comb)  #Making a set to remove duplicates
             #Write all these flat names to a file.
             imgflatlistfname=night+'/'+OutCombimg[:-5]+'.flatlist'
-            imgflatlistFILE=open(imgflatlistfname,'w')
-            imgflatlistFILE.write('\n'.join([night+'/'+fla for fla in Flats2Comb]))
-            imgflatlistFILE.close()
-            
-#To Do Later:: #If spectroscopy of cross disperse mode : change the FlatStatSection
-            
+            with open(imgflatlistfname,'w') as imgflatlistFILE :
+                imgflatlistFILE.write('\n'.join([night+'/'+fla for fla in Flats2Comb]))
+
+            #If spectroscopy of short slit cross disperse mode : change the FlatStatSection
+            if Filtrfiledic[imglist[0]][1:-1].split(',')[2].strip().strip("'")[0] == 'S' :
+                if Filtrfiledic[imglist[0]][1:-1].split(',')[0].strip().strip("'") == 'GHKX' :
+                    FlatStatSection= HKFlatStatSection
+                elif Filtrfiledic[imglist[0]][1:-1].split(',')[0].strip().strip("'") == 'GYJX' :
+                    FlatStatSection= YJFlatStatSection
+                else :   #Short slit single order spectra
+                    FlatStatSection= SSFlatStatSection
+            else :
+                FlatStatSection= FullFlatStatSection
+
+            print('Image section used for normalising Flat is '+FlatStatSection)
             outflatname=night+'/'+OutCombimg[:-5]+'_flat.fits'
             iraf.imcombine (input='@'+imgflatlistfname, output=outflatname, combine="median", scale="median",reject="sigclip", statsec=FlatStatSection)
             statout=iraf.imstatistics(outflatname+FlatStatSection,fields='mode',Stdout=1)
