@@ -57,7 +57,11 @@ def LoadDataCube(imgname,RampNDRsuffix,NoofNDRs=None,tile=FullTile):
     NDRfilesT=glob.glob(imgname[:-5]+RampNDRsuffix)
     NDRfiles=sorted(NDRfilesT, key=lambda k: int(k[len(imgname)-5+7:-5]))
     if NoofNDRs==None : NoofNDRs=len(NDRfiles)
-    datacube=np.array([pyfits.getdata(NDR).astype(np.float32)[tile[0]:tile[1],tile[2]:tile[3]] for NDR in NDRfiles[:NoofNDRs]])
+
+    datacube=np.empty((NoofNDRs,tile[1]-tile[0],tile[3]-tile[2]),dtype=np.float32)
+    for i,img in enumerate((pyfits.getdata(NDR).astype(np.float32)[tile[0]:tile[1],tile[2]:tile[3]] for NDR in NDRfiles[:NoofNDRs])) : datacube[i,:,:]=img   # This iterator method is ~12 times faster than the equivalent commented line below !!
+#    datacube=np.array([pyfits.getdata(NDR).astype(np.float32)[tile[0]:tile[1],tile[2]:tile[3]] for NDR in NDRfiles[:NoofNDRs]])
+
     return datacube
 
 def AverageDataCube(imglist,RampNDRsuffix,NoofNDRs=None,tile=FullTile):
