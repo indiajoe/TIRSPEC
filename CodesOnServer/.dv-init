@@ -3,3 +3,5 @@ m.setbutton 0 /home/tirspec/DV/macros lastNDR.mac
 Buffer a 3
 DisplayType Header 3
 Buffer a 4
+Buffer a 1
+DisplayType XlineCut 1
