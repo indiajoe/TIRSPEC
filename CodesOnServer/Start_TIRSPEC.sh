@@ -2,9 +2,9 @@
 #This script is just to start the 4 terminals and dv for running tirspec.
 #-----------------------------------------indiajoe
 
-binDIR=/home/tirspec/bin.sw/  #Location of binaries
+binDIR=/home/tirspec/bin.20140129/  #Location of binaries  #bin.sw
 logDIR=/home/tirspec/LOGS   #Location to write logs
-scriptDIR=/home/tirspec/   #Location to shell scripts
+scriptDIR=/home/tirspec/bin/   #Location to shell scripts
 
 xmessage -buttons Continue:10,Cancel:20 -default Continue "Before Continuing, make sure no other instances of tirspec software is running. " 
 if [ $? -eq 20 ] ; then

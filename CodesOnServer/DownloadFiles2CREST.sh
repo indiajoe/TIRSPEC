@@ -40,10 +40,10 @@ echo "Proceeding with the processing of following directories :  ${nightarray[@]
 echo "Which Machine at CREST do you want to download the data into ?"
 echo "---------------------------------------"
 echo " 0 : Do not download data to anywhere "
-echo " 1 : Download to 192.168.1.23 "
-echo " 2 : Download to 192.168.1.14 "
+echo " 1 : Download to 192.168.1.16 (hct_archive)"
+echo " 2 : Download to 192.168.1.23 (control_machine)"
 echo "---------------------------------------"
-echo -n "Enter Serial number of your choice :"
+echo -n "Enter Serial number of your choice (Prefer: 1):"
 while read -n 1 choice
 do
     case $choice in
@@ -52,18 +52,19 @@ do
 	    echo
 	    echo "No downloading of data wil be done." 
 	    break ;;
-	
 	1) 
+	    MachineIP='192.168.1.16' 
+	    echo
+	    DestinationDir='/home/observer/hct_archive/TIRSPECdata/'
+	    echo "Final Data will be downloaded to $MachineIP :$DestinationDir"
+	    break ;;
+
+	2) 
 	    MachineIP='192.168.1.23' 
 	    echo
-	    echo "Final Data will be downloaded to $MachineIP"
+	    DestinationDir='/home/observer/TIRSPECdata/'
+	    echo "Final Data will be downloaded to $MachineIP :$DestinationDir"
 	    break ;;	
-	2) 
-	    MachineIP='192.168.1.14' 
-	    echo
-	    echo "Final Data will be downloaded to $MachineIP"
-	    echo "Sorry: Not yet setup. cannot be done..."
-	    break ;;
 	*)
 	    echo
 	    echo "Pls enter a valid choice: 0,1, or 2" 
@@ -93,12 +94,12 @@ done
 
 if [[ $MachineIP != 'NIL' ]] ; then
     for dir in "${nightarray[@]}"; do
-	echo "Uploading $dir files to ~/TIRSPECdata/ in $MachineIP..."
+	echo "Uploading $dir files to $DestinationDir in $MachineIP..."
 	date
-	rsync -e ssh -avzR $dir/Slope* observer@$MachineIP:~/TIRSPECdata/
+	rsync -e ssh -avzR $dir/Slope* observer@$MachineIP:$DestinationDir
 	date
     done
-    echo "All uploads to CREST over..."
+    echo "If no error above, All uploads to CREST over..."
 fi
 echo "Thanks for using TIRSPEC."
 echo
