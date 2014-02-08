@@ -223,7 +223,7 @@ def Photometry():
         print('-'*60)
         traceback.print_exc(file=sys.stdout)
         print('-'*60)
-        exit
+        exit(1)
 
     # Setting flag by checking wheter the size of qphotinput.txt is Zero or not.
     if os.stat(MotherDIR+"/qphotinput.txt")[6]!=0 : QPHOT_todo='Y'
@@ -231,9 +231,11 @@ def Photometry():
 
 
     imgNo=0
+    FirstImageName=None
     for imgline in imgfile :
         imgline=imgline.rstrip()
         imgline=shlex.split(imgline)
+        if FirstImageName is None : FirstImageName=os.path.abspath(imgline[0])  #Saving the first image name of this photometry run
         wdir=imgline[0].split('/')[-2]
         if wdir != os.getcwd().split('/')[-1] : #If we are not already in img dir
             iraf.cd(MotherDIR)  #Going back to parent directory
@@ -270,7 +272,7 @@ def Photometry():
         #Runing xyxymatch and geo map and geotran to create new SourceT.coo , GoodStarsT.coo, BlankSky.coo
         Nmatch=32
         num_lines=0
-        while num_lines < 6 :       # Set the number of stars it should atlest mach here....
+        while num_lines < XYMATCHMIN :       # the number of stars it should atlest mach is set in .conf file XYMATCHMIN= 6....
             os.system("rm "+img+"xymatch.out 2> /dev/null")
             Nmatch=Nmatch-2
             iraf.xyxymatch.unlearn()
@@ -279,9 +281,22 @@ def Photometry():
             os.system("gawk '{if ($1 >0){print $0}}' "+img+"xymatch.out > matchedstars.txt") #Removing headers
             num_lines = sum(1 for line in open("matchedstars.txt"))  #Counting number of lines in the xymatch output. it should be more than 15 (size of header)
             print("Number of stars Matched= "+str(num_lines))
-            if Nmatch < 5 : 
+            if Nmatch < XYMATCHMIN : 
                 print("Failed to find the coordinates for "+img)
-                exit
+                print("We need to find the transformation interactevilly")
+                Inpfirstimg=raw_input("Enter the path to first image using which coords was generated with sextractor (default: {0}) : ".format(FirstImageName)).strip(' ')
+                if Inpfirstimg : FirstImageName=Inpfirstimg
+                print("Running the xyxy match interactviely... Select three same points from both images")
+                iraf.display(FirstImageName,1)
+                iraf.display(img,2)
+                os.system("rm "+img+"xymatch.out 2> /dev/null")
+                iraf.xyxymatch.unlearn()
+                iraf.xyxymatch(input="Bright30.coo",reference=MotherDIR+"/FirstImageTop30.coo",output=img+"xymatch.out", toler=5, matching="tolerance",nmatch=3*XYMATCHMIN,interactive="yes")
+                os.system("gawk '{if ($1 >0){print $0}}' "+img+"xymatch.out > matchedstars.txt") #Removing headers
+                num_lines = sum(1 for line in open("matchedstars.txt"))  #Counting number of lines in the xymatch output. it should be more than 15 (size of header)
+                print("Number of stars Matched= "+str(num_lines))
+                break
+
         
         iraf.geomap(input=img+"xymatch.out", database=img+"rtran.db", xmin=1, xmax=yxdim[1], ymin=1, ymax=yxdim[0], interactive=0)
         iraf.geoxytran(input=MotherDIR+"/GoodStars.coo", output=img+"GoodStarsT.coo",database=img+"rtran.db",transforms=img+"xymatch.out")
@@ -312,7 +327,7 @@ def Photometry():
         starlist=" "
         i=2
         while i < len(imx) :
-            if (imx[i+1].split()[4] != 'INDEF') and (float(imx[i+1].split()[4]) > 10*np.sqrt(float(imx[i+1].split()[3]))) and (float(imx[i+1].split()[4])+float(imx[i+1].split()[3])) < float(DATAMAX) : # (Peak-sky) is not INDEF and (Peak-sky) > 10*sqrt(sky) and  Peak is not saturated
+            if (imx[i+1].split()[4] != 'INDEF') and (min(float(imx[i+1].split()[10]),float(imx[i+1].split()[9])) > np.abs(float(imx[i+1].split()[10])-float(imx[i+1].split()[9]))) and (float(imx[i+1].split()[4])+float(imx[i+1].split()[3])) < float(DATAMAX) : # (Peak-sky) is not INDEF and min(MoffetFWHM,directFWHM) > abs(directFWHM-MoffetFWHM) and  Peak is not saturated
                 foo.write(imx[i].split()[0] +'  '+imx[i].split()[1]+'\n')
                 starlist=starlist+str(i/2)+"_"   #Saving the string of good stars survived.
             else : print('Discarded: '+str(i/2)+' th number star not good of '+DIRtogo+' '+img)
@@ -551,7 +566,7 @@ def Sextractor_subrout(img=None,N=30):
             print('-'*60)
             traceback.print_exc(file=sys.stdout)
             print('-'*60)
-            exit
+            exit(1)
 
         imgline=imgfile.readline()  #First line only
         imgline=imgline.rstrip()
@@ -579,7 +594,7 @@ def Star_sky_subrout(img=None) :
             print('-'*60)
             traceback.print_exc(file=sys.stdout)
             print('-'*60)
-            exit
+            exit(1)
 
         imgline=imgfile.readline()  #First line only
         imgline=imgline.rstrip()
@@ -721,7 +736,7 @@ def AlignNcombine_subrout(method="average"):
                 with open(night+'/shifts.in','w') as foo2 :
                     alignInpfname=night+'/'+OutCombimg[:-5]+'.ditherList'
                     alignOutfname=night+'/'+OutCombimg[:-5]+'.AlignedditherList'
-                    imgs2align=open(alignInpfname,'w')
+                    imgs2align=open(alignInpfname,'w')    #Once the world migrates to Python 2.7+, these files also should be opened in the same with command above...
                     imgs2alignOUT=open(alignOutfname,'w')
                     for img in imglist[1:]:
                         Xin=eval(XYfiledic[Comb2Firstdic[img]][0])  
@@ -773,9 +788,6 @@ def CombDith_FlatCorr_subrout(method="median",FullFlatStatSection='[200:800,200:
         with open(night+'/AllObjects-FinalFlat.List','r') as FlatFILE :
             Flatfiledic=dict([(flatset.split()[0],flatset.rstrip().split()[1:]) for flatset in FlatFILE])  #Dictionary of flats list for each image.
 
-        if len(Flatfiledic) == 0 : #No images this night..
-            print('No images to work on this night. skipping...')
-            continue
         #Load all the FilterSet indexing file data
         with open(night+'/AllObjects.List','r') as FiltrFILE :
             Filtrfiledic=dict([(filtset.split()[0],shlex.split(filtset.rstrip())[1]) for filtset in FiltrFILE])  #Dictionary of filterset for each image.
@@ -788,6 +800,14 @@ def CombDith_FlatCorr_subrout(method="median",FullFlatStatSection='[200:800,200:
             for imgline in Obj2CombFILE:
                 if len(imgline.split()) == 0 and len(ListofLists[-1]) != 0 :  ListofLists.append([])  #Start a new list at end
                 elif len(imgline.split()) > 0 : ListofLists[-1].append(imgline.split()[0]) #Append to the last list
+
+        if len(ListofLists[0]) == 0 : #No images this night..
+            print('No images to work on this night. skipping...')
+            try :
+                os.remove(night+'/FirstoneANDcombinedImages.List')
+            except OSError :
+                print('Not able to remove (if any) previous '+night+'/FirstoneANDcombinedImages.List')
+            continue
 
         #Now iterate through every list of images to combine
         outlogFILE=open(night+'/FirstoneANDcombinedImages.List','w')
@@ -1110,7 +1130,9 @@ for con in configfile:
             READNOISE=con.split()[1]
         elif con.split()[0] == "DATAMAX=" :
             DATAMAX=con.split()[1]
-
+        elif con.split()[0] == "XYMATCHMIN=" :
+            XYMATCHMIN=int(con.split()[1])
+            
         elif con.split()[0] == "APPERTURE=" :
             APPERTURE=con.split()[1]
         elif con.split()[0] == "ANNULUS=" :
