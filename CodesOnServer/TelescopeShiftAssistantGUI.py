@@ -283,7 +283,8 @@ class OStab(ttk.Frame):
         Rot is the rotation given to telescope by  telescopesetrotator command in degrees.
         This function returns the new Offsets in RA and Dec"""
         PixelScale=0.3081
-        RApos,DECpos=self.RotateScaleVector((Start[0]-Destination[0],Start[1]-Destination[1]),S=(PixelScale,PixelScale),rot=math.radians(rot))
+        RApos,DECpos=self.RotateScaleVector((Start[0]-Destination[0],Start[1]-Destination[1]),S=(PixelScale,-1*PixelScale),rot=math.radians(rot))
+        DECpos*=-1     # Flipping the axis back..
         RApos+=OffsetRA
         DECpos+=OffsetDec
         return RApos,DECpos
