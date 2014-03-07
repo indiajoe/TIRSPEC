@@ -228,6 +228,8 @@ class OStab(ttk.Frame):
             self.OutputText.set(u"RA Offset: {0:.2f}  Dec Offset: {1:.2f}".format(OffsetRA,OffsetDec))
             self.InpOffsetX.set('{0:.2f}'.format(OffsetRA))
             self.InpOffsetY.set('{0:.2f}'.format(OffsetDec))
+            self.InpCurrentX.set(self.InpTargetX.get())  # Automatically updating Current position to Target position.
+            self.InpCurrentY.set(self.InpTargetY.get())  # This will prevent values from changing in accidental double click.
 
 
     def is_number(self,s): 
