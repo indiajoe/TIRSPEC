@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 #This script will help in telluric correction of spectra with standard star spectra interactively.
 import readline
+import sys
 import numpy as np
 import numpy.ma
 import scipy.interpolate as interp
@@ -317,7 +318,7 @@ def FindConvolutionKernel(InSpec1,InSpec2,wlshift=0,Ratio=1):
     #First we have to sample the second spectra exactly to same axis of first spectra
     tck2=interp.splrep(Spec2[:,0],Spec2[:,1],s=0)
     Spec2=Spec1.copy()  #Making the array same size of first spectra
-    Spec2[:,1]=interp.splev(Spec1[:,0]-wlshift,tck2,der=0)
+    Spec2[:,1]=interp.splev(Spec1[:,0]+wlshift,tck2,der=0)
     #We have to normalise the continuum of Second spectra. (First is believed to be already normalised).
     Spec2,flux2,continuum2=ContinuumNormSpec(Spec2)
     #We also have to scale the flux of the line spectra to Ratio
@@ -405,8 +406,15 @@ def AskAndCleanStellarLines(Inspec):
     Star='A0'
     StdNormSpecdic=dict([('A0','Vega_R2000_WR9000to30000_RS10_Norm.txt')])
     StdContBreakdic=dict([('A0','Cont_break_Vega_R2000_WR9000to30000_RS10_Norm.txt')])
-    StdNorm=np.loadtxt(StdNormSpecdic[Star])
+    try :
+        StdNorm=np.loadtxt(StdNormSpecdic[Star])
 #    StdContBreak=np.loadtxt(StdContBreakdic[Star])
+    except IOError as e:
+        print(e)
+        print('File : '+StdNormSpecdic[Star]+' not found in present directory.')
+        print('Please copy that file to present directory and proceed')
+        sys.exit(1)
+
     StdConvolved=False
     WLshift=0.0
     ratio=1
@@ -459,8 +467,8 @@ def AskAndCleanStellarLines(Inspec):
             elif choice[0] == 'f' and len(choice.split())==3: #Find the instrumental convolution kernel
                 start=int(choice.split()[1])
                 end=int(choice.split()[2])
-                Wstart=spec[start,0]+WLshift
-                Wend=spec[end,0]+WLshift
+                Wstart=spec[start,0]-WLshift
+                Wend=spec[end,0]-WLshift
                 SNstart=np.argmax(StdNorm[:,0] > Wstart)
                 SNend=np.argmax(StdNorm[:,0] > Wend)
                 kernel=FindConvolutionKernel(StdNorm[SNstart:SNend,:],spec[start:end,:],wlshift=WLshift,Ratio=ratio)
