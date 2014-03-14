@@ -94,7 +94,7 @@ def SpectralExtraction_subrout():
                 try:
                     iraf.scombine(input='@FinalwcSpectralistin_'+filt+'.txt',output=filt+'_avg_'+Filt2finalspecs[filt][0],combine='average',scale='median')
                     print('Averaging the spectras to final output '+filt+'_avg_'+Filt2finalspecs[filt][0])
-                except iraf.IrafError, e :
+                except iraf.IrafError as e :
                     print(e)
                     print('ERROR: Could not scombine images in FinalwcSpectralistin_'+filt+'.txt')
 
@@ -127,7 +127,7 @@ def SpectralPairSubtraction_subrout():
             #We shall also keep a list of images in proper order.
             Allimglist=[ditherset.rstrip().split()[1]  for ditherset in DitherFILElines if len(ditherset.split()) == 2]
 
-        except IOError,e:
+        except IOError as e:
             print('Cannot open the image file list.')
             print(e)
             print('So skipping this directory.')
@@ -168,7 +168,7 @@ def SpectralPairSubtraction_subrout():
                         Outimg=OutFilePrefix+'_'+filt+'_'+instr[0]+'-'+instr[1]+'.fits'
                         try:
                             iraf.imarith(operand1=night+'/'+ABCDtoimg[instr[0]],op="-",operand2=night+'/'+ABCDtoimg[instr[1]],result=night+'/'+Outimg)
-                        except iraf.IrafError, e :
+                        except iraf.IrafError as e :
                             print(e)
                             print('Skipping to next instruction')
                             continue
@@ -183,8 +183,15 @@ def SpectralPairSubtraction_subrout():
                 #Now Copy the already identified Repository Lamps to this directory.
                 print("Copying already identified lines of this filter %s from Repository.."%(filt))
                 os.system('mkdir -p '+night+'/database/')
-                shutil.copy(LAMPREPODIR+'/RepoArgon_'+filt+'.fits',night+'/RepoArgon_'+filt+'.fits')
-                shutil.copy(LAMPREPODIR+'/database/idRepoArgon_'+filt,night+'/database/idRepoArgon_'+filt)
+                try:
+                    shutil.copy(LAMPREPODIR+'/RepoArgon_'+filt+'.fits',night+'/RepoArgon_'+filt+'.fits')
+                    shutil.copy(LAMPREPODIR+'/database/idRepoArgon_'+filt,night+'/database/idRepoArgon_'+filt)
+                except IOError as e:
+                    print(e)
+                    print("ERROR: Cannot find already identified lines of this filter %s from Repository.."%(filt))
+                    print("Before you proceed to next step, do copy the identified line spectra of this filter.")
+                    print(" Or remove this image from "+night+'/Spectrastoextract_Argon_BandFilter.txt')
+                    print('-'*10)
 
             else:
                 print("More than 26 images (or no images!!) in single filter? Sorry, you should consider combining them somehow. Or split into two nights directory")
@@ -217,7 +224,7 @@ def Photometry():
 
     try:
         imgfile=open(MotherDIR+'/Images4Photo.in','r')
-    except IOError,e:
+    except IOError as e:
         print('Cannot open Images4Photo.in file. Run Task #6 ')
         print(e)
         print('-'*60)
@@ -344,7 +351,7 @@ def Photometry():
                     foo.write(imx[i].split()[0] +'  '+imx[i].split()[1]+'\n')
                     i=i+2
 
-        except iraf.IrafError, e :
+        except iraf.IrafError as e :
             print('Iraf Error: going forward with first estimated Source.coo')
             shutil.copy(img+'SourceT.coo',img+'Source.coo')
     
@@ -588,7 +595,7 @@ def Star_sky_subrout(img=None) :
     if img is None : # If No img is given, then using the first image in Images4Photo.in file
         try:
             imgfile=open(MotherDIR+'/Images4Photo.in','r')
-        except IOError,e:
+        except IOError as e:
             print('Cannot open Images4Photo.in file. Run Task #6 ')
             print(e)
             print('-'*60)
@@ -642,7 +649,8 @@ def Star_sky_subrout(img=None) :
                 for i in qphot_inp.split() : boolvar = boolvar and is_number(i)
                 if boolvar and (len(qphot_inp.split()) == 5) : foo.write(qphot_inp+' \n')
                 elif (qphot_inp != "q") : print("Wrong Entry. Please enter properly the 5 values. q is to stop.")
-
+    else :
+        print("Source.coo, GoodStars.coo, BlankSky.coo, qphotinput.txt already exists. If you need to recreate, rename/remove them before calling this step.")
     #Finished all first images data collection. Now going forward..
 
     print("\n All required human input of coordinates taken..")
@@ -667,7 +675,7 @@ def Createlist_subrout():
 
             #Now Read and write the images to do photometry one by one.
             ImgsFILE=open(night+'/FirstoneANDalignNcombinedImages.List','r')
-        except IOError,e:
+        except IOError as e:
             print('Cannot open the image file list.')
             print(e)
             print('So skipping this directory.')
@@ -750,7 +758,7 @@ def AlignNcombine_subrout(method="average"):
                 try :  #Now align and if succeded combine those images....
                     iraf.imalign(input='@'+alignInpfname, reference=night+'/'+Refimage, coords=night+'/'+OutCoofile, output='@'+alignOutfname, shifts=night+'/shifts.in', interp_type="nearest",boundary_type="constant",trimimages="no")
                     iraf.imcombine(input=night+'/'+Refimage+','+'@'+alignOutfname, output=night+'/'+OutCombimg,combine=method,reject="sigclip")
-                except iraf.IrafError, e :
+                except iraf.IrafError as e :
                     print ('IRAF ERROR : Some image might be having problem. Remove it and try later')
                     print e
                     print('-'*60)
@@ -826,7 +834,7 @@ def CombDith_FlatCorr_subrout(method="median",FullFlatStatSection='[200:800,200:
             #Write all these flat names to a file.
             imgflatlistfname=night+'/'+OutCombimg[:-5]+'.flatlist'
             with open(imgflatlistfname,'w') as imgflatlistFILE :
-                imgflatlistFILE.write('\n'.join([night+'/'+fla for fla in Flats2Comb]))
+                imgflatlistFILE.write('\n'.join([night+'/'+fla for fla in Flats2Comb])+'\n')
 
             #If spectroscopy of short slit cross disperse mode : change the FlatStatSection
             if Filtrfiledic[imglist[0]][1:-1].split(',')[2].strip().strip("'")[0] == 'S' :
@@ -929,14 +937,18 @@ def Manual_InspectObj_subrout():
         FWHM=4.0  #Not important what number you give here...
         newU_L_Sfilter='(Blah,Blah,Blah)'
         for objline in ObjFILE:
-            img=objline.split()[0]
+            try:
+                img=objline.split()[0]
+            except IndexError:
+                print('Blank line in '+night+'/AllObjects.List file')
+                continue
             iraf.display(night+'/'+img,1)
             print(objline)
             if TODO=='P':print('\n To discard this image press _q_ without pressing _a_')
             if TODO=='S':print('\n To discard this image press _q_ without pressing _j_')
             try:
                 imx=iraf.imexam(Stdout=1)
-            except iraf.IrafError, e :
+            except iraf.IrafError as e :
                 print ('IRAF ERROR : This image %s might be having problem, still choosing it'%(night+'/'+img))
                 print e
                 if len(imx) < 1 :imx=['center= %f  peak fwhm= %f bkg'%(newsX,FWHM)]  #A dummy entry..
@@ -1081,7 +1093,7 @@ def LoadDirectories(CONF=False):
         if InpList : 
             directories=[dirs.rstrip().strip(' ').rstrip('/') for dirs in InpList.split(',')] #Removing spaces or trailing /
             with open(MotherDIR+'/directories','w') as directoriesF : #Updateing directories file
-                directoriesF.write('\n'.join(directories))
+                directoriesF.write('\n'.join(directories)+'\n')
 
     if len(directories) == 0 : 
         print('Atleast one directory containing data to be given as input')
