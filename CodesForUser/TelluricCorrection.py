@@ -6,6 +6,7 @@ import numpy.ma
 import scipy.interpolate as interp
 import scipy.constants
 import matplotlib.pyplot as plt
+from astropy.io import fits  #Needed only to load fits spectra
 
 def RichardsonLucy(Signal,PSF,IniKernel,niter):
     """ By Richardson-Lucy Algorithm, retrun the deconvolution of Signal using input PSF.
@@ -47,6 +48,7 @@ def AskAndMaskSpectra(Inspec):
     """ Displays the spectra in index coordinates and masks user requested points """
     spec=Inspec.copy() #Copying to protect input
     if not np.ma.isMaskedArray(spec): spec=np.ma.array(spec)
+    plt.close() #Closing the window, just checking whether this removes the error while calling m
     fig = plt.figure()
     ax=fig.add_subplot(1,1,1)
     fullline,=ax.plot(spec[:,1],marker='.',alpha=0.5)  #Saving the input full plot
@@ -563,25 +565,61 @@ def TelluricCorrect(InSci,InStd):
     #Return the cleaned spectra
     return CorrectedSci,Sci[:,0],Std
             
-            
 
-def AskAndLoadAsciiData(toask="Enter Filename : ",Skipascii=69):
-    """ Asks user ascii filename and return the table loaded as numpy array. 
-    toask is string which contains the prompt to ask. 
+def LoadFitsSpectra(filename):
+    """Load and return the wavelength calibrated input fits spectra as 2 column numpy array. """
+    fitsfile=fits.open(filename)
+    flux=fitsfile[0].data
+
+    try :
+        ref_pixel = fitsfile[0].header['CRPIX1']
+        coord_ref_pixel = fitsfile[0].header['CRVAL1']
+        wave_per_pixel = fitsfile[0].header['CDELT1']
+    except KeyError as e :
+        print('Error: Missing keywords in fits header to do wavelength calibration')
+        print(e)
+        print('You might have entered wrong file name. Hence I am raising IOError')
+        print('Enter the fits file name which is wavelength calibrated.')
+        raise IOError
+    else:
+        w_start=coord_ref_pixel - ((ref_pixel-1) * wave_per_pixel)  #Starting wavelength
+        Wavelengths=w_start+np.arange(len(flux))*wave_per_pixel
+
+        return np.vstack((Wavelengths,flux)).T
+    
+
+def LoadAsciiSpectra(filename,Skipascii=69):
+    """Load and return the ascii spectra as 2 column numpy array. 
     Skipasciii is an integer which tells the number of initial lines to skip while reading the data from file """
-
-    while True:  #Keep asking till a file is properly loaded
-        try :
-            filename=raw_input(toask).strip(' ')
+    while True:  #Keep asking number of lines to skip in the ascii if error comes
+        try:
             Data=np.loadtxt(filename,skiprows=Skipascii)
             break
-        except IOError :
-            print("Error: Cannot find the file %s, Please give the correct file name."%(filename))
         except ValueError as e:
             print("Non float values in file? ")
             print(e)
             print("Present number of lines to skip in ascii file is %d "%Skipascii) 
             Skipascii=int(raw_input("Enter number of initial lines to skip in file:").strip(' '))
+
+    return Data
+    
+
+def AskAndLoadData(toask="Enter Filename : ",Skipascii=69):
+    """ Asks user to enter filename and return the table loaded as numpy array. 
+    toask is string which contains the prompt to ask. 
+    Skipasciii is an integer which tells the number of initial lines of header to skip, incase user inputs an ascii spectra file instead of a fits data file """
+
+    while True:  #Keep asking till a file is properly loaded
+        try :
+            filename=raw_input(toask).strip(' ')
+            if filename[-5:] == '.fits' : #User has inputed a fits file
+                Data=LoadFitsSpectra(filename)
+            else:   #We assume it is an ascii spectra
+                Data=LoadAsciiSpectra(filename,skiprows=Skipascii)
+            break
+        except IOError :
+            print("Error: Cannot find the file %s, Please give the correct file name."%(filename))
+
     return Data,filename
 
 def is_number(s):   # A funtion to check wheter string s is a number or not.
@@ -594,8 +632,8 @@ def is_number(s):   # A funtion to check wheter string s is a number or not.
 
 def main():
     """ Asks user for the standard star spectra and science target spectra files and start telluric correction """
-    StdStarRaw,stdfname=AskAndLoadAsciiData(toask="Enter the name of standard star spectrum ascii file : ",Skipascii=69)
-    ScienceStarRaw,scifname=AskAndLoadAsciiData(toask="Enter the name of science star spectrum ascii file : ",Skipascii=69)
+    StdStarRaw,stdfname=AskAndLoadData(toask="Enter the name of standard star spectrum file : ",Skipascii=69)
+    ScienceStarRaw,scifname=AskAndLoadData(toask="Enter the name of science star spectrum file : ",Skipascii=69)
     CorrSci,CorrSciWL,Telluric=TelluricCorrect(ScienceStarRaw,StdStarRaw)
     BBtemp='SkipCC'
     BBtemp=raw_input("Enter Temperature of Std star (Kelvin) to correct continuum (to skip press enter): ")
