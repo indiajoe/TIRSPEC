@@ -545,11 +545,17 @@ def TelluricCorrect(InSci,InStd):
         print(" sc 1.1    #To scale the Telluric spectra by factor of 1.1")
         print(" m         #To start a window on masking regions in spectra of Telluric Std spectra")
         print(" f         #To start a window on fitting and removing stellar lines in Telluric Std spectra")
-        print(" q         #To exit, returning the latest telluric spectra and corrected science target")
+        print(" wq        #To exit, returning the latest telluric spectra and corrected science target to save")
+        print(" q         #Exit and close, discarding everything")
         choice=raw_input("Enter your choice : ").strip(' ')
         print('-'*40)
         try:
-            if choice[0] == 'q': #Exiting
+            if choice[0] == 'q': #Exiting discarding everything
+                confirm=raw_input("Do you want to exit, Discarding everything done so far? (Enter y to exit) : ").strip(' ')
+                if confirm.lower() == 'y' :
+                    print("Exiting, discarding everything.")
+                    sys.exit(0)
+            if choice[0] == 'w': #Exiting to save the new spectra
                 break
             elif choice[0] == 'f': #Stellar line fitting..
                 Std=AskAndCleanStellarLines(Std)
@@ -614,6 +620,7 @@ def LoadAsciiSpectra(filename,Skipascii=69):
 
 def AskAndLoadData(toask="Enter Filename : ",Skipascii=69):
     """ Asks user to enter filename and return the table loaded as numpy array. 
+    User can input, a fits file, ascii spectra or even a numpy .npy array.
     toask is string which contains the prompt to ask. 
     Skipasciii is an integer which tells the number of initial lines of header to skip, incase user inputs an ascii spectra file instead of a fits data file """
 
@@ -622,6 +629,8 @@ def AskAndLoadData(toask="Enter Filename : ",Skipascii=69):
             filename=raw_input(toask).strip(' ')
             if filename[-5:] == '.fits' : #User has inputed a fits file
                 Data=LoadFitsSpectra(filename)
+            elif filename[-4:] == '.npy' : #User has inputed a numpy .npy array file
+                Data=np.load(filename)
             else:   #We assume it is an ascii spectra
                 Data=LoadAsciiSpectra(filename,skiprows=Skipascii)
             break
@@ -660,11 +669,15 @@ def main():
     print("Final spectrum will be saved after window is closed.")
     plt.show()
     #Save the generated spectras values as numpy arrays
-    scifname=scifname.split('.')[0]
-    stdfname=stdfname.split('.')[0]
+    fnameSuffix=raw_input("Enter any suffix, you want to add to the output spectra file names: ")
+    scifname=scifname.split('.')[0]+'_'+fnameSuffix
+    stdfname=stdfname.split('.')[0]+'_'+fnameSuffix
     np.save(scifname+'_Y_',np.array(np.ma.compressed(CorrSci)))  #Adding extra np.array to fix the bug in numpy till a fix 
     np.save(scifname+'_X_',np.array(np.ma.compressed(CorrSciWL)))
     np.save(stdfname+'_XY_',np.array(np.ma.compress_rows(Telluric)))
+    print('The spectra saved by the following names')
+    print(scifname+'_Y_.npy',scifname+'_X_.npy',stdfname+'_XY_.npy')
+    print('Enjoy!!_________________________indiajoe')
 
 if __name__ == "__main__":
     main()
