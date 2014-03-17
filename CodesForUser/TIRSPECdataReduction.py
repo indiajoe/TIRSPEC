@@ -824,8 +824,9 @@ def CombDith_FlatCorr_subrout(method="median",FullFlatStatSection='[200:800,200:
                 OutCombimg=imglist[0]
             elif len(imglist) > 1 :
                 OutCombimg=imglist[0][:-5]+'_'+method+'_'+imglist[-1][:-5]+'.fits'
-                inpVAR=','.join([night+'/'+img for img in imglist])
-                iraf.imcombine(input=inpVAR, output=night+'/'+OutCombimg,combine=method,reject="sigclip")
+                with open(night+'/'+OutCombimg+'.imcombine.List','w') as imcombineinputFile:
+                    imcombineinputFile.write('\n'.join([night+'/'+img for img in imglist])+'\n')
+                iraf.imcombine(input='@'+night+'/'+OutCombimg+'.imcombine.List', output=night+'/'+OutCombimg,combine=method,reject="sigclip")
             #Now make list of flats to be combined for this image set
             Flats2Comb=[]
             for img in imglist:
