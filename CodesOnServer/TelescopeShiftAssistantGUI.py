@@ -181,7 +181,7 @@ class OStab(ttk.Frame):
         self.TarXentrybox = Tkinter.Entry(self.TargetXYEntryFrame,textvariable=self.InpTargetX)
         TarXentryboxToolTip = ToolTip(self.TarXentrybox, follow_mouse=1, text="Enter Targeted X pixel coordinate.")
         self.TarYentrybox = Tkinter.Entry(self.TargetXYEntryFrame,textvariable=self.InpTargetY)
-        TarYentryboxToolTip = ToolTip(self.TarYentrybox, follow_mouse=1, text="Enter Targeted Y pixel coordinate. \nOr name of slit to get slit position.\n Eg:    L3")
+        TarYentryboxToolTip = ToolTip(self.TarYentrybox, follow_mouse=1, text="Enter Targeted Y pixel coordinate. \nOr name of slit [+/- optional offset] to get slit position.\n Eg:    L2 +3.1")
         self.SlitPositionButton = Tkinter.Button(self.TargetXYEntryFrame,text=u"Get Slit Pos",command=self.OnGetSlitPositionButtonClick)
         SlitPositionButtonToolTip = ToolTip(self.SlitPositionButton, follow_mouse=1, text="Update the boxes with slit position.")
         self.TarXentrybox.grid(column=0,row=0,sticky='EW')
@@ -260,8 +260,16 @@ class OStab(ttk.Frame):
         
 
     def GetSlitPosition(self,slit,X=None):
-        """ Returns the X,Y coordinate to position star inside the slit . If the slit position changes update them inside this function."""
+        """ Returns the X,Y coordinate to position star inside the slit . If the slit position changes update them inside this function. You can give Y axis offset also to the slit name. Eg: L1+3.1 """
         slit=slit.upper()
+        offset=0
+        #If user has given any offest along with slit name
+        if ('+' in slit) and self.is_number(slit.split('+')[-1]) : 
+            offset=float(slit.split('+')[-1])
+            slit=slit.split('+')[0].strip()
+        elif ('-' in slit) and self.is_number(slit.split('-')[-1]) :  
+            offset=-1*float(slit.split('-')[-1])
+            slit=slit.split('-')[0].strip()            
                 
         # Using the X coordinate if user has already specified it else default value 510
         PosX= float(X) if self.is_number(X) else 510.0
@@ -281,7 +289,7 @@ class OStab(ttk.Frame):
 
         SlitDict={'S1':S1pC, 'S2':S2pC, 'S3':S3pC, 'S4':S4pC, 'S5': S5pC,'L1':L1pC, 'L2':L2pC, 'L3':L3pC, 'L4':L4pC, 'L5': L5pC}
         
-        PosY=SlitDict[slit][0]*PosX**2 +SlitDict[slit][1]*PosX +SlitDict[slit][2]
+        PosY=SlitDict[slit][0]*PosX**2 +SlitDict[slit][1]*PosX +SlitDict[slit][2] +offset
 
         return PosX,PosY
         
