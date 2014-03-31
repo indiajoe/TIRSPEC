@@ -6,34 +6,76 @@ And also some add-on scripts to assist during observation.
 Codes are mostly in Python.
 
 Feel free to modify as needed and use it while observing with TIRSPEC.
-Make sure, you keep the modified scripts under a seperate directory of your name, 
+Make sure, you keep the modified scripts under a separate directory of your name, 
 to prevent any conflict with default scripts for other users.
 
 You may also find some helpful scripts in the following link: http://indiajoe.github.io/HandyTools4Astronomers/
 
 Webpage of this repository: http://indiajoe.github.io/TIRSPEC/
 
+For TIRSPEC instrument details, visit : http://web.tifr.res.in/~daa/tirspec/
+
 Contents
 ================
-### Major Scripts: ###
-*    **Generate4mRamp.py**  *:* This script generates the slope calculation from up-the-ramp readout raw data. It produces the dark subtracted final slope images. A log file is also generated. You can load this also as a module in IPython, and use the collection of functions in it for an interative analysis of tirspec's raw data.
+### CodesForUser: ###
 *    **TIRSPECdataReduction.py** (needs **TIRSPECscript.conf**) *:* This script is to help the astronomer reduce tirspec data (output of *Generate4mRamp.py*) . It will semi-automate and guide the user through : *image selection, flat correction, aligning and combining of NIR dithered frames* for final photometry/spectroscopy.
-*    **AlignCombineImagesinDir.py** *:* This is a stand alone script to help astronomer align and combine his fits images.
+Module requirements: astropy, numpy and pyraf
+The image below shows the major steps in TIRSPEC data reduction script. The boxes marked with faces needs human supervision.
+![Photometry flowchart](docs/PhotometryPipeline.png)
+![Spectroscopy flowchart](docs/SpectroscopyPipeline.png)
+For automated wavelength calibration, one needs to keep a calibrated template of the argon spectra in a directory.
 
-### Minor Scripts:  
+*    **TelluricCorrection.py** *:* This is to remove the telluric lines and do continuum correction of final NIR spectra.
+The flow chart of the processes one can take in telluric correction are shown below.
+![Telluric correction flowchart](docs/TelluricCorrectionAlgorithm.png)
+Make sure, the theoretical stellar line profiles of Vega star is available in same directory.
+Module requirements: astropy, numpy, scipy and matplotlib
+
+*    **AlignCombineImagesinDir.py** *:* This is a stand alone script to help astronomer align and combine fits images.
+
+*    **BadPixelMaskCreate.py** *:* This script is to generate a new bad pixel mask using two flat images.
+
+*    **BadPixelMaskCreate.py** *:* Use this script to rename image filenames if you need to. It will update log files also.
+
+### CodesOnServer:  
 Intended for use on tirspec machine while observing.
+
+*    **Generate4mRamp.py**  *:* This script generates the slope calculation from up-the-ramp readout raw data. It produces the dark subtracted final slope images. A log file is also generated. The flow chart below shows the major steps done in generating the final images before downloading to Hoskote from Hanle.
+![Generate4mRamp flowchart](docs/SlopeImageGenerationPipeline.png)
+Module requirements: astropy and numpy
+
+You can load this also as a module in IPython, and use the collection of functions in it for an interactive analysis of tirspec's raw data. The available functions inside this module are
+   - filelist
+   - CheckNDRexist
+   - LoadDataCube
+   - AverageDataCube
+   - AverageWithCRrej
+   - ReplaceCRhits
+   - CRhitslocation
+   - Generate_DarkTemplate
+   - ApplyNLdarkcorr
+   - NonlinearityCorrCoeff
+   - ApplyNonLinearityCorrection
+   - FitSlope
+
+With additional module numexpr, Generate4mRampFaster.py can be used for a slightly faster and parallel version of this module.
+
+*    **TelescopeShiftAssistantGUI.py** *:* A GUI based software for calculating shifts to be given in Autoguider as well as Observatory Server for dithering the telescope. It also has slit position calculator.
+
 *    **StarPlot.py** (needs **StarPlot.gnuplot**) *:* This script is to quickly view the surface plot and contour of a star profile in fits file. 
-*    **DitherAssistant.py** *:* To help in visualising Dither pattern and generating the commands to be given to Observatory Server.
+*    **DitherAssistant.py** *:* To help in visualizing Dither pattern and generating the commands to be given to Observatory Server.
 *    **TelescopeShift-4OS.py** *:* To get the input to be given to Observatory Server to move star to slit or any other location in image.
 *    **TelescopeShift.py** *:* To get the input to be given to Keystone Server to move star to slit or any other location in image.
+*    **AutoguiderShiftCalculator.py** *:* To get the shift to be given to Autoguider to move star to any other location in image.
 *    **lastNDR.sh** *:* To quickly load the last NDR readout frame of the directory to DV.
 *    **Start_TIRSPEC.sh** (needs **run_mkmac_h1_as.sh,run_dv_LampAlert.sh**) *:* This script starts TIRSPEC software for starting observation in the night.
 *    **.dv-init** *:* Some DV start up script to make life easier while observing.
-      
+*    **DownloadFiles2CREST.sh** *:* Script to run slope generation scripts and download final data to Hoskote. 
+     
 Module Dependencies
 -------------------
 First few lines of the script will tell you the required python modules for each script.
-Generaly speaking you will need: numpy, pyfits and pyraf
+For running all the scripts you will need: numpy, astropy, pyraf, scipy and matplotlib
       
 
 License
