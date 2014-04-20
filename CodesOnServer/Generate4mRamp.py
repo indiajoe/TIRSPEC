@@ -36,7 +36,7 @@ def CheckNDRexist(imgname,RampNDRsuffix,NoofNDRs=None):
     """ Checks the Non distructive Readouts (NDR) exists in the current directory for given image.
         Only if they exist we should proceed with Slope calculation from them """
     NDRfiles=glob.glob(imgname[:-5]+RampNDRsuffix)
-    if NoofNDRs==None : NoofNDRs=pyfits.convenience.getval(imgname,'NDRS')
+    if NoofNDRs is None : NoofNDRs=pyfits.convenience.getval(imgname,'NDRS')
     if len(NDRfiles) == NoofNDRs :
         return True
     else:
@@ -48,7 +48,7 @@ def LoadDataCube(imgname,RampNDRsuffix,NoofNDRs=None,tile=FullTile):
         NoofNDRs is the number of NDRs to load into cube (type =int). By default everything is loaded."""
     NDRfilesT=glob.glob(imgname[:-5]+RampNDRsuffix)
     NDRfiles=sorted(NDRfilesT, key=lambda k: int(k[len(imgname)-5+7:-5]))
-    if NoofNDRs==None : NoofNDRs=len(NDRfiles)
+    if NoofNDRs is None : NoofNDRs=len(NDRfiles)
     datacube=np.empty((NoofNDRs,tile[1]-tile[0],tile[3]-tile[2]),dtype=np.float32)
     for i,img in enumerate((pyfits.getdata(NDR).astype(np.float32)[tile[0]:tile[1],tile[2]:tile[3]] for NDR in NDRfiles[:NoofNDRs])) : datacube[i,:,:]=img   # This iterator method is ~12 times faster than the equivalent commented line below !!
 #    datacube=np.array([pyfits.getdata(NDR).astype(np.float32)[tile[0]:tile[1],tile[2]:tile[3]] for NDR in NDRfiles[:NoofNDRs]])
@@ -88,7 +88,7 @@ def CRhitslocation(imgcube,thresh=10):
         (T,X,Y)=np.ma.where(np.ma.array(convimg,mask=np.ma.getmaskarray(imgcube[3:,:,:])) > thresh*stdconv) 
     else: (T,X,Y)=np.ma.where(convimg > thresh*stdconv)
     T=T+2  #Converting to the original time coordinate of imgcube by correcting for the shifts. This T is the first pixel after CR hit
-    return (T,X,Y)
+    return T,X,Y
 
 def ReplaceCRhits(imagelist,NoofNDRs=None,tile=FullTile):
     """ Outputs an image cube with of all pixels hit by Cosmic Rays in first image replaced with those from the next clean image"""
@@ -178,7 +178,7 @@ def FitSlope(imgcube,time, CRcorr=False):
     Sxx=np.ma.array(np.transpose(np.resize(np.square(time),tshape),(2,0,1)),mask=np.ma.getmaskarray(imgcube)).sum(axis=0,dtype=np.float64)
 
     Sy=imgcube.sum(axis=0,dtype=np.float64)
-    Syy=(np.square(imgcube)).sum(axis=0,dtype=np.float64)
+    # Syy=(np.square(imgcube)).sum(axis=0,dtype=np.float64)  #Only needed to calculate error in slope
     Sxy=(imgcube*time[:,np.newaxis,np.newaxis]).sum(axis=0,dtype=np.float64)
     n=np.ma.count(imgcube,axis=0)   #number of points used in fitting slope of a pixel
     
@@ -190,7 +190,7 @@ def FitSlope(imgcube,time, CRcorr=False):
     alpha=np.ma.array(alpha,mask=np.ma.getmaskarray(beta))
 
     #If cosmic ray hit correction is asked to do and total exposure of image was more than 4 sec
-    if CRcorr == True and imgcube.shape[0] > 5 :
+    if (CRcorr is True) and (imgcube.shape[0] > 5) :
         T,X,Y=CRhitslocation(imgcube,thresh=10)  #Locations of CR hit
         #Masking the first pixel after a CR hit.
         imgcube[(T,X,Y)]=np.ma.masked
@@ -232,7 +232,7 @@ def FitSlope(imgcube,time, CRcorr=False):
             else :
                 print('Couldnot remove CR hit (insufficent data) at %d %d '%(i,j))
 
-    return (beta,alpha)
+    return beta,alpha
 
 
 def Generate_DarkTemplate(longexp,shortexp,extent=35,LThresh=LinearThresh,outputfile=None,tile=FullTile) :
@@ -296,7 +296,7 @@ def Generate_DarkTemplate(longexp,shortexp,extent=35,LThresh=LinearThresh,output
     #Subtracting the y = alpha + beta *x component from the dark cube.
     #FUTURE WORK: To be split into -= and += lines if memory shortage is noticed.
     imgcube=(( imgcube-alpha[np.newaxis,:] ) - beta[np.newaxis,:]*time[:,np.newaxis,np.newaxis]).astype(np.float32)
-    if outputfile == None: return imgcube
+    if outputfile is None: return imgcube
     else: 
         np.save(outputfile,imgcube.data)
         return
@@ -428,7 +428,7 @@ def NonlinearityCorrCoeff(image,dark,order=3,LThreshFactor=0.7,UThresh=None,LThr
         print("Image cube and Dark cube doesn't match in dimensions: Image is "+str(imgcube.shape)+" and Dark is "+str(darkcube.shape))
         return
 
-    if UThresh == None : #No input Upper threshold given. So use the global minima of second derivative
+    if UThresh is None : #No input Upper threshold given. So use the global minima of second derivative
         imgcube-=darkcube  #Removing the dark current temporarily for now
         imgcube2ndD=imgcube[:-2,:,:]-2*imgcube[1:-1,:,:]+imgcube[2:,:,:]  #Convolving with [1,-2,1] for second derivative
         imgcube2ndD=imgcube2ndD[2:,:,:]  #removing the first two entries before finding minima
@@ -453,7 +453,7 @@ def NonlinearityCorrCoeff(image,dark,order=3,LThreshFactor=0.7,UThresh=None,LThr
 
 #    imgcube=np.ma.masked_greater(imgcube,UThresh)  #For No lower bound case
 
-    if LThresh==None: #Lets define the lower bound of the region where polynomial fit is valid. 
+    if LThresh is None: #Lets define the lower bound of the region where polynomial fit is valid.
         LThresh=imgcube[2,:,:]  # Change the index here to choose any slice below which to be masked away before polynomial fit.
 
     imgcube=np.ma.masked_less(np.ma.masked_greater(imgcube,UThresh),LThresh)
@@ -476,8 +476,8 @@ def NonlinearityCorrCoeff(image,dark,order=3,LThreshFactor=0.7,UThresh=None,LThr
                 # plt.show()                   #Debuggg 
             else: print("Non linear correction not applicable for pixel : (%d,%d)" %(i,j))   #For debugging 
     
-    if outputfile == None: 
-        return (coeffs,LThresh,UThresh)
+    if outputfile is None:
+        return coeffs,LThresh,UThresh
     else: 
         np.save(outputfile,coeffs)
         return
