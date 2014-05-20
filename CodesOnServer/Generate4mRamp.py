@@ -567,7 +567,7 @@ def main():
     for lostimgs in list(set(listOFimgsT)-set(listOFimgs)) :
         print('Warning: Discarded %s because of missing NDR files'%lostimgs)
 
-    Darklist=[f for f in listOFimgs if re.match(r'^[Dd]ark.*', f)]
+    Darklist=[f for f in listOFimgs if re.match(r'^[Dd][Aa][Rr][Kk]-.*', f)]
     Darks=[]
     #For Specific NDR long darks
     print('Darks with %d NDRS used for averaging'%DarkNDRS)
@@ -578,7 +578,7 @@ def main():
     DarkAvgcube=AverageWithCRrej(Darks,NoofNDRs=DarkNDRS) #Average Dark with CR hits rejected
     #Load the latest saturation levels. (Upper threshold file)
     Uthresh=np.load(Uthreshnpyfile)  
-    listwithoutdark=[f for f in listOFimgs if not re.match(r'^[Dd]ark.*', f) ]
+    listwithoutdark=[f for f in listOFimgs if not re.match(r'^[Dd][Aa][Rr][Kk]-.*', f) ]
     sortedlist=sorted(listwithoutdark, key=lambda k: int(k[:-5].split('-')[-1]))
     logfile=open('SlopeimagesLog.txt','w')
     for img in sortedlist:
@@ -586,10 +586,14 @@ def main():
         hdulist=pyfits.open(img)
         prihdr= hdulist[0].header
         NDRS2read=min(prihdr['NDRS'],DarkNDRS)
-        for hkeys in  ['TARGET','TCOMMENT']:   #To capture bug of these keywords missing in header
-            if hkeys not in prihdr : prihdr.update(hkeys,'-NA-')
+        for hkeys in  ['TARGET','TCOMMENT','TCSRA','TCSDEC','PROGID','OBSERVE']:   #To capture bug of these keywords missing in header
+            if hkeys not in prihdr : prihdr[hkeys]='-NA-'
+        #Adding a few more NEW headers in slope fits file
+        prihdr['OBJECT']=(prihdr['TARGET'],'Target being observed') #This is usefull for short imhead in iraf
+        prihdr['OBSTIME']=(prihdr['TIME'],'UT of observation')   #To preserve OBS time in fits header
+        prihdr['OBSDATE']=(prihdr['DATE'],'DATE of observation')   #To preserve OBS Date in fits header
 
-        logfile.write('%s %s "%s" %d %.2f %s %s %s %s %s %s \n'%('Slope-'+img,prihdr['TIME'],prihdr['TARGET'],prihdr['NDRS'],prihdr['ITIME'],prihdr['UPPER'],prihdr['LOWER'],prihdr['SLIT'],prihdr['CALMIR'],prihdr['DATE'],prihdr['TCOMMENT']))
+        logfile.write('%s %s "%s" %d %.2f %s %s %s %s %s "%s" "%s" "%s" "%s" \n'%('Slope-'+img,prihdr['TIME'],prihdr['TARGET'],prihdr['NDRS'],prihdr['ITIME'],prihdr['UPPER'],prihdr['LOWER'],prihdr['SLIT'],prihdr['CALMIR'],prihdr['DATE'],prihdr['TCSRA'],prihdr['TCSDEC'],prihdr['PROGID'],prihdr['TCOMMENT']))
         if NDRS2read <= FullframeMax :
             tilelist=[(0,1024,0,1024)]  #Loading out as a single frame ; else we load each quadrent seperately
         else: tilelist=[(0,512,0,512),(0,512,512,1024),(512,1024,0,512),(512,1024,512,1024)]
@@ -599,7 +603,7 @@ def main():
             imgcube=LoadDataCube(img,RampNDRsuffix,NoofNDRs=NDRS2read,tile=sec)
             imgcube=np.ma.masked_greater(imgcube,Uthresh[sec[0]:sec[1],sec[2]:sec[3]]*UthreshFactor)
             imgcube-=DarkAvgcube[:NDRS2read,sec[0]:sec[1],sec[2]:sec[3]]  #Dark subtraction
-            if imgcube.shape[0] >= 60 :  #Throw away first 5 pixels before fitting dlope
+            if imgcube.shape[0] >= 60 :  #Throw away first 5 pixels before fitting slope
                 imgcube=imgcube[5:,:,:]
                 prihdr.add_history('Discarded first 5 NDRS')
             elif imgcube.shape[0] >= 20 and prihdr['LOWER']=='G' : #Spectras more than 20 NDRS
