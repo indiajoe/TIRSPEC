@@ -19,11 +19,13 @@ Contents
 ================
 ### CodesForUser: ###
 *    **TIRSPECdataReduction.py** (needs **TIRSPECscript.conf**) *:* This script is to help the astronomer reduce tirspec data (output of *Generate4mRamp.py*) . It will semi-automate and guide the user through : *image selection, flat correction, aligning and combining of NIR dithered frames* for final photometry/spectroscopy.
-Module requirements: astropy, numpy and pyraf
+
 The image below shows the major steps in TIRSPEC data reduction script. The boxes marked with faces needs human supervision.
 ![Photometry flowchart](docs/PhotometryPipeline.png)
 ![Spectroscopy flowchart](docs/SpectroscopyPipeline.png)
 For automated wavelength calibration, one needs to keep a calibrated template of the argon spectra in a directory.
+Module requirements: astropy, numpy and pyraf
+NonPython requirements: iraf, sextractor
 
 *    **TelluricCorrection.py** *:* This is to remove the telluric lines and do continuum correction of final NIR spectra.
 The flow chart of the processes one can take in telluric correction are shown below.
@@ -31,11 +33,13 @@ The flow chart of the processes one can take in telluric correction are shown be
 Make sure, the theoretical stellar line profiles of Vega star is available in same directory.
 Module requirements: astropy, numpy, scipy and matplotlib
 
+*    **FitWCS.py** *:* This is a stand alone script to add WCS information in fits header of an image.
+
 *    **AlignCombineImagesinDir.py** *:* This is a stand alone script to help astronomer align and combine fits images.
 
 *    **BadPixelMaskCreate.py** *:* This script is to generate a new bad pixel mask using two flat images.
 
-*    **BadPixelMaskCreate.py** *:* Use this script to rename image filenames if you need to. It will update log files also.
+*    **RenameImgs.sh** *:* Use this script to rename image filenames if you need to. It will update log files also.
 
 ### CodesOnServer:  
 Intended for use on tirspec machine while observing.
