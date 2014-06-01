@@ -273,7 +273,7 @@ def Photometry():
         if not os.path.isfile(MotherDIR+"/sextractor.sex") :  #Incase the parameter file is not already created
             Sextractor_subrout(img=imgline[0])
 
-        os.system("sextractor "+img+" -c "+MotherDIR+"/sextractor.sex -PARAMETERS_NAME "+MotherDIR+"/default.param -FILTER_NAME "+MotherDIR+"/default.conv")
+        os.system("sex "+img+" -c "+MotherDIR+"/sextractor.sex -PARAMETERS_NAME "+MotherDIR+"/default.param -FILTER_NAME "+MotherDIR+"/default.conv")
 #        os.system("awk 'NR>7{print $3,$5,$6}' test.cat | sort -nr | head -30 | awk '{print $2,$3}' > Bright30.coo")
         os.system("awk 'NR>7{if ($7 == 0){print $3,$5,$6}}' test.cat | sort -nr | cut -d' ' -f 2,3 | head -30 > Bright30.coo")
         #Runing xyxymatch and geo map and geotran to create new SourceT.coo , GoodStarsT.coo, BlankSky.coo
@@ -558,7 +558,7 @@ def Sextractor_subrout(img=None,N=30):
     backupPWD=os.getcwd()
     iraf.cd(MotherDIR)  #Going back to parent directory
     if not os.path.isfile("sextractor.sex") : #If a config file doesn't exist already
-        os.system("sextractor -d > sextractor.sex")
+        os.system("sex -d > sextractor.sex")
         if os.path.isfile("/usr/share/sextractor/default.param") :
             os.system("cp /usr/share/sextractor/default.param /usr/share/sextractor/default.conv .")
         else : print ("Error: cannot find default.param (.conv) in /usr/share/sextractor/ . \n You might have installed sextracter somewhere else")
@@ -580,7 +580,7 @@ def Sextractor_subrout(img=None,N=30):
         img=imgline.split()[0]
         imgfile.close()
 
-    os.system("sextractor "+img+" -c sextractor.sex")
+    os.system("sex "+img+" -c sextractor.sex")
     os.system("awk 'NR>7{if ($7 == 0){print $3,$5,$6}}' test.cat | sort -nr | cut -d' ' -f 2,3 | head -"+N+" > FirstImageTop"+N+".coo")
 #    os.system("awk 'NR>7{print $3,$5,$6}' test.cat | sort -nr | head -"+N+" | awk '{print $2,$3}' > FirstImageTop"+N+".coo")
     print("Brightest "+N+" stars coordinates of first image created in FirstImageTop"+N+".coo")
