@@ -24,16 +24,21 @@ The image below shows the major steps in TIRSPEC data reduction script. The boxe
 ![Photometry flowchart](docs/PhotometryPipeline.png)
 ![Spectroscopy flowchart](docs/SpectroscopyPipeline.png)
 For automated wavelength calibration, one needs to keep a calibrated template of the argon spectra in a directory.
-Module requirements: astropy, numpy and pyraf
-NonPython requirements: iraf, sextractor
+
+*Module requirements: astropy, numpy and pyraf*
+
+*NonPython requirements: iraf, sextractor*
 
 *    **TelluricCorrection.py** *:* This is to remove the telluric lines and do continuum correction of final NIR spectra.
 The flow chart of the processes one can take in telluric correction are shown below.
 ![Telluric correction flowchart](docs/TelluricCorrectionAlgorithm.png)
 Make sure, the theoretical stellar line profiles of Vega star is available in same directory.
-Module requirements: astropy, numpy, scipy and matplotlib
+
+*Module requirements: astropy, numpy, scipy and matplotlib*
 
 *    **FitWCS.py** *:* This is a stand alone script to add WCS information in fits header of an image.
+
+*Module requirements: astropy, scipy, numpy*
 
 *    **AlignCombineImagesinDir.py** *:* This is a stand alone script to help astronomer align and combine fits images.
 
