@@ -787,7 +787,7 @@ def FixBadPixels(images,nightdir):
     iraf.fixpix(images=images,masks=PixelMask)
 
 def CombDith_FlatCorr_subrout(method="median",FullFlatStatSection='[200:800,200:800]',YJFlatStatSection='[200:800,200:800]',HKFlatStatSection='[307:335,658:716]',SSFlatStatSection='[200:800,200:800]'):
-    """ This will combine (default=median) with avsigclip the images in single dither and also create corresponding normalized flats and divide for flat correction """
+    """ This will combine (default=median) with avsigclip the images in single dither and also create corresponding normalized flats [,sky] and divide[,subtract] for flat [,sky] correction """
     iraf.imcombine.unlearn()
     directories=LoadDirectories(CONF=False)
     for night in directories:
@@ -795,6 +795,11 @@ def CombDith_FlatCorr_subrout(method="median",FullFlatStatSection='[200:800,200:
         #Load all the Flat indexing file data
         with open(night+'/AllObjects-FinalFlat.List','r') as FlatFILE :
             Flatfiledic=dict([(flatset.split()[0],flatset.rstrip().split()[1:]) for flatset in FlatFILE])  #Dictionary of flats list for each image.
+
+        if SEPERATESKY=='Y' :
+            #Load all the Sky files indexing file data
+            with open(night+'/AllObjects-FinalSky.List','r') as SkyFILE :
+                Skyfiledic=dict([(skyset.split()[0],skyset.rstrip().split()[1:]) for skyset in SkyFILE])  #Dictionary of Sky list for each image.
 
         #Load all the FilterSet indexing file data
         with open(night+'/AllObjects.List','r') as FiltrFILE :
@@ -837,6 +842,17 @@ def CombDith_FlatCorr_subrout(method="median",FullFlatStatSection='[200:800,200:
             with open(imgflatlistfname,'w') as imgflatlistFILE :
                 imgflatlistFILE.write('\n'.join([night+'/'+fla for fla in Flats2Comb])+'\n')
 
+            if SEPERATESKY=='Y' : #Now make list of skys to be combined for this image set
+                Skys2Comb=[]
+                for img in imglist:
+                    Skys2Comb+=Skyfiledic[img]  #Adding all the sky lists
+                Skys2Comb=set(Skys2Comb)  #Making a set to remove duplicates
+                #Write all these Sky names to a file.
+                imgskylistfname=night+'/'+OutCombimg[:-5]+'.skylist'
+                with open(imgskylistfname,'w') as imgskylistFILE :
+                    imgskylistFILE.write('\n'.join([night+'/'+sky for sky in Skys2Comb])+'\n')
+
+
             #If spectroscopy of short slit cross disperse mode : change the FlatStatSection
             if Filtrfiledic[imglist[0]][1:-1].split(',')[2].strip().strip("'")[0] == 'S' :
                 if Filtrfiledic[imglist[0]][1:-1].split(',')[0].strip().strip("'") == 'GHKX' :
@@ -856,6 +872,14 @@ def CombDith_FlatCorr_subrout(method="median",FullFlatStatSection='[200:800,200:
             #We will normalise this flat with the mode of pixels in FlatStatSection
             Noutflatname=night+'/'+OutCombimg[:-5]+'_Nflat.fits'
             iraf.imarith(operand1=outflatname,op="/",operand2=mode,result=Noutflatname)
+            #If we are subtracting sky, doing it before flat fielding.
+            if SEPERATESKY=='Y':
+                outskyname=night+'/'+OutCombimg[:-5]+'_sky.fits'
+                iraf.imcombine (input='@'+imgskylistfname, output=outskyname, combine="median",reject="sigclip")
+                #Now subtract the sky form the science frame
+                OutSSimg=OutCombimg[:-5]+'_SS.fits'
+                iraf.imarith(operand1=night+'/'+OutCombimg,op="-",operand2=outskyname,result=night+'/'+OutSSimg)
+                OutCombimg=OutSSimg  #Updating the new _SS appended input filename to continue as if nothing happened here.
             #Now divide by flat...
             OutFCimg=OutCombimg[:-5]+'_FC.fits'
             iraf.imarith(operand1=night+'/'+OutCombimg,op="/",operand2=Noutflatname,result=night+'/'+OutFCimg)
@@ -875,13 +899,17 @@ def CombDith_FlatCorr_subrout(method="median",FullFlatStatSection='[200:800,200:
                 
 
 def Manual_InspectFlat_subrout():
-    """ This will display Flats and Argons one after other, and based on user input select/reject """
+    """ This will display Flats, Sky and Argons one after other, and based on user input select/reject """
     directories=LoadDirectories(CONF=True)
     filelist=['AllObjects-Flat.List']
     outfilelist=['AllObjects-FinalFlat.List']
     if TODO=='S' :
         filelist.append('AllObjects-Argon.List')
         outfilelist.append('AllObjects-FinalArgon.List')
+    if SEPERATESKY=='Y' :
+        filelist.append('AllObjects-Sky.List')
+        outfilelist.append('AllObjects-FinalSky.List')
+
     for night in directories:
         print("Working on night : "+night)
         for inpfile,outfile in zip(filelist,outfilelist):
@@ -992,7 +1020,7 @@ def Manual_InspectObj_subrout():
         
              
 def SelectionofFrames_subrout():
-    """ Selects the images to reduce and create tables of corresponding Flat and Argons """
+    """ Selects the images to reduce and create tables of corresponding Flat, Sky and Argons """
     directories=LoadDirectories(CONF=True)
     FiltREdic=dict()
     ArgonREdic=dict()
@@ -1038,6 +1066,27 @@ def SelectionofFrames_subrout():
             regexpFilt= re.compile(r''+FiltREdic[filt])
             FlatList=[imgline.split()[0] for imgline in slopeimgFILElines if (regexpFilt.search(imgline.split()[0]) is not None) and (filt == tuple([pos.upper() for pos in shlex.split(imgline)[5:8]])) and filenumbregexp.search(imgline.split()[0]) ]
             Flatlistdic[filt]=FlatList  #Saving flat list for this filter set
+
+        #Now if Seperate sky is being used to subtract, ask for each filter
+        if SEPERATESKY=='Y':
+            Skylistdic=dict()
+            print("Below in addition to regexp, if needed you can enter the starting and ending filenumbers separated by space also.")
+            for filt in FiltList:
+                filenumbregexp=re.compile(r'.*')
+                if filt not in FiltREdic.keys() : 
+                    SkyREdic[filt]=ObjRE+'_[Ss]ky.*'  #Setting default to object_sky
+                #Ask user again to confirm or change if he/she needs to
+                InpfiltRE=raw_input("Enter Regular Expression for the Sky of filters %s (default: %s) : "%(str(filt),SkyREdic[filt])).strip(' ')
+                if InpfiltRE :
+                    SkyREdic[filt]=InpfiltRE
+                    if len(InpfiltRE.split())==3 and is_number(InpfiltRE.split()[1]) and is_number(InpfiltRE.split()[2]):
+                        filenumbregexp=re.compile('|'.join(['.*-'+str(i)+'\..*' for i in range(int(InpfiltRE.split()[1]), int(InpfiltRE.split()[2])+1)]))
+                        SkyREdic[filt]=InpfiltRE.split()[0]
+                        
+                regexpSky= re.compile(r''+SkyREdic[filt])
+                SkyList=[imgline.split()[0] for imgline in slopeimgFILElines if (regexpSky.search(imgline.split()[0]) is not None) and (filt == tuple([pos.upper() for pos in shlex.split(imgline)[5:8]])) and filenumbregexp.search(imgline.split()[0]) ]
+                Skylistdic[filt]=SkyList  #Saving Sky list for this filter set
+
         
         #Now if We are doing Spectroscopy, Find the corresponding Argon lamps also
         if TODO=='S':
@@ -1062,6 +1111,7 @@ def SelectionofFrames_subrout():
         #Now, load the Object list and write to a file the Obj and corresponding flats/Argons
         ObjFlatFILE=open(night+'/AllObjects-Flat.List','w')
         if TODO=='S': ObjArgonFILE=open(night+'/AllObjects-Argon.List','w')
+        if SEPERATESKY=='Y': ObjSkyFILE=open(night+'/AllObjects-Sky.List','w')
         for Objline in ObjList:
             if (TODO=='P' and shlex.split(Objline)[6].upper() =='G') or (TODO=='S' and shlex.split(Objline)[6].upper() !='G') :
                 continue    #Skip this and go to the next object.
@@ -1069,12 +1119,16 @@ def SelectionofFrames_subrout():
             U_L_Sfilter=tuple([pos.upper() for pos in shlex.split(Objline)[5:8]])  #(UPPER,LOWER,SLIT) filters in UPPERCASE
             ObjFlatFILE.write(Name+'  '+' '.join(Flatlistdic[U_L_Sfilter])+'\n')
             if TODO=='S' :ObjArgonFILE.write(Name+'  '+' '.join(Argonlistdic[U_L_Sfilter])+'\n')
+            if SEPERATESKY=='Y': ObjSkyFILE.write(Name+'  '+' '.join(Skylistdic[U_L_Sfilter])+'\n')
         ObjFlatFILE.close()
-        print('Edit and save the Flat/Argon list associations for this night :'+night)
+        print('Edit and save the Flat/Argon/Sky list associations for this night :'+night)
         os.system(TEXTEDITOR+' '+night+'/AllObjects-Flat.List')
         if TODO=='S': 
             ObjArgonFILE.close()
             os.system(TEXTEDITOR+' '+night+'/AllObjects-Argon.List')
+        if SEPERATESKY=='Y': 
+            ObjSkyFILE.close()
+            os.system(TEXTEDITOR+' '+night+'/AllObjects-Sky.List')
     print('All nights over...')    
     
 
@@ -1129,6 +1183,8 @@ for con in configfile:
             IMGCOMBMETHOD=con.split()[1]
         elif con.split()[0] == "DITHERCOMB=" :
             DITHERCOMBMETHOD=con.split()[1]
+        elif con.split()[0] == "SEPERATE_SKY=" :
+            SEPERATESKY=con.split()[1][0].upper()
 
         elif con.split()[0] == "BPMPHOTO=" :
             PhotBadPixelMaskName=con.split()[1]
