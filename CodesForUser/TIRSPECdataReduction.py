@@ -875,7 +875,7 @@ def CombDith_FlatCorr_subrout(method="median",FullFlatStatSection='[200:800,200:
             #If we are subtracting sky, doing it before flat fielding.
             if SEPERATESKY=='Y':
                 outskyname=night+'/'+OutCombimg[:-5]+'_sky.fits'
-                iraf.imcombine (input='@'+imgskylistfname, output=outskyname, combine="median",reject="sigclip")
+                iraf.imcombine (input='@'+imgskylistfname, output=outskyname, combine="median",reject="pclip")
                 #Now subtract the sky form the science frame
                 OutSSimg=OutCombimg[:-5]+'_SS.fits'
                 iraf.imarith(operand1=night+'/'+OutCombimg,op="-",operand2=outskyname,result=night+'/'+OutSSimg)
@@ -1024,6 +1024,7 @@ def SelectionofFrames_subrout():
     directories=LoadDirectories(CONF=True)
     FiltREdic=dict()
     ArgonREdic=dict()
+    SkyREdic=dict()
     ObjRE=raw_input("Enter Regular Expression to select the objects from all dirs: ").strip(' ')
     # For RE rules See: http://docs.python.org/2/howto/regex.html#regex-howto
     regexpObj= re.compile(r''+ObjRE)
@@ -1073,7 +1074,7 @@ def SelectionofFrames_subrout():
             print("Below in addition to regexp, if needed you can enter the starting and ending filenumbers separated by space also.")
             for filt in FiltList:
                 filenumbregexp=re.compile(r'.*')
-                if filt not in FiltREdic.keys() : 
+                if filt not in SkyREdic.keys() : 
                     SkyREdic[filt]=ObjRE+'_[Ss]ky.*'  #Setting default to object_sky
                 #Ask user again to confirm or change if he/she needs to
                 InpfiltRE=raw_input("Enter Regular Expression for the Sky of filters %s (default: %s) : "%(str(filt),SkyREdic[filt])).strip(' ')
@@ -1264,8 +1265,8 @@ print("Enter the Serial numbers (space seperated if more than one task in succes
 print("0  Backup files in current directory to ../"+BACKUPDIR+"\n")
 print("1  Selection of object frames to reduce \n")
 print("2  Manually inspect and reject object images by displaying one by one to classify \n")
-print("3  Manually inspect and reject Flats/Argons by displaying one by one\n")
-print("4  Combine images in a Dither, apply Flat Correction and Bad pixel interpolation\n")
+print("3  Manually inspect and reject Flats/Sky/Argons by displaying one by one\n")
+print("4  Combine images in a Dither [,subtract sky], apply Flat Correction and Bad pixel interpolation\n")
 if TODO=='P':print("5  Align and combine combined images of each Dither in Photometry data \n")
 elif TODO=='S':print("5  Give Spectrum pair subtraction input \n")
 if TODO=='P':print("6  Make the list of images, Images4Photo.in to do Photometry \n")
