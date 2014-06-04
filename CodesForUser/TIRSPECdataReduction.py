@@ -15,6 +15,8 @@ import re
 import shlex
 import readline
 import shutil
+import subprocess
+import time
 
 # Other modules inserted inside the code are
 # pyraf.iraf
@@ -34,11 +36,11 @@ def SpectralExtraction_subrout():
     iraf.scombine.unlearn()
 
     iraf.apextract.setParam('dispaxis',DISPAXIS) # Always 2 for TIRSPEC
-    iraf.cd(MotherDIR)
+    iraf.cd(os.path.join(MotherDIR,OUTDIR))
     directories=LoadDirectories(CONF=False)
     for night in directories:
         print('Working on night: '+night)
-        iraf.cd(MotherDIR+'/'+night)        
+        iraf.cd(os.path.join(MotherDIR,OUTDIR,night))        
         try:
             #First we load the Spectrastoextract_Argon_BandFilter.txt
             SpecslistFILE=open('Spectrastoextract_Argon_BandFilter.txt','r')
@@ -66,14 +68,14 @@ def SpectralExtraction_subrout():
             leftover=glob.glob(img[:-5]+'_*.fits')  #Clean up of some previous attempts if any..
             leftover+=glob.glob(img[:-5]+'.ms.fits')
             if len(leftover) > 0 :
-                os.system('mkdir -p Leftover')
+                if not os.path.isdir('Leftover'): os.makedirs('Leftover') 
                 for lft in leftover :
-                    os.system('mv '+lft+' Leftover/ ')
+                    shutil.move(lft,'Leftover/')
 
             # Running apall
             iraf.apall(input=img,nfind=1,lower=-15,upper=15,llimit=-15,ulimit=15,b_sample=BACKGROUND,background ='fit',weights ='variance',readnoi=READNOISE,gain=EPADU,t_function=TRACEFUNC,t_order=TRACEORDER,t_niterate=1,ylevel=SPECAPPERTURE,interactive=VER)
             #Extracting the Argon arc for this spectra as img_arc.fits
-            iraf.apall(input=Img2Argon[img],reference=img,out=img[:-5]+'_arc',recenter='no',trace='no',background='none',interactive='no')
+            iraf.apall(input=os.path.join(MotherDIR,night,Img2Argon[img]),reference=img,out=img[:-5]+'_arc',recenter='no',trace='no',background='none',interactive='no')
             #Now reidentify the lines in this spectra
             RepoLamp='RepoArgon_'+Img2Filt[img]+'.fits'
             iraf.reidentify(reference=RepoLamp, images=img[:-5]+'_arc',verbose='yes',interactive=VER)
@@ -112,15 +114,15 @@ def SpectralPairSubtraction_subrout():
         print('Working on night: '+night)
         try:
             #First we load a dictionary of raw images to their filters
-            with open(night+'/AllObjects.List','r') as FiltrFILE :
+            with open(os.path.join(MotherDIR,OUTDIR,night,'AllObjects.List'),'r') as FiltrFILE :
                 Filtrfiledic=dict([(filtset.split()[0],shlex.split(filtset.rstrip())[1]) for filtset in FiltrFILE])  #Dictionary of filterset for each image.
 
             #Secondly we load a dictionary of raw images to their Calibration Argon lamb file
-            with open(night+'/AllObjects-FinalArgon.List','r') as ArgonFILE :
+            with open(os.path.join(MotherDIR,OUTDIR,night,'AllObjects-FinalArgon.List'),'r') as ArgonFILE :
                 Argonfiledic=dict([(Argonset.split()[0],shlex.split(Argonset.rstrip())[1]) for Argonset in ArgonFILE])  #Dictionary of Argon file for each image.
 
             #Secondly, we load a dictionary of Dither Frame to first Raw images
-            with open(night+'/FirstoneANDcombinedImages.List','r') as DitherFILE :
+            with open(os.path.join(MotherDIR,OUTDIR,night,'FirstoneANDcombinedImages.List'),'r') as DitherFILE :
                 DitherFILElines=list(DitherFILE)
 
             Ditherfiledic=dict([(ditherset.rstrip().split()[1],ditherset.split()[0]) for ditherset in DitherFILElines if len(ditherset.split()) == 2])  #Dictionary of First image of each Dither set.
@@ -134,7 +136,7 @@ def SpectralPairSubtraction_subrout():
             print('-'*60)
             continue
         #Output file to write the table of final image, argon and filter band
-        outlog=open(night+'/Spectrastoextract_Argon_BandFilter.txt','w')
+        outlog=open(os.path.join(MotherDIR,OUTDIR,night,'Spectrastoextract_Argon_BandFilter.txt'),'w')
         #First Lets create the list of filters to iterate through
         FilterList=list(set([eval(filtset)[0] for filtset in Filtrfiledic.values()]))
         print("You have %d orders of spectra for this object on this night %s"%(len(FilterList),night))
@@ -144,12 +146,12 @@ def SpectralPairSubtraction_subrout():
             #List of images with this filter.
             Imglist=[img for img in Allimglist if eval(Filtrfiledic[Ditherfiledic[img]])[0] == filt ]
             if len(Imglist) < 16 :
-                for i,img in enumerate(Imglist): iraf.display(night+'/'+img,i+1)
+                for i,img in enumerate(Imglist): iraf.display(os.path.join(MotherDIR,OUTDIR,night,img),i+1)
             else : print('Number of images more that 16, Hence not displaying in ds9')
             if len(Imglist) <= 26 and len(Imglist) != 0:
                 ABCDtoimg=dict()
                 Anumb=ord('A')
-                with open(night+'/ABCDtoImageTable_'+filt+'.txt','w') as AlphatoFILE :
+                with open(os.path.join(MotherDIR,OUTDIR,night,'ABCDtoImageTable_'+filt+'.txt'),'w') as AlphatoFILE :
                     for i,img in enumerate(Imglist):
                         alpha=chr(Anumb+i)
                         ABCDtoimg[alpha]=img
@@ -167,14 +169,14 @@ def SpectralPairSubtraction_subrout():
                     if len(instr) == 2 :
                         Outimg=OutFilePrefix+'_'+filt+'_'+instr[0]+'-'+instr[1]+'.fits'
                         try:
-                            iraf.imarith(operand1=night+'/'+ABCDtoimg[instr[0]],op="-",operand2=night+'/'+ABCDtoimg[instr[1]],result=night+'/'+Outimg)
+                            iraf.imarith(operand1=os.path.join(MotherDIR,OUTDIR,night,ABCDtoimg[instr[0]]),op="-",operand2=os.path.join(MotherDIR,OUTDIR,night,ABCDtoimg[instr[1]]),result=os.path.join(MotherDIR,OUTDIR,night,Outimg))
                         except iraf.IrafError as e :
                             print(e)
                             print('Skipping to next instruction')
                             continue
                     elif len(instr) == 1 : 
                         Outimg=OutFilePrefix+'_'+filt+'_'+instr[0]+'.fits'
-                        shutil.copy(night+'/'+ABCDtoimg[instr[0]],night+'/'+Outimg)
+                        shutil.copy(os.path.join(MotherDIR,OUTDIR,night,ABCDtoimg[instr[0]]),os.path.join(MotherDIR,OUTDIR,night,Outimg))
                     else : 
                         print("Could not understand "+instr)
                         continue
@@ -182,15 +184,15 @@ def SpectralPairSubtraction_subrout():
                     outlog.write(Outimg+' '+Argonfiledic[Ditherfiledic[ABCDtoimg[instr[0]]]]+' '+filt+' \n')
                 #Now Copy the already identified Repository Lamps to this directory.
                 print("Copying already identified lines of this filter %s from Repository.."%(filt))
-                os.system('mkdir -p '+night+'/database/')
+                if not os.path.isdir(os.path.join(MotherDIR,OUTDIR,night,'database')): os.makedirs(os.path.join(MotherDIR,OUTDIR,night,'database'))
                 try:
-                    shutil.copy(LAMPREPODIR+'/RepoArgon_'+filt+'.fits',night+'/RepoArgon_'+filt+'.fits')
-                    shutil.copy(LAMPREPODIR+'/database/idRepoArgon_'+filt,night+'/database/idRepoArgon_'+filt)
+                    shutil.copy(LAMPREPODIR+'/RepoArgon_'+filt+'.fits',os.path.join(MotherDIR,OUTDIR,night,'RepoArgon_'+filt+'.fits'))
+                    shutil.copy(LAMPREPODIR+'/database/idRepoArgon_'+filt,os.path.join(MotherDIR,OUTDIR,night,'database','idRepoArgon_'+filt))
                 except IOError as e:
                     print(e)
                     print("ERROR: Cannot find already identified lines of this filter %s from Repository.."%(filt))
                     print("Before you proceed to next step, do copy the identified line spectra of this filter.")
-                    print(" Or remove this image from "+night+'/Spectrastoextract_Argon_BandFilter.txt')
+                    print(" Or remove this image from "+os.path.join(MotherDIR,OUTDIR,night,'Spectrastoextract_Argon_BandFilter.txt'))
                     print('-'*10)
 
             else:
@@ -202,7 +204,7 @@ def SpectralPairSubtraction_subrout():
 
 
 def Photometry():
-    """ Does the photometry of images in MotherDIR/Images4Photo.in """
+    """ Does the photometry of images in MotherDIR/OUTDIR/Images4Photo.in """
     iraf.noao(_doprint=0)     #Loading packages noao digiohot apphot daophot
     iraf.digiphot(_doprint=0)
     iraf.apphot(_doprint=0)
@@ -223,7 +225,7 @@ def Photometry():
     iraf.findpars.unlearn()
 
     try:
-        imgfile=open(MotherDIR+'/Images4Photo.in','r')
+        imgfile=open(os.path.join(MotherDIR,OUTDIR,'Images4Photo.in'),'r')
     except IOError as e:
         print('Cannot open Images4Photo.in file. Run Task #6 ')
         print(e)
@@ -233,7 +235,7 @@ def Photometry():
         exit(1)
 
     # Setting flag by checking wheter the size of qphotinput.txt is Zero or not.
-    if os.stat(MotherDIR+"/qphotinput.txt")[6]!=0 : QPHOT_todo='Y'
+    if os.stat(os.path.join(MotherDIR,OUTDIR,"qphotinput.txt"))[6]!=0 : QPHOT_todo='Y'
     else : QPHOT_todo='N'
 
 
@@ -245,11 +247,11 @@ def Photometry():
         if FirstImageName is None : FirstImageName=os.path.abspath(imgline[0])  #Saving the first image name of this photometry run
         wdir=imgline[0].split('/')[-2]
         if wdir != os.getcwd().split('/')[-1] : #If we are not already in img dir
-            iraf.cd(MotherDIR)  #Going back to parent directory
+            iraf.cd(os.path.join(MotherDIR,OUTDIR))  #Going back to output directory
             DIRtogo="/".join(imgline[0].split('/')[:-1]) #Now going to dir of img
             iraf.cd(DIRtogo)
-            with open(MotherDIR+'/'+OUTPUTfile,'a') as foo:    #Appending into tbe log file The begining of a new directory
-                foo.write(DIRtogo+' ---------------------------------------- \n')  # '-'*40  To mark begining of a DIrectory
+            with open(os.path.join(MotherDIR,OUTDIR,OUTPUTfile),'a') as foo:    #Appending into tbe log file The begining of a new directory
+                foo.write(wdir+' ---------------------------------------- \n')  # '-'*40  To mark begining of a DIrectory
 
         
         img=imgline[0].split('/')[-1]
@@ -264,53 +266,69 @@ def Photometry():
         yxdim=pyfits.getdata(img).shape  #Storing the (Ymax,Xmax) of image
         leftover=glob.glob(img+'.*')
         if len(leftover) > 0 :
-            os.system('mkdir -p Leftover')
+            if not os.path.isdir('Leftover'): os.makedirs('Leftover') 
             for lft in leftover :
-                os.system('mv '+lft+' Leftover/ ')
-
+                shutil.move(lft,'Leftover/')
 
         #Calling Sextracter And find coordinates
-        if not os.path.isfile(MotherDIR+"/sextractor.sex") :  #Incase the parameter file is not already created
+        if not os.path.isfile(os.path.join(MotherDIR,OUTDIR,"sextractor.sex")) :  #Incase the parameter file is not already created
             Sextractor_subrout(img=imgline[0])
 
-        os.system("sex "+img+" -c "+MotherDIR+"/sextractor.sex -PARAMETERS_NAME "+MotherDIR+"/default.param -FILTER_NAME "+MotherDIR+"/default.conv")
+        subprocess.call(["sex",img,"-c",os.path.join(MotherDIR,OUTDIR,"sextractor.sex"),"-PARAMETERS_NAME",os.path.join(MotherDIR,OUTDIR,"default.param"),"-FILTER_NAME",os.path.join(MotherDIR,OUTDIR,"default.conv"),'-PIXEL_SCALE','0.3'])
+
+        N=30  #Number of bright stars to take
+        SExtractCat=ascii.read('test.cat')
+        # Selecting only good stars without any major problems
+        GoodStarCat= SExtractCat[SExtractCat['FLAGS']<2]  # Flag 0 is good and 1 is contaminated by less than 10% in flux by neighbour
+        #Sort in descending order of Flux
+        GoodStarCat.sort('FLUX_AUTO')
+        GoodStarCat.reverse()
+        #Write X and Y coordinates of First N number of brightest stars in text file
+        GoodStarCat['X_IMAGE','Y_IMAGE'][:N].write('Bright{0}.coo'.format(N),format='ascii.no_header')
+
+
+#        os.system("sex "+img+" -c "+MotherDIR+"/sextractor.sex -PARAMETERS_NAME "+MotherDIR+"/default.param -FILTER_NAME "+MotherDIR+"/default.conv")
 #        os.system("awk 'NR>7{print $3,$5,$6}' test.cat | sort -nr | head -30 | awk '{print $2,$3}' > Bright30.coo")
-        os.system("awk 'NR>7{if ($7 == 0){print $3,$5,$6}}' test.cat | sort -nr | cut -d' ' -f 2,3 | head -30 > Bright30.coo")
+#        os.system("awk 'NR>7{if ($7 == 0){print $3,$5,$6}}' test.cat | sort -nr | cut -d' ' -f 2,3 | head -30 > Bright30.coo")
         #Runing xyxymatch and geo map and geotran to create new SourceT.coo , GoodStarsT.coo, BlankSky.coo
         Nmatch=32
         num_lines=0
         while num_lines < XYMATCHMIN :       # the number of stars it should atlest mach is set in .conf file XYMATCHMIN= 6....
-            os.system("rm "+img+"xymatch.out 2> /dev/null")
+            if os.path.isfile(img+"xymatch.out") :os.remove(img+"xymatch.out")
             Nmatch=Nmatch-2
             iraf.xyxymatch.unlearn()
-            iraf.xyxymatch(input="Bright30.coo",reference=MotherDIR+"/FirstImageTop30.coo",output=img+"xymatch.out", toler=3, matching="triangles",nmatch=Nmatch)
+            iraf.xyxymatch(input='Bright{0}.coo'.format(N),reference=os.path.join(MotherDIR,OUTDIR,"FirstImageTop{0}.coo".format(N)),output=img+"xymatch.out", toler=3, matching="triangles",nmatch=Nmatch)
             # Making sure atleast a few stars were matched. otherwise geoxytran will exit with error.
-            os.system("gawk '{if ($1 >0){print $0}}' "+img+"xymatch.out > matchedstars.txt") #Removing headers
+            os.system("awk '{if ($1 >0){print $0}}' "+img+"xymatch.out > matchedstars.txt") #Removing headers
             num_lines = sum(1 for line in open("matchedstars.txt"))  #Counting number of lines in the xymatch output. it should be more than 15 (size of header)
             print("Number of stars Matched= "+str(num_lines))
             if Nmatch < XYMATCHMIN : 
                 print("Failed to find the coordinates for "+img)
                 print("We need to find the transformation interactevilly")
-                Inpfirstimg=raw_input("Enter the path to first image using which coords was generated with sextractor (default: {0}) : ".format(FirstImageName)).strip(' ')
+                Inpfirstimg=raw_input("Enter the full path to first image using which coords was generated with sextractor (default: {0}) : ".format(FirstImageName)).strip(' ')
                 if Inpfirstimg : FirstImageName=Inpfirstimg
-                print("Running the xyxy match interactviely... Select three same points from both images")
-                iraf.display(FirstImageName,1)
-                iraf.display(img,2)
-                os.system("rm "+img+"xymatch.out 2> /dev/null")
-                iraf.xyxymatch.unlearn()
-                iraf.xyxymatch(input="Bright30.coo",reference=MotherDIR+"/FirstImageTop30.coo",output=img+"xymatch.out", toler=5, matching="tolerance",nmatch=3*XYMATCHMIN,interactive="yes")
-                os.system("gawk '{if ($1 >0){print $0}}' "+img+"xymatch.out > matchedstars.txt") #Removing headers
-                num_lines = sum(1 for line in open("matchedstars.txt"))  #Counting number of lines in the xymatch output. it should be more than 15 (size of header)
-                print("Number of stars Matched= "+str(num_lines))
-                break
-
+                if os.path.isfile(FirstImageName): 
+                    print("Running the xyxy match interactviely... Select three same points from both images")
+                    iraf.display(FirstImageName,1)
+                    iraf.display(img,2)
+                    if os.path.isfile(img+"xymatch.out") :os.remove(img+"xymatch.out")
+                    iraf.xyxymatch.unlearn()
+                    iraf.xyxymatch(input="Bright30.coo",reference=os.path.join(MotherDIR,OUTDIR,"FirstImageTop30.coo"),output=img+"xymatch.out", toler=5, matching="tolerance",nmatch=3*XYMATCHMIN,interactive="yes")
+                    os.system("awk '{if ($1 >0){print $0}}' "+img+"xymatch.out > matchedstars.txt") #Removing headers
+                    num_lines = sum(1 for line in open("matchedstars.txt"))  #Counting number of lines in the xymatch output. it should be more than 15 (size of header)
+                    print("Number of stars Matched= "+str(num_lines))
+                    break
+                else:
+                    print("ERROR: Cannot find the file :"+FirstImageName)
+                    print("Enter the correct full path to the file again after thist attempt.")
+        
         
         iraf.geomap(input=img+"xymatch.out", database=img+"rtran.db", xmin=1, xmax=yxdim[1], ymin=1, ymax=yxdim[0], interactive=0)
-        iraf.geoxytran(input=MotherDIR+"/GoodStars.coo", output=img+"GoodStarsT.coo",database=img+"rtran.db",transforms=img+"xymatch.out")
-        iraf.geoxytran(input=MotherDIR+"/Source.coo", output=img+"SourceT.coo",database=img+"rtran.db",transforms=img+"xymatch.out")
-        iraf.geoxytran(input=MotherDIR+"/BlankSky.coo", output=img+"BlankSky.coo",database=img+"rtran.db",transforms=img+"xymatch.out")
+        iraf.geoxytran(input=os.path.join(MotherDIR,OUTDIR,"GoodStars.coo"), output=img+"GoodStarsT.coo",database=img+"rtran.db",transforms=img+"xymatch.out")
+        iraf.geoxytran(input=os.path.join(MotherDIR,OUTDIR,"Source.coo"), output=img+"SourceT.coo",database=img+"rtran.db",transforms=img+"xymatch.out")
+        iraf.geoxytran(input=os.path.join(MotherDIR,OUTDIR,"BlankSky.coo"), output=img+"BlankSky.coo",database=img+"rtran.db",transforms=img+"xymatch.out")
         if QPHOT_todo=='Y' :
-            iraf.geoxytran(input=MotherDIR+"/qphotinput.txt", output=img+"qphotinput.txt",database=img+"rtran.db",transforms=img+"xymatch.out")
+            iraf.geoxytran(input=os.path.join(MotherDIR,OUTDIR,"qphotinput.txt"), output=img+"qphotinput.txt",database=img+"rtran.db",transforms=img+"xymatch.out")
 
 
         # Sanity check: To remove any new coordinates calculated lying outside image in *.coo 
@@ -324,7 +342,7 @@ def Photometry():
                 else: print(star +": Outside the image field \n")
             fooIN.close()
             fooOUT.close()
-            os.system('mv  '+img+coofile+'TEMP  '+img+coofile)
+            os.rename(img+coofile+'TEMP',img+coofile)
 
         #---------------------------------
         # Due to small error in calculation of star position, we need to create a more accurate GoodStars.coo and Source.coo
@@ -345,7 +363,7 @@ def Photometry():
             imx=iraf.imexam(input=img,frame=1,use_display=0,defkey='a',imagecur=img+'SourceT.coo',Stdout=1)
             Xprim=eval(imx[2].split()[0])  
             Yprim=eval(imx[2].split()[1])
-            with open(img+'Source.coo','w') as foo :    #Creating text file contiaing coords of v1647
+            with open(img+'Source.coo','w') as foo :    #Creating text file contiaing coords of primary interest
                 i=2
                 while i < len(imx) :
                     foo.write(imx[i].split()[0] +'  '+imx[i].split()[1]+'\n')
@@ -397,7 +415,7 @@ def Photometry():
             print('Mean sigma = '+str(sigma))
             print('Datamin = '+str(datamin))
 
-            with open(MotherDIR+'/'+OUTPUTfile,'a') as foo:    #Appending into the log file to write output of photometry
+            with open(os.path.join(MotherDIR,OUTDIR,OUTPUTfile),'a') as foo:    #Appending into the log file to write output of photometry
                 foo.write(img +'  '+str(round(fwhm,2)) + '  "'+filterr+'"  '+str(intime) +'  '+str(StartUT)+'  '+ str(round(mean,3)) +'  ' + str(round(sigma,3)) +'  '+str(round(datamin,3)) + ' | ')
 
             #Now starts photometry processes....
@@ -479,7 +497,7 @@ def Photometry():
                 
                 foo.close()
             #Now, Writing the Mag to output file
-            foo=open(MotherDIR+'/'+OUTPUTfile,'a')
+            foo=open(os.path.join(MotherDIR,OUTDIR,OUTPUTfile),'a')
 #            os.system(MotherDIR+'/Creating_Log_File.sh '+img+' '+OriginalIMG+'GoodStars.coo'+' '+OriginalIMG+'Source.coo'+' '+MotherDIR+'/'+OUTPUTfile ) 
 
             #First append the qphot magnitudes to the Photometry output file
@@ -488,7 +506,7 @@ def Photometry():
             for filemag in magfiles:
                 if eval(filemag.split('.')[-1]) > 2 : # The qphot output files
                     qphottable=ascii.read(filemag)
-                    foo.write(' '+qphottable['MAG'][-1]) #Writing the last Mag in file
+                    foo.write(' {0}'.format(qphottable['MAG'][-1])) #Writing the last Mag in file
             foo.write(' | ')  #Adding a seperator after qphot mags
             # If PSF photometry as done, adding those mags to the file.
             if DOPSF == 'YES' :  # IF PSF photometry was done...
@@ -536,7 +554,7 @@ def Photometry():
             print ("Photometry of "+img+" over. \n Now proceeding to next image")
             #END of the photometry of convolved images set..
         imgNo=imgNo+1
-        with open(MotherDIR+'/'+OUTPUTfile,'a') as foo :    #Appending into the log file to write output of photometry
+        with open(os.path.join(MotherDIR,OUTDIR,OUTPUTfile),'a') as foo :    #Appending into the log file to write output of photometry
             foo.write('-------------------------------------------- \n')  # '-'*44  To mark end of an image
 
 
@@ -554,19 +572,29 @@ def is_number(s):   # A funtion to check wheter string s is a number or not.
 
 def Sextractor_subrout(img=None,N=30):
     """ Calls the Sextractor and create the sextractor parameter files if it doesn't already exists. And also create coord file of the brightest N=30 number of stars."""
-    N=str(N)
+    try :
+        subprocess.call(['sex','--version'])
+    except OSError:
+        print('ERROR: Cannot find the command: sex')
+        print('SExtractor needs to be installed before running this task')
+        exit(1)
+
     backupPWD=os.getcwd()
-    iraf.cd(MotherDIR)  #Going back to parent directory
+    os.chdir(os.path.join(MotherDIR,OUTDIR))  #Going to output directory of this run.
+
     if not os.path.isfile("sextractor.sex") : #If a config file doesn't exist already
-        os.system("sex -d > sextractor.sex")
-        if os.path.isfile("/usr/share/sextractor/default.param") :
-            os.system("cp /usr/share/sextractor/default.param /usr/share/sextractor/default.conv .")
-        else : print ("Error: cannot find default.param (.conv) in /usr/share/sextractor/ . \n You might have installed sextracter somewhere else")
-        print("Sextractor Config file sextractor.sex and default.parm and default.conv created. \n If required u can edit it before calling Photometry")
+        with open('sextractor.sex','w') as sexConfigFile:
+            subprocess.call(['sex','-d'],stdout=sexConfigFile)
+        with open('default.conv','w') as convolutionFile:
+            convolutionFile.write("""CONV NORM\n# 3x3 ``all-ground'' convolution mask with FWHM = 2 pixels.\n1 2 1\n2 4 2\n1 2 1\n""")
+        with open('default.param','w') as sexCatParamFile:
+            sexCatParamFile.write('\n'.join(['NUMBER','FLUXERR_ISO','FLUX_AUTO','FLUXERR_AUTO','X_IMAGE','Y_IMAGE','FLAGS'])+'\n')
+        
+        print("Sextractor Config file sextractor.sex, default.parm and default.conv created. \n If required u can edit it before calling Photometry")
 
     if img is None : # If No img is given, then using the first image in Images4Photo.in file
         try:
-            imgfile=open(MotherDIR+'/Images4Photo.in','r')
+            imgfile=open(os.path.join(MotherDIR,OUTDIR,'Images4Photo.in'),'r')
         except IOError,e:
             print('Cannot open Images4Photo.in file. Run Task #6 ')
             print(e)
@@ -580,21 +608,29 @@ def Sextractor_subrout(img=None,N=30):
         img=imgline.split()[0]
         imgfile.close()
 
-    os.system("sex "+img+" -c sextractor.sex")
-    os.system("awk 'NR>7{if ($7 == 0){print $3,$5,$6}}' test.cat | sort -nr | cut -d' ' -f 2,3 | head -"+N+" > FirstImageTop"+N+".coo")
-#    os.system("awk 'NR>7{print $3,$5,$6}' test.cat | sort -nr | head -"+N+" | awk '{print $2,$3}' > FirstImageTop"+N+".coo")
-    print("Brightest "+N+" stars coordinates of first image created in FirstImageTop"+N+".coo")
-    iraf.cd(backupPWD)
+    subprocess.call(["sex",img,"-c",os.path.join(MotherDIR,OUTDIR,"sextractor.sex"),"-PARAMETERS_NAME",os.path.join(MotherDIR,OUTDIR,"default.param"),"-FILTER_NAME",os.path.join(MotherDIR,OUTDIR,"default.conv"),'-PIXEL_SCALE','0.3'])
+#    subprocess.call(["sex",img,"-c","sextractor.sex"])
+    SExtractCat=ascii.read('test.cat')
+    # Selecting only good stars without any major problems
+    GoodStarCat= SExtractCat[SExtractCat['FLAGS']<2]  # Flag 0 is good and 1 is contaminated by less than 10% in flux by neighbour
+    #Sort in descending order of Flux
+    GoodStarCat.sort('FLUX_AUTO')
+    GoodStarCat.reverse()
+    #Write X and Y coordinates of First N number of brightest stars in text file
+    GoodStarCat['X_IMAGE','Y_IMAGE'][:N].write('FirstImageTop{0}.coo'.format(N),format='ascii.no_header')
+#    os.system("awk 'NR>7{if ($7 == 0){print $3,$5,$6}}' test.cat | sort -nr | cut -d' ' -f 2,3 | head -"+N+" > FirstImageTop"+N+".coo")
+    print("Brightest {0} stars coordinates of first image created in FirstImageTop{0}.coo".format(N))
+    os.chdir(backupPWD)
 
 
 def Star_sky_subrout(img=None) :
     """ Opens the image and create Source.coo, GoodStars.coo, BlankSky.coo, Polygon.coo files"""
     backupPWD=os.getcwd()
-    iraf.cd(MotherDIR)  #Going back to parent directory
+    iraf.cd(os.path.join(MotherDIR,OUTDIR))  #Going to output directory of this run.
 
     if img is None : # If No img is given, then using the first image in Images4Photo.in file
         try:
-            imgfile=open(MotherDIR+'/Images4Photo.in','r')
+            imgfile=open(os.path.join(MotherDIR,OUTDIR,'Images4Photo.in'),'r')
         except IOError as e:
             print('Cannot open Images4Photo.in file. Run Task #6 ')
             print(e)
@@ -612,7 +648,7 @@ def Star_sky_subrout(img=None) :
         iraf.display(img,1)
         print ('\n For taking coordinates of Source. Press _a_ over Primary Sources.')
         imx=iraf.imexam(Stdout=1)
-        with open('Source.coo','w') as foo :    #Creating text file contiaing coords of v1647
+        with open('Source.coo','w') as foo :    #Creating text file contiaing coords of science sources of primary interest
             i=2
             while i < len(imx) :               
                 foo.write(imx[i].split()[0] +'  '+imx[i].split()[1]+'\n')
@@ -650,31 +686,32 @@ def Star_sky_subrout(img=None) :
                 if boolvar and (len(qphot_inp.split()) == 5) : foo.write(qphot_inp+' \n')
                 elif (qphot_inp != "q") : print("Wrong Entry. Please enter properly the 5 values. q is to stop.")
     else :
-        print("Source.coo, GoodStars.coo, BlankSky.coo, qphotinput.txt already exists. If you need to recreate, rename/remove them before calling this step.")
+        print("Source.coo, GoodStars.coo, BlankSky.coo, qphotinput.txt already exists in "+os.path.join(MotherDIR,OUTDIR)+". If you need to recreate, rename/remove them before calling this step.")
     #Finished all first images data collection. Now going forward..
 
     print("\n All required human input of coordinates taken..")
-    iraf.cd(backupPWD)
+
+    iraf.cd(backupPWD) # Going back to the directory from were we entered this function.
 
 
 def Createlist_subrout():
     """ Creates the Images4Photo.in containing the image name , filter, exposure time, threshold """
-    fooOUT=open(MotherDIR+'/Images4Photo.in','w')
+    fooOUT=open(os.path.join(MotherDIR,OUTDIR,'Images4Photo.in'),'w')
     directories=LoadDirectories(CONF=False)
     Exptime=1  #By default, all TIRSPEC images are scaled to per second.
     for night in directories:
         print('Working on night: '+night)
         try:
             #First we load a dictionary of raw images to their filters
-            with open(night+'/AllObjects.List','r') as FiltrFILE:
+            with open(os.path.join(MotherDIR,OUTDIR,night,'AllObjects.List'),'r') as FiltrFILE:
                 Filtrfiledic=dict([(filtset.split()[0],shlex.split(filtset.rstrip())[1]) for filtset in FiltrFILE])  #Dictionary of filterset for each image.
 
             #Secondly, we load a dictionary of Dither Frame to Raw images
-            with open(night+'/FirstoneANDcombinedImages.List','r') as DitherFILE:
+            with open(os.path.join(MotherDIR,OUTDIR,night,'FirstoneANDcombinedImages.List'),'r') as DitherFILE:
                 Ditherfiledic=dict([(ditherset.rstrip().split()[1],ditherset.split()[0]) for ditherset in DitherFILE if len(ditherset.split()) == 2])  #Dictionary of First image of each Dither set.
 
             #Now Read and write the images to do photometry one by one.
-            ImgsFILE=open(night+'/FirstoneANDalignNcombinedImages.List','r')
+            ImgsFILE=open(os.path.join(MotherDIR,OUTDIR,night,'FirstoneANDalignNcombinedImages.List'),'r')
         except IOError as e:
             print('Cannot open the image file list.')
             print(e)
@@ -685,7 +722,7 @@ def Createlist_subrout():
         for imgline in ImgsFILE:
             img=imgline.rstrip().split()[1]
             imgfilter=Filtrfiledic[Ditherfiledic[imgline.split()[0]]]
-            fooOUT.write(night+'/'+img+'  "'+imgfilter+'"  '+str(Exptime)+'  '+str(threshold)+' \n')
+            fooOUT.write(os.path.join(MotherDIR,OUTDIR,night,img)+'  "'+imgfilter+'"  '+str(Exptime)+'  '+str(threshold)+' \n')
         ImgsFILE.close()
     fooOUT.close()
     print('All nights over...')
@@ -703,14 +740,14 @@ def AlignNcombine_subrout(method="average"):
         print('Working on night: '+night)
 
         #Load all the X,Y coords of star indexed for every file already
-        with open(night+'/AllObjects2Combine.List','r') as XYFILE :
+        with open(os.path.join(MotherDIR,OUTDIR,night,'AllObjects2Combine.List'),'r') as XYFILE :
             XYfiledic=dict([(XYset.split()[0],XYset.rstrip().split()[1:]) for XYset in XYFILE if len(XYset.split()) == 3 ])  #Dictionary of XY coords for each image.
 
         if len(XYfiledic) == 0 : #No images this night..
             print('No images to work on this night. skipping...')
             continue
 
-        with open(night+'/FirstoneANDcombinedImages.List','r') as Obj2CombFILE :
+        with open(os.path.join(MotherDIR,OUTDIR,night,'FirstoneANDcombinedImages.List'),'r') as Obj2CombFILE :
             #Firstly generate the list of lists of images to combine. Also a dict which maps the combined images to first image.
             ListofLists=[[]]
             Comb2Firstdic=dict()
@@ -721,7 +758,7 @@ def AlignNcombine_subrout(method="average"):
                     Comb2Firstdic[imgline.rstrip().split()[1]]=imgline.split()[0] #Adding the mapping to the dictionary
 
         #Now iterate through every list of images to combine
-        outlogFILE=open(night+'/FirstoneANDalignNcombinedImages.List','w')
+        outlogFILE=open(os.path.join(MotherDIR,OUTDIR,night,'FirstoneANDalignNcombinedImages.List'),'w')
         for imglist in ListofLists:
             if len(imglist) == 1 : #Single image. nothing to align and combine
                 OutCombimg=imglist[0]
@@ -731,33 +768,33 @@ def AlignNcombine_subrout(method="average"):
                 Refimage=imglist[0]
                 Xref=eval(XYfiledic[Comb2Firstdic[Refimage]][0])
                 Yref=eval(XYfiledic[Comb2Firstdic[Refimage]][1])
-                iraf.display(night+'/'+Refimage,1) 
+                iraf.display(os.path.join(MotherDIR,OUTDIR,night,Refimage),1) 
                 print ('Press _a_ over some good stars to align, u can press s also, but DONT press r \n')
                 imx=iraf.imexam(Stdout=1)
-                with open(night+'/'+OutCoofile,'w') as foo :
+                with open(os.path.join(MotherDIR,OUTDIR,night,OutCoofile),'w') as foo :
                     i=2
                     while i < len(imx) :               
                         foo.write(imx[i].split()[0] +'  '+imx[i].split()[1]+'\n')
                         i=i+2
 
                 #Now enter the crude shifts for other images from our dic in the file. And also create text files containing images to align and aligned output
-                with open(night+'/shifts.in','w') as foo2 :
-                    alignInpfname=night+'/'+OutCombimg[:-5]+'.ditherList'
-                    alignOutfname=night+'/'+OutCombimg[:-5]+'.AlignedditherList'
+                with open(os.path.join(MotherDIR,OUTDIR,night,'shifts.in'),'w') as foo2 :
+                    alignInpfname=os.path.join(MotherDIR,OUTDIR,night,OutCombimg[:-5]+'.ditherList')
+                    alignOutfname=os.path.join(MotherDIR,OUTDIR,night,OutCombimg[:-5]+'.AlignedditherList')
                     imgs2align=open(alignInpfname,'w')    #Once the world migrates to Python 2.7+, these files also should be opened in the same with command above...
                     imgs2alignOUT=open(alignOutfname,'w')
                     for img in imglist[1:]:
                         Xin=eval(XYfiledic[Comb2Firstdic[img]][0])  
                         Yin=eval(XYfiledic[Comb2Firstdic[img]][1])
                         foo2.write(str(Xref-Xin)+'   '+str(Yref-Yin)+'\n')
-                        imgs2align.write(night+'/'+img+'\n')
-                        imgs2alignOUT.write(night+'/'+'s'+img+'\n')
+                        imgs2align.write(os.path.join(MotherDIR,OUTDIR,night,img)+'\n')
+                        imgs2alignOUT.write(os.path.join(MotherDIR,OUTDIR,night,'s'+img)+'\n')
 
                 imgs2align.close()
                 imgs2alignOUT.close()
                 try :  #Now align and if succeded combine those images....
-                    iraf.imalign(input='@'+alignInpfname, reference=night+'/'+Refimage, coords=night+'/'+OutCoofile, output='@'+alignOutfname, shifts=night+'/shifts.in', interp_type="nearest",boundary_type="constant",trimimages="no")
-                    iraf.imcombine(input=night+'/'+Refimage+','+'@'+alignOutfname, output=night+'/'+OutCombimg,combine=method,reject="sigclip")
+                    iraf.imalign(input='@'+alignInpfname, reference=os.path.join(MotherDIR,OUTDIR,night,Refimage), coords=os.path.join(MotherDIR,OUTDIR,night,OutCoofile), output='@'+alignOutfname, shifts=os.path.join(MotherDIR,OUTDIR,night,'shifts.in'), interp_type="nearest",boundary_type="constant",trimimages="no")
+                    iraf.imcombine(input=os.path.join(MotherDIR,OUTDIR,night,Refimage)+','+'@'+alignOutfname, output=os.path.join(MotherDIR,OUTDIR,night,OutCombimg),combine=method,reject="sigclip")
                 except iraf.IrafError as e :
                     print ('IRAF ERROR : Some image might be having problem. Remove it and try later')
                     print e
@@ -793,21 +830,21 @@ def CombDith_FlatCorr_subrout(method="median",FullFlatStatSection='[200:800,200:
     for night in directories:
         print('Working on night: '+night)
         #Load all the Flat indexing file data
-        with open(night+'/AllObjects-FinalFlat.List','r') as FlatFILE :
+        with open(os.path.join(MotherDIR,OUTDIR,night,'AllObjects-FinalFlat.List'),'r') as FlatFILE :
             Flatfiledic=dict([(flatset.split()[0],flatset.rstrip().split()[1:]) for flatset in FlatFILE])  #Dictionary of flats list for each image.
 
         if SEPERATESKY=='Y' :
             #Load all the Sky files indexing file data
-            with open(night+'/AllObjects-FinalSky.List','r') as SkyFILE :
+            with open(os.path.join(MotherDIR,OUTDIR,night,'AllObjects-FinalSky.List'),'r') as SkyFILE :
                 Skyfiledic=dict([(skyset.split()[0],skyset.rstrip().split()[1:]) for skyset in SkyFILE])  #Dictionary of Sky list for each image.
 
         #Load all the FilterSet indexing file data
-        with open(night+'/AllObjects.List','r') as FiltrFILE :
+        with open(os.path.join(MotherDIR,OUTDIR,night,'AllObjects.List'),'r') as FiltrFILE :
             Filtrfiledic=dict([(filtset.split()[0],shlex.split(filtset.rstrip())[1]) for filtset in FiltrFILE])  #Dictionary of filterset for each image.
 
         NewFiltSet='(Blah,Blah,Blah)'
 
-        with open(night+'/AllObjects2Combine.List','r') as Obj2CombFILE :
+        with open(os.path.join(MotherDIR,OUTDIR,night,'AllObjects2Combine.List'),'r') as Obj2CombFILE :
             #Secondly generate the list of lists of images to combine.
             ListofLists=[[]]
             for imgline in Obj2CombFILE:
@@ -817,28 +854,29 @@ def CombDith_FlatCorr_subrout(method="median",FullFlatStatSection='[200:800,200:
         if len(ListofLists[0]) == 0 : #No images this night..
             print('No images to work on this night. skipping...')
             try :
-                os.remove(night+'/FirstoneANDcombinedImages.List')
+                os.remove(os.path.join(MotherDIR,OUTDIR,night,'FirstoneANDcombinedImages.List'))
             except OSError :
-                print('Not able to remove (if any) previous '+night+'/FirstoneANDcombinedImages.List')
+                print('Not able to remove (if any) previous '+os.path.join(MotherDIR,OUTDIR,night,'FirstoneANDcombinedImages.List'))
             continue
 
         #Now iterate through every list of images to combine
-        outlogFILE=open(night+'/FirstoneANDcombinedImages.List','w')
+        outlogFILE=open(os.path.join(MotherDIR,OUTDIR,night,'FirstoneANDcombinedImages.List'),'w')
         for imglist in ListofLists:
             if len(imglist) == 1 : #Single image. no need to combine
-                OutCombimg=imglist[0]
+                OutCombimg=imglist[0][6:]   #Removing the Slope- prefix
+                shutil.copy2(night+'/'+imglist[0],os.path.join(MotherDIR,OUTDIR,night,OutCombimg))  #Copying the file dito..
             elif len(imglist) > 1 :
-                OutCombimg=imglist[0][:-5]+'_'+method+'_'+imglist[-1][:-5]+'.fits'
-                with open(night+'/'+OutCombimg+'.imcombine.List','w') as imcombineinputFile:
+                OutCombimg=imglist[0][6:-5]+'_'+method+'_'+imglist[-1][6:-5]+'.fits'  #Removing the Slope- prefix
+                with open(os.path.join(MotherDIR,OUTDIR,night,OutCombimg+'.imcombine.List'),'w') as imcombineinputFile:
                     imcombineinputFile.write('\n'.join([night+'/'+img for img in imglist])+'\n')
-                iraf.imcombine(input='@'+night+'/'+OutCombimg+'.imcombine.List', output=night+'/'+OutCombimg,combine=method,reject="sigclip")
+                iraf.imcombine(input='@'+os.path.join(MotherDIR,OUTDIR,night,OutCombimg+'.imcombine.List'), output=os.path.join(MotherDIR,OUTDIR,night,OutCombimg),combine=method,reject="sigclip")
             #Now make list of flats to be combined for this image set
             Flats2Comb=[]
             for img in imglist:
                 Flats2Comb+=Flatfiledic[img]  #Adding all the flat lists
             Flats2Comb=set(Flats2Comb)  #Making a set to remove duplicates
             #Write all these flat names to a file.
-            imgflatlistfname=night+'/'+OutCombimg[:-5]+'.flatlist'
+            imgflatlistfname=os.path.join(MotherDIR,OUTDIR,night,OutCombimg[:-5]+'.flatlist')
             with open(imgflatlistfname,'w') as imgflatlistFILE :
                 imgflatlistFILE.write('\n'.join([night+'/'+fla for fla in Flats2Comb])+'\n')
 
@@ -848,7 +886,7 @@ def CombDith_FlatCorr_subrout(method="median",FullFlatStatSection='[200:800,200:
                     Skys2Comb+=Skyfiledic[img]  #Adding all the sky lists
                 Skys2Comb=set(Skys2Comb)  #Making a set to remove duplicates
                 #Write all these Sky names to a file.
-                imgskylistfname=night+'/'+OutCombimg[:-5]+'.skylist'
+                imgskylistfname=os.path.join(MotherDIR,OUTDIR,night,OutCombimg[:-5]+'.skylist')
                 with open(imgskylistfname,'w') as imgskylistFILE :
                     imgskylistFILE.write('\n'.join([night+'/'+sky for sky in Skys2Comb])+'\n')
 
@@ -865,26 +903,26 @@ def CombDith_FlatCorr_subrout(method="median",FullFlatStatSection='[200:800,200:
                 FlatStatSection= FullFlatStatSection
 
             print('Image section used for normalising Flat is '+FlatStatSection)
-            outflatname=night+'/'+OutCombimg[:-5]+'_flat.fits'
-            iraf.imcombine (input='@'+imgflatlistfname, output=outflatname, combine="median", scale="median",reject="sigclip", statsec=FlatStatSection)
+            outflatname=os.path.join(MotherDIR,OUTDIR,night,OutCombimg[:-5]+'_flat.fits')
+            iraf.imcombine(input='@'+imgflatlistfname, output=outflatname, combine="median", scale="median",reject="sigclip", statsec=FlatStatSection)
             statout=iraf.imstatistics(outflatname+FlatStatSection,fields='mode',Stdout=1)
             mode=float(statout[1])
             #We will normalise this flat with the mode of pixels in FlatStatSection
-            Noutflatname=night+'/'+OutCombimg[:-5]+'_Nflat.fits'
+            Noutflatname=os.path.join(MotherDIR,OUTDIR,night,OutCombimg[:-5]+'_Nflat.fits')
             iraf.imarith(operand1=outflatname,op="/",operand2=mode,result=Noutflatname)
             #If we are subtracting sky, doing it before flat fielding.
             if SEPERATESKY=='Y':
-                outskyname=night+'/'+OutCombimg[:-5]+'_sky.fits'
+                outskyname=os.path.join(MotherDIR,OUTDIR,night,OutCombimg[:-5]+'_sky.fits')
                 iraf.imcombine (input='@'+imgskylistfname, output=outskyname, combine="median",reject="pclip")
                 #Now subtract the sky form the science frame
                 OutSSimg=OutCombimg[:-5]+'_SS.fits'
-                iraf.imarith(operand1=night+'/'+OutCombimg,op="-",operand2=outskyname,result=night+'/'+OutSSimg)
+                iraf.imarith(operand1=os.path.join(MotherDIR,OUTDIR,night,OutCombimg),op="-",operand2=outskyname,result=os.path.join(MotherDIR,OUTDIR,night,OutSSimg))
                 OutCombimg=OutSSimg  #Updating the new _SS appended input filename to continue as if nothing happened here.
             #Now divide by flat...
             OutFCimg=OutCombimg[:-5]+'_FC.fits'
-            iraf.imarith(operand1=night+'/'+OutCombimg,op="/",operand2=Noutflatname,result=night+'/'+OutFCimg)
+            iraf.imarith(operand1=os.path.join(MotherDIR,OUTDIR,night,OutCombimg),op="/",operand2=Noutflatname,result=os.path.join(MotherDIR,OUTDIR,night,OutFCimg))
             #Now interpolate the bad pixels in the final image.
-            FixBadPixels(night+'/'+OutFCimg,night)
+            FixBadPixels(os.path.join(MotherDIR,OUTDIR,night,OutFCimg),night)
             if TODO=='P':
                 Oldfiltset=NewFiltSet
                 NewFiltSet=Filtrfiledic[imglist[0]]
@@ -893,7 +931,7 @@ def CombDith_FlatCorr_subrout(method="median",FullFlatStatSection='[200:800,200:
             #     outlogFILE.write('\n')  #Entering a blank line no matter what. We will ask user to change is they want to move and add.
             outlogFILE.write(imglist[0]+' '+OutFCimg+'\n')
         outlogFILE.close()
-        if TODO=='P': print('Edit the spaces between image sets in file '+night+'/FirstoneANDcombinedImages.List'+' to align and combine them in next step.')
+        if TODO=='P': print('Edit the spaces between image sets in file '+os.path.join(MotherDIR,OUTDIR,night,'FirstoneANDcombinedImages.List')+' to align and combine them in next step.')
     print('All nights over...')             
                 
                 
@@ -913,9 +951,9 @@ def Manual_InspectFlat_subrout():
     for night in directories:
         print("Working on night : "+night)
         for inpfile,outfile in zip(filelist,outfilelist):
-            print('Files in:'+night+'/'+inpfile)
-            inFILE=open(night+'/'+inpfile,'r')
-            ouFILE=open(night+'/'+outfile,'w')
+            print('Files in:'+os.path.join(MotherDIR,OUTDIR,night,inpfile))
+            inFILE=open(os.path.join(MotherDIR,OUTDIR,night,inpfile),'r')
+            ouFILE=open(os.path.join(MotherDIR,OUTDIR,night,outfile),'w')
             AlwaysRemove=[]
             AlwaysAccept=[]
             for inpline in inFILE:
@@ -958,8 +996,8 @@ def Manual_InspectObj_subrout():
     if TODO=='S': print("Press _j_ and then _q_ over a good part of spectra for selecting image")
     for night in directories:
         print("Working on night : "+night)
-        ObjFILE=open(night+'/AllObjects.List','r')
-        Obj2CombFILE=open(night+'/AllObjects2Combine.List','w')
+        ObjFILE=open(os.path.join(MotherDIR,OUTDIR,night,'AllObjects.List'),'r')
+        Obj2CombFILE=open(os.path.join(MotherDIR,OUTDIR,night,'AllObjects2Combine.List'),'w')
         newX=0
         newY=0
         newsX=0
@@ -969,9 +1007,17 @@ def Manual_InspectObj_subrout():
             try:
                 img=objline.split()[0]
             except IndexError:
-                print('Blank line in '+night+'/AllObjects.List file')
+                print('Blank line in '+os.path.join(MotherDIR,OUTDIR,night,'AllObjects.List'))
                 continue
-            iraf.display(night+'/'+img,1)
+            try :
+                iraf.display(night+'/'+img,1)
+            except iraf.IrafError as e:
+                # ds9 might not be open, hence open it and try again
+                print('No ds9 seems to be open, I am opening a ds9..')
+                subprocess.Popen('ds9')
+                time.sleep(4)  # Give 4 seconds for ds9 to startup
+                iraf.display(night+'/'+img,1)
+                
             print(objline)
             if TODO=='P':print('\n To discard this image press _q_ without pressing _a_')
             if TODO=='S':print('\n To discard this image press _q_ without pressing _j_')
@@ -1014,8 +1060,9 @@ def Manual_InspectObj_subrout():
             Obj2CombFILE.write(img+' '+str(newX)+' '+str(newY)+'\n')
         Obj2CombFILE.close()
         ObjFILE.close()
-        print('We have made the selected list of images in '+night+'/AllObjects2Combine.List  \n Add blank lines between file names to prevent them from median combining. \n Remove the blank line between file names, which you want to combine.')
-        os.system(TEXTEDITOR+' '+night+'/AllObjects2Combine.List')
+        print('We have made the selected list of images in '+os.path.join(MotherDIR,OUTDIR,night,'AllObjects2Combine.List')+' \n Add blank lines between file names to prevent them from median combining. \n Remove the blank line between file names, which you want to combine.')
+        subprocess.call(TEXTEDITOR.split()+[os.path.join(MotherDIR,OUTDIR,night,'AllObjects2Combine.List')])
+
     print('All nights over...')
         
              
@@ -1025,8 +1072,8 @@ def SelectionofFrames_subrout():
     FiltREdic=dict()
     ArgonREdic=dict()
     SkyREdic=dict()
+    print('For Regular Expression rules See: http://docs.python.org/2/howto/regex.html#regex-howto')
     ObjRE=raw_input("Enter Regular Expression to select the objects from all dirs: ").strip(' ')
-    # For RE rules See: http://docs.python.org/2/howto/regex.html#regex-howto
     regexpObj= re.compile(r''+ObjRE)
     #Generating list of objects frames
     for night in directories:
@@ -1035,7 +1082,7 @@ def SelectionofFrames_subrout():
             slopeimgFILElines=list(slopeimgFILE)
         ObjList=[imgline.rstrip() for imgline in slopeimgFILElines if regexpObj.search(imgline.split()[0]) is not None ]
         FiltList=set()  #Set to store the list of filters needed to find flat/Argon for
-        with open(night+'/AllObjects.List','w') as ObjFILE :
+        with open(os.path.join(MotherDIR,OUTDIR,night,'AllObjects.List'),'w') as ObjFILE :
             for Objline in ObjList:
                 if (TODO=='P' and shlex.split(Objline)[6].upper() =='G') or (TODO=='S' and shlex.split(Objline)[6].upper() !='G') :
                     continue    #Skip this and go to the next object.
@@ -1110,9 +1157,9 @@ def SelectionofFrames_subrout():
                 Argonlistdic[filt]=ArgonList  #Saving Argon list for this filter set
             
         #Now, load the Object list and write to a file the Obj and corresponding flats/Argons
-        ObjFlatFILE=open(night+'/AllObjects-Flat.List','w')
-        if TODO=='S': ObjArgonFILE=open(night+'/AllObjects-Argon.List','w')
-        if SEPERATESKY=='Y': ObjSkyFILE=open(night+'/AllObjects-Sky.List','w')
+        ObjFlatFILE=open(os.path.join(MotherDIR,OUTDIR,night,'AllObjects-Flat.List'),'w')
+        if TODO=='S': ObjArgonFILE=open(os.path.join(MotherDIR,OUTDIR,night,'AllObjects-Argon.List'),'w')
+        if SEPERATESKY=='Y': ObjSkyFILE=open(os.path.join(MotherDIR,OUTDIR,night,'AllObjects-Sky.List'),'w')
         for Objline in ObjList:
             if (TODO=='P' and shlex.split(Objline)[6].upper() =='G') or (TODO=='S' and shlex.split(Objline)[6].upper() !='G') :
                 continue    #Skip this and go to the next object.
@@ -1123,34 +1170,61 @@ def SelectionofFrames_subrout():
             if SEPERATESKY=='Y': ObjSkyFILE.write(Name+'  '+' '.join(Skylistdic[U_L_Sfilter])+'\n')
         ObjFlatFILE.close()
         print('Edit and save the Flat/Argon/Sky list associations for this night :'+night)
-        os.system(TEXTEDITOR+' '+night+'/AllObjects-Flat.List')
+        subprocess.call(TEXTEDITOR.split()+[os.path.join(MotherDIR,OUTDIR,night,'AllObjects-Flat.List')])
         if TODO=='S': 
             ObjArgonFILE.close()
-            os.system(TEXTEDITOR+' '+night+'/AllObjects-Argon.List')
+            subprocess.call(TEXTEDITOR.split()+[os.path.join(MotherDIR,OUTDIR,night,'AllObjects-Argon.List')])
         if SEPERATESKY=='Y': 
             ObjSkyFILE.close()
-            os.system(TEXTEDITOR+' '+night+'/AllObjects-Sky.List')
+            subprocess.call(TEXTEDITOR.split()+[os.path.join(MotherDIR,OUTDIR,night,'AllObjects-Sky.List')])
+
     print('All nights over...')    
     
 
 def LoadDirectories(CONF=False):
     """ Loads the directores and return the list of directories to do analysis """
     try :
-        directoriesF=open(MotherDIR+'/directories','r')
+        directoriesF=open(os.path.join(MotherDIR,OUTDIR,'directories'),'r')
     except IOError :
-        #Creating a text file containg the directories to visit if it doesn't already exist
-        os.system('find . -type d -maxdepth 1 -mindepth 1 | sort > directories ')
-        directoriesF=open(MotherDIR+'/directories','r')
+        #Creating a text file containg the directories which has SlopeimagesLog.tx logs to visit if it doesn't already exist
+        directories=[dirs for dirs in os.walk(MotherDIR).next()[1] if os.path.isfile(os.path.join(MotherDIR,dirs,'SlopeimagesLog.txt'))]
+        directories.sort()
+        with open(os.path.join(MotherDIR,OUTDIR,'directories'),'w') as directoriesF : #Creating directories file
+            directoriesF.write('\n'.join(directories)+'\n')
+        #Now reopening the file to read and proceed
+        directoriesF=open(os.path.join(MotherDIR,OUTDIR,'directories'),'r')
+
+    #Load directories list from the file
     directories=[dirs.rstrip().strip(' ').rstrip('/') for dirs in directoriesF] #Removing spaces or trailing /
     directoriesF.close()
+
     if CONF == True :
         #Ask user again to confirm or change if he/she needs to
         InpList=raw_input('Enter the directories to analyse (default: %s) :'%','.join(directories)).strip(' ')
         if InpList : 
             directories=[dirs.rstrip().strip(' ').rstrip('/') for dirs in InpList.split(',')] #Removing spaces or trailing /
-            with open(MotherDIR+'/directories','w') as directoriesF : #Updateing directories file
+            with open(os.path.join(MotherDIR,OUTDIR,'directories'),'w') as directoriesF : #Updateing directories file
                 directoriesF.write('\n'.join(directories)+'\n')
 
+
+    for dirs in directories:
+        #Create a corresponding night directory in OUTPUT directory also if not already present.
+        try:
+            os.makedirs(os.path.join(MotherDIR,OUTDIR,dirs))
+        except OSError:
+            if os.path.isdir(os.path.join(MotherDIR,OUTDIR,dirs)) :
+                print("Output directory "+os.path.join(MotherDIR,OUTDIR,dirs)+" already exists.\n Everything inside it will be overwritten.")
+            else:
+                raise
+        else:
+            print('Created directory :'+os.path.join(MotherDIR,OUTDIR,dirs))
+        
+        #Also Alert user if some directory has SlopeimagesLog.txt missing in it.            
+        if not os.path.isfile(os.path.join(MotherDIR,dirs,'SlopeimagesLog.txt')):
+            print('WARNING: '+ os.path.join(MotherDIR,dirs,'SlopeimagesLog.txt')+' file missing.')
+            print('Copy the SlopeimagesLog.txt log file to the directory before procceding')
+
+    
     if len(directories) == 0 : 
         print('Atleast one directory containing data to be given as input')
         exit(1)
@@ -1160,21 +1234,31 @@ def LoadDirectories(CONF=False):
 
 def Backup_subrout():
     """ Copies all the files in present directory to the ../BACKUPDIR """
-    os.system('mkdir  ../'+BACKUPDIR)
+    os.makedirs('../'+BACKUPDIR)
     print("Copying files to ../"+BACKUPDIR)
     os.system('cp -r * ../'+BACKUPDIR)
 
 #-----Main Program Begins here........
+if len(sys.argv)<2 :
+    print('-'*10)
+    print('Usage : {0} TIRSPECscript.conf'.format(sys.argv[0]))
+    print('where,')
+    print('     TIRSPECscript.conf is the configuration file for this run of reduction pipeline')
+    print('-'*10)
+    exit(1)
 
 try : 
-    configfile=open('TIRSPECscript.conf','r')
+    configfile=open(sys.argv[1],'r')
 except IOError :
-    print ("Error: Copy the TIRSPECscript.conf into this directory contianing folders of each night data, before running the script.")
+    print ("Error: Cannot open the file "+sys.argv[1]+". Setup the config file based on TIRSPECscript.conf file correctly, before running the script.")
     exit(1)
+
 for con in configfile:
     con=con.rstrip()
     if len(con.split()) >= 2 :
-        if con.split()[0] == "VERBOSE=" :
+        if con.split()[0] == "OUTPUTDIR=" :
+            OUTDIR=con.split()[1]
+        elif con.split()[0] == "VERBOSE=" :
             VER=con.split()[1]
         elif con.split()[0] == "TODO=" :
             TODO=con.split()[1]
@@ -1255,11 +1339,23 @@ configfile.close()
 MotherDIR=os.getcwd()
 #    OUTPUTfilePATH=MotherDIR+'/'+OUTPUTfile
 parentdir=MotherDIR.split('/')[-1]
+print('-'*10)
+print('IMP: All outputs of this run will be written to the directory '+os.path.join(MotherDIR,OUTDIR)+'\n')
+try:
+    os.makedirs(os.path.join(MotherDIR,OUTDIR))
+except OSError:
+    if os.path.isdir(os.path.join(MotherDIR,OUTDIR)) :
+        print("WARNING : Output directory "+os.path.join(MotherDIR,OUTDIR)+" already exists.\n Everything inside it will be overwritten. Be warned...")
+    else:
+        raise
+else:
+    print('Created directory :'+os.path.join(MotherDIR,OUTDIR))
+    
 
 if TODO == 'P' : todoinwords='Photometry'
 elif TODO == 'S' : todoinwords='Spectroscopy'
  
-print("Very Very Important: Backup your files first. Don't proceed without backup.\n")
+print("\n Very Very Important: Backup your files first. Don't proceed without backup.\n")
 print(" ---------------- Welcome to TIRSPEC \033[91m "+todoinwords+" \033[0m Script --------------- \n")
 print("Enter the Serial numbers (space seperated if more than one task in succession) \n")
 print("0  Backup files in current directory to ../"+BACKUPDIR+"\n")
@@ -1278,9 +1374,9 @@ if TODO=='P':print("9  Do Photometry \n")
 print("--------------------------------------------------------------- \n")
 todo=raw_input('Enter the list : ')
 todo=todo.split()
-if ("2" in todo) or ("3" in todo) or ("4" in todo) or ("5" in todo) or ("7" in todo) or ("8" in todo) or ("9" in todo) or (("6" in todo) and (TODO=='S')):
+if ("2" in todo) or ("3" in todo) or ("4" in todo) or ("5" in todo) or ("7" in todo) or ("9" in todo) or (("6" in todo) and (TODO=='S')):
     from pyraf import iraf
-if ("9" in todo) :
+if ("8" in todo) or ("9" in todo) :
     from astropy.io import ascii
     import astropy.table as table  #Requires astropy version >= 0.3 for vstack function
 for task in todo :
