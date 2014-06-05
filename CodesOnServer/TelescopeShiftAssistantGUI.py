@@ -489,10 +489,10 @@ class MainWindow(Tkinter.Tk):
     
     def initialize(self):
         FullNotebook = ttk.Notebook(self)
-        Tab4AG = AGtab(FullNotebook)
         Tab4OS = OStab(FullNotebook)
-        FullNotebook.add(Tab4AG, text=Tab4AG.title)
+        Tab4AG = AGtab(FullNotebook)
         FullNotebook.add(Tab4OS, text=Tab4OS.title)
+        FullNotebook.add(Tab4AG, text=Tab4AG.title)
         FullNotebook.pack(fill='both', expand='yes')
         self.grid()
 
