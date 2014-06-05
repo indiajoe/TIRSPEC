@@ -13,7 +13,7 @@ You may also find some helpful scripts in the following link: http://indiajoe.gi
 
 Webpage of this repository: http://indiajoe.github.io/TIRSPEC/
 
-For TIRSPEC instrument details, visit : http://web.tifr.res.in/~daa/tirspec/
+#####For TIRSPEC instrument webpage, visit : http://web.tifr.res.in/~daa/tirspec/  #####
 
 Contents
 ================
@@ -39,6 +39,10 @@ Make sure, the theoretical stellar line profiles of Vega star is available in sa
 *    **FitWCS.py** *:* This is a stand alone script to add WCS information in fits header of an image.
 
 *Module requirements: astropy, scipy, numpy*
+
+*    **ExposureTimeCalculator.py** *:* This is a graphical tool to estimate the Photometric signal to noise ratio (S/N) one can obtain with different exposures and appertures.
+
+*Module requirements: numpy, matplotlib*
 
 *    **AlignCombineImagesinDir.py** *:* This is a stand alone script to help astronomer align and combine fits images.
 
