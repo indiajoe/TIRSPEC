@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # IMP:  Keep ds9 open 
 # This script will guide you through the  images in directory.
 # Tell the script which combination of images to align , combine etc.
@@ -16,7 +16,8 @@ if len(sys.argv) < 3 or not os.path.isdir(sys.argv[1]):
     print("-"*30)
     exit(1)
 
-import pyfits
+#import pyfits
+import astropy.io.fits as pyfits
 from pyraf import iraf
 
 pwd=os.getcwd()
