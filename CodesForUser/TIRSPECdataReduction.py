@@ -5,7 +5,7 @@
 import os
 import os.path
 import glob
-#import pyfits  #Depricated and mearged to astropy
+#import pyfits  #Deprecated and merged to astropy
 import astropy.io.fits as pyfits
 import pyfits.convenience
 import sys, traceback 
@@ -47,7 +47,7 @@ def SpectralExtraction_subrout():
         except IOError:
             print('Could not fine Spectrastoextract_Argon_BandFilter.txt in this directory. Hence skipping %s directory'%(night))
             continue
-        #Image to Argon file dictinoary
+        #Image to Argon file dictionary
         Img2Argon=[]  #They are first born as lists...
         Img2Filt=[]
         AllImglist=[]
@@ -59,7 +59,7 @@ def SpectralExtraction_subrout():
         SpecslistFILE.close()
         Img2Argon=dict(Img2Argon)
         Img2Filt=dict(Img2Filt)
-        #Initialising an empty dictionary for storing spectras of each filter
+        #Initialising an empty dictionary for storing spectra of each filter
         Filt2finalspecs=dict()
         for filt in set(Img2Filt.values()) : Filt2finalspecs[filt]=[]
 
@@ -73,7 +73,7 @@ def SpectralExtraction_subrout():
                     shutil.move(lft,'Leftover/')
 
             # Running apall
-            iraf.apall(input=img,nfind=1,lower=-15,upper=15,llimit=-15,ulimit=15,b_sample=BACKGROUND,background ='fit',weights ='variance',readnoi=READNOISE,gain=EPADU,t_function=TRACEFUNC,t_order=TRACEORDER,t_niterate=1,ylevel=SPECAPPERTURE,interactive=VER)
+            iraf.apall(input=img,nfind=1,lower=-15,upper=15,llimit=-15,ulimit=15,b_sample=BACKGROUND,background ='fit',weights ='variance',readnoi=READNOISE,gain=EPADU,t_function=TRACEFUNC,t_order=TRACEORDER,t_niterate=1,ylevel=SPECAPERTURE,interactive=VER)
             #Extracting the Argon arc for this spectra as img_arc.fits
             iraf.apall(input=os.path.join(MotherDIR,night,Img2Argon[img]),reference=img,out=img[:-5]+'_arc',recenter='no',trace='no',background='none',interactive='no')
             #Now reidentify the lines in this spectra
@@ -91,11 +91,11 @@ def SpectralExtraction_subrout():
             with open('FinalwcSpectralistin_'+filt+'.txt','w') as foo:
                 foo.write(' \n'.join(Filt2finalspecs[filt])+' \n')
 
-            print('List of final spectras in FinalwcSpectralistin_'+filt+'.txt')
+            print('List of final spectra in FinalwcSpectralistin_'+filt+'.txt')
             if SCOMBINE=='YES':
                 try:
                     iraf.scombine(input='@FinalwcSpectralistin_'+filt+'.txt',output=filt+'_avg_'+Filt2finalspecs[filt][0],combine='average',scale='median')
-                    print('Averaging the spectras to final output '+filt+'_avg_'+Filt2finalspecs[filt][0])
+                    print('Averaging the spectra to final output '+filt+'_avg_'+Filt2finalspecs[filt][0])
                 except iraf.IrafError as e :
                     print(e)
                     print('ERROR: Could not scombine images in FinalwcSpectralistin_'+filt+'.txt')
@@ -158,7 +158,7 @@ def SpectralPairSubtraction_subrout():
                         print("%s : %s"%(alpha,img))
                         AlphatoFILE.write("%s  %s"%(alpha,img)+' \n')
 
-                print("Enter the pairs to subtract in space seperated form ")
+                print("Enter the pairs to subtract in space separated form ")
                 print("For Example an input: AB BC CB D")
                 print("Corresponding images produced by subtraction or not are : A-B, B-C, C-B and D")
                 print("Note: the final D is not a subtracted image ")
@@ -213,7 +213,7 @@ def Photometry():
 
     iraf.images(_doprint=0) 
     iraf.immatch(_doprint=0) #Loading for xyxymatch, geomap, geotran of coords
-    iraf.imfilter(_doprint=0)  #Loading packages for convolutiong of gauss
+    iraf.imfilter(_doprint=0)  #Loading packages for convolution of Gauss
 
     iraf.phot.unlearn()   #Setting everything to default
     iraf.psf.unlearn()
@@ -234,7 +234,7 @@ def Photometry():
         print('-'*60)
         exit(1)
 
-    # Setting flag by checking wheter the size of qphotinput.txt is Zero or not.
+    # Setting flag by checking whether the size of qphotinput.txt is Zero or not.
     if os.stat(os.path.join(MotherDIR,OUTDIR,"qphotinput.txt"))[6]!=0 : QPHOT_todo='Y'
     else : QPHOT_todo='N'
 
@@ -250,8 +250,8 @@ def Photometry():
             iraf.cd(os.path.join(MotherDIR,OUTDIR))  #Going back to output directory
             DIRtogo="/".join(imgline[0].split('/')[:-1]) #Now going to dir of img
             iraf.cd(DIRtogo)
-            with open(os.path.join(MotherDIR,OUTDIR,OUTPUTfile),'a') as foo:    #Appending into tbe log file The begining of a new directory
-                foo.write(wdir+' ---------------------------------------- \n')  # '-'*40  To mark begining of a DIrectory
+            with open(os.path.join(MotherDIR,OUTDIR,OUTPUTfile),'a') as foo:    #Appending into tbe log file The beginning of a new directory
+                foo.write(wdir+' ---------------------------------------- \n')  # '-'*40  To mark beginning of a Directory
 
         
         img=imgline[0].split('/')[-1]
@@ -279,7 +279,7 @@ def Photometry():
         N=30  #Number of bright stars to take
         SExtractCat=ascii.read('test.cat')
         # Selecting only good stars without any major problems
-        GoodStarCat= SExtractCat[SExtractCat['FLAGS']<2]  # Flag 0 is good and 1 is contaminated by less than 10% in flux by neighbour
+        GoodStarCat= SExtractCat[SExtractCat['FLAGS']<2]  # Flag 0 is good and 1 is contaminated by less than 10% in flux by neighbor
         #Sort in descending order of Flux
         GoodStarCat.sort('FLUX_AUTO')
         GoodStarCat.reverse()
@@ -304,11 +304,11 @@ def Photometry():
             print("Number of stars Matched= "+str(num_lines))
             if Nmatch < XYMATCHMIN : 
                 print("Failed to find the coordinates for "+img)
-                print("We need to find the transformation interactevilly")
+                print("We need to find the transformation interactively")
                 Inpfirstimg=raw_input("Enter the full path to first image using which coords was generated with sextractor (default: {0}) : ".format(FirstImageName)).strip(' ')
                 if Inpfirstimg : FirstImageName=Inpfirstimg
                 if os.path.isfile(FirstImageName): 
-                    print("Running the xyxy match interactviely... Select three same points from both images")
+                    print("Running the xyxy match interactively... Select three same points from both images")
                     iraf.display(FirstImageName,1)
                     iraf.display(img,2)
                     if os.path.isfile(img+"xymatch.out") :os.remove(img+"xymatch.out")
@@ -320,7 +320,7 @@ def Photometry():
                     break
                 else:
                     print("ERROR: Cannot find the file :"+FirstImageName)
-                    print("Enter the correct full path to the file again after thist attempt.")
+                    print("Enter the correct full path to the file again after this attempt.")
         
         
         iraf.geomap(input=img+"xymatch.out", database=img+"rtran.db", xmin=1, xmax=yxdim[1], ymin=1, ymax=yxdim[0], interactive=0)
@@ -363,7 +363,7 @@ def Photometry():
             imx=iraf.imexam(input=img,frame=1,use_display=0,defkey='a',imagecur=img+'SourceT.coo',Stdout=1)
             Xprim=eval(imx[2].split()[0])  
             Yprim=eval(imx[2].split()[1])
-            with open(img+'Source.coo','w') as foo :    #Creating text file contiaing coords of primary interest
+            with open(img+'Source.coo','w') as foo :    #Creating text file containing coords of primary interest
                 i=2
                 while i < len(imx) :
                     foo.write(imx[i].split()[0] +'  '+imx[i].split()[1]+'\n')
@@ -410,7 +410,7 @@ def Photometry():
             #Average mean,sigma and datamin are
             mean=np.median(skylist)
             sigma=np.median(sigmalist)
-            datamin= mean - 10*max(sigma,TrueSigma)  #Setting lowerlimit to sigma from going less than TrueSigma of original img
+            datamin= mean - 10*max(sigma,TrueSigma)  #Setting lower limit to sigma from going less than TrueSigma of original img
             print('Mean sky = '+str(mean))
             print('Mean sigma = '+str(sigma))
             print('Datamin = '+str(datamin))
@@ -438,7 +438,7 @@ def Photometry():
             iraf.fitskypar.setParam('annulus',eval(ANNULUS))
             iraf.fitskypar.setParam('dannulu',eval(DANNULUS))
             
-            aperture = eval(APPERTURE)  # 4*fwhm
+            aperture = eval(APERTURE)  # 4*fwhm
             iraf.photpar.setParam('apertur',aperture)
             iraf.findpars.setParam('threshold',threshold)
             if OriginalIMG == img :
@@ -507,7 +507,7 @@ def Photometry():
                 if eval(filemag.split('.')[-1]) > 2 : # The qphot output files
                     qphottable=ascii.read(filemag)
                     foo.write(' {0}'.format(qphottable['MAG'][-1])) #Writing the last Mag in file
-            foo.write(' | ')  #Adding a seperator after qphot mags
+            foo.write(' | ')  #Adding a separator after qphot mags
             # If PSF photometry as done, adding those mags to the file.
             if DOPSF == 'YES' :  # IF PSF photometry was done...
                 #First the mags of Source stars
@@ -522,7 +522,7 @@ def Photometry():
                 SourcestarsALSTable=table.vstack(tablelist)
                 for rows in SourcestarsALSTable: 
                     foo.write(' %f %f %f'%(rows['XCENTER'],rows['YCENTER'],rows['MAG']))
-                foo.write(' | ')  #Adding a seperator after Source Mags
+                foo.write(' | ')  #Adding a separator after Source Mags
                 #Now the psf magnitudes of the good stars
                 with open(OriginalIMG+'GoodStars.coo','r') as goodstarsFILE :
                     tablelist=[]
@@ -535,7 +535,7 @@ def Photometry():
                 goodstarsALSTable=table.vstack(tablelist)
                 for rows in goodstarsALSTable:
                     foo.write(' %f %f %f'%(rows['XCENTER'],rows['YCENTER'],rows['MAG']))
-                foo.write(' | ')  #Adding a seperator after Good stars X Y Mags
+                foo.write(' | ')  #Adding a separator after Good stars X Y Mags
                 
             else:
                 foo.write(' | | ')
@@ -543,10 +543,10 @@ def Photometry():
             # Writing the pure phot results we calculated into the list before closing the line
             for rows in Sourcemagtable:  #Source Mags
                 foo.write(' %f %f %f'%(rows['XCENTER'],rows['YCENTER'],rows['MAG']))
-            foo.write(' | ')  #Adding a seperator after Source Mags
+            foo.write(' | ')  #Adding a separator after Source Mags
             for rows in goodstarsTable:  #Good Stars Mags
                 foo.write(' %f %f %f'%(rows['XCENTER'],rows['YCENTER'],rows['MAG']))
-            foo.write(' | ')  #Adding a seperator after Good Star Mags
+            foo.write(' | ')  #Adding a separator after Good Star Mags
 
             foo.write(' '+starlist+' \n') # Ending this image line with Good star's ID.
             foo.close()
@@ -563,7 +563,7 @@ def Photometry():
     print("Great...Photometry of all "+str(imgNo)+" images are over...")
     print("Enjoy!!! ---------------------indiajoe@gmail.com ")
 
-def is_number(s):   # A funtion to check wheter string s is a number or not.
+def is_number(s):   # A function to check whether string s is a number or not.
     try:
         float(s)
         return True
@@ -612,7 +612,7 @@ def Sextractor_subrout(img=None,N=30):
 #    subprocess.call(["sex",img,"-c","sextractor.sex"])
     SExtractCat=ascii.read('test.cat')
     # Selecting only good stars without any major problems
-    GoodStarCat= SExtractCat[SExtractCat['FLAGS']<2]  # Flag 0 is good and 1 is contaminated by less than 10% in flux by neighbour
+    GoodStarCat= SExtractCat[SExtractCat['FLAGS']<2]  # Flag 0 is good and 1 is contaminated by less than 10% in flux by neighbor
     #Sort in descending order of Flux
     GoodStarCat.sort('FLUX_AUTO')
     GoodStarCat.reverse()
@@ -648,13 +648,13 @@ def Star_sky_subrout(img=None) :
         iraf.display(img,1)
         print ('\n For taking coordinates of Source. Press _a_ over Primary Sources.')
         imx=iraf.imexam(Stdout=1)
-        with open('Source.coo','w') as foo :    #Creating text file contiaing coords of science sources of primary interest
+        with open('Source.coo','w') as foo :    #Creating text file containing coords of science sources of primary interest
             i=2
             while i < len(imx) :               
                 foo.write(imx[i].split()[0] +'  '+imx[i].split()[1]+'\n')
                 i=i+2
 
-        print ('\n For taking coordinates of good stars. Press _a_ over some good stars. \n Nonsaturated among them will be used for psf fitting.')
+        print ('\n For taking coordinates of good stars. Press _a_ over some good stars. \n Non saturated among them will be used for psf fitting.')
         print ('IMP: Press coordinate of Stars in standard required order')
         imx=iraf.imexam(Stdout=1)
         with open('GoodStars.coo','w') as foo :    #Creating good stars coords files
@@ -674,10 +674,10 @@ def Star_sky_subrout(img=None) :
                 i=i+1
 
         print('\n Use the ds9 to Mark circles centered at locations to do qphot.')
-        print('Enter the center X Y and radius of apperture for qphot annulus and dannulus for sky')
-        print('Enter values space seperated in the format below. Enter "q" to exit')
-        print('X   Y   Apperture  Annulus  Dannulus ')
-        with open('qphotinput.txt','w') as foo:    #Creating the qphot partameter file
+        print('Enter the center X Y and radius of aperture for qphot annulus and dannulus for sky')
+        print('Enter values space separated in the format below. Enter "q" to exit')
+        print('X   Y   Aperture  Annulus  Dannulus ')
+        with open('qphotinput.txt','w') as foo:    #Creating the qphot parameter file
             qphot_inp="junk"
             while (qphot_inp != "q") :
                 qphot_inp=raw_input("|> ")
@@ -792,7 +792,7 @@ def AlignNcombine_subrout(method="average"):
 
                 imgs2align.close()
                 imgs2alignOUT.close()
-                try :  #Now align and if succeded combine those images....
+                try :  #Now align and if succeeded combine those images....
                     iraf.imalign(input='@'+alignInpfname, reference=os.path.join(MotherDIR,OUTDIR,night,Refimage), coords=os.path.join(MotherDIR,OUTDIR,night,OutCoofile), output='@'+alignOutfname, shifts=os.path.join(MotherDIR,OUTDIR,night,'shifts.in'), interp_type="nearest",boundary_type="constant",trimimages="no")
                     iraf.imcombine(input=os.path.join(MotherDIR,OUTDIR,night,Refimage)+','+'@'+alignOutfname, output=os.path.join(MotherDIR,OUTDIR,night,OutCombimg),combine=method,reject="sigclip")
                 except iraf.IrafError as e :
@@ -833,7 +833,7 @@ def CombDith_FlatCorr_subrout(method="median",FullFlatStatSection='[200:800,200:
         with open(os.path.join(MotherDIR,OUTDIR,night,'AllObjects-FinalFlat.List'),'r') as FlatFILE :
             Flatfiledic=dict([(flatset.split()[0],flatset.rstrip().split()[1:]) for flatset in FlatFILE])  #Dictionary of flats list for each image.
 
-        if SEPERATESKY=='Y' :
+        if SEPARATESKY=='Y' :
             #Load all the Sky files indexing file data
             with open(os.path.join(MotherDIR,OUTDIR,night,'AllObjects-FinalSky.List'),'r') as SkyFILE :
                 Skyfiledic=dict([(skyset.split()[0],skyset.rstrip().split()[1:]) for skyset in SkyFILE])  #Dictionary of Sky list for each image.
@@ -880,7 +880,7 @@ def CombDith_FlatCorr_subrout(method="median",FullFlatStatSection='[200:800,200:
             with open(imgflatlistfname,'w') as imgflatlistFILE :
                 imgflatlistFILE.write('\n'.join([night+'/'+fla for fla in Flats2Comb])+'\n')
 
-            if SEPERATESKY=='Y' : #Now make list of skys to be combined for this image set
+            if SEPARATESKY=='Y' : #Now make list of skys to be combined for this image set
                 Skys2Comb=[]
                 for img in imglist:
                     Skys2Comb+=Skyfiledic[img]  #Adding all the sky lists
@@ -911,7 +911,7 @@ def CombDith_FlatCorr_subrout(method="median",FullFlatStatSection='[200:800,200:
             Noutflatname=os.path.join(MotherDIR,OUTDIR,night,OutCombimg[:-5]+'_Nflat.fits')
             iraf.imarith(operand1=outflatname,op="/",operand2=mode,result=Noutflatname)
             #If we are subtracting sky, doing it before flat fielding.
-            if SEPERATESKY=='Y':
+            if SEPARATESKY=='Y':
                 outskyname=os.path.join(MotherDIR,OUTDIR,night,OutCombimg[:-5]+'_sky.fits')
                 iraf.imcombine (input='@'+imgskylistfname, output=outskyname, combine="median",reject="pclip")
                 #Now subtract the sky form the science frame
@@ -944,7 +944,7 @@ def Manual_InspectFlat_subrout():
     if TODO=='S' :
         filelist.append('AllObjects-Argon.List')
         outfilelist.append('AllObjects-FinalArgon.List')
-    if SEPERATESKY=='Y' :
+    if SEPARATESKY=='Y' :
         filelist.append('AllObjects-Sky.List')
         outfilelist.append('AllObjects-FinalSky.List')
 
@@ -1072,7 +1072,14 @@ def SelectionofFrames_subrout():
     FiltREdic=dict()
     ArgonREdic=dict()
     SkyREdic=dict()
+    print('-'*10) 
     print('For Regular Expression rules See: http://docs.python.org/2/howto/regex.html#regex-howto')
+    print('Some examples of typical input are shown below')
+    print(' .*M31.*   is the regular expression to select all the filenames which has "M31" in it.')
+    print(' .*M31.*sky.*   is to select all the filenames which has both "M31" and then "sky" in it.')
+    print('While selecting Argon, Flat etc, you can give a range of filenumbers to uniquely choose specific files')
+    print(' .*Continu.* 140 190   is to select all filenames of _same_ filter which has "Continu" in it and has a filenumber in the range of 140 to 190')
+    print('-'*10) 
     ObjRE=raw_input("Enter Regular Expression to select the objects from all dirs: ").strip(' ')
     regexpObj= re.compile(r''+ObjRE)
     #Generating list of objects frames
@@ -1115,8 +1122,8 @@ def SelectionofFrames_subrout():
             FlatList=[imgline.split()[0] for imgline in slopeimgFILElines if (regexpFilt.search(imgline.split()[0]) is not None) and (filt == tuple([pos.upper() for pos in shlex.split(imgline)[5:8]])) and filenumbregexp.search(imgline.split()[0]) ]
             Flatlistdic[filt]=FlatList  #Saving flat list for this filter set
 
-        #Now if Seperate sky is being used to subtract, ask for each filter
-        if SEPERATESKY=='Y':
+        #Now if Separate sky is being used to subtract, ask for each filter
+        if SEPARATESKY=='Y':
             Skylistdic=dict()
             print("Below in addition to regexp, if needed you can enter the starting and ending filenumbers separated by space also.")
             for filt in FiltList:
@@ -1159,7 +1166,7 @@ def SelectionofFrames_subrout():
         #Now, load the Object list and write to a file the Obj and corresponding flats/Argons
         ObjFlatFILE=open(os.path.join(MotherDIR,OUTDIR,night,'AllObjects-Flat.List'),'w')
         if TODO=='S': ObjArgonFILE=open(os.path.join(MotherDIR,OUTDIR,night,'AllObjects-Argon.List'),'w')
-        if SEPERATESKY=='Y': ObjSkyFILE=open(os.path.join(MotherDIR,OUTDIR,night,'AllObjects-Sky.List'),'w')
+        if SEPARATESKY=='Y': ObjSkyFILE=open(os.path.join(MotherDIR,OUTDIR,night,'AllObjects-Sky.List'),'w')
         for Objline in ObjList:
             if (TODO=='P' and shlex.split(Objline)[6].upper() =='G') or (TODO=='S' and shlex.split(Objline)[6].upper() !='G') :
                 continue    #Skip this and go to the next object.
@@ -1167,14 +1174,14 @@ def SelectionofFrames_subrout():
             U_L_Sfilter=tuple([pos.upper() for pos in shlex.split(Objline)[5:8]])  #(UPPER,LOWER,SLIT) filters in UPPERCASE
             ObjFlatFILE.write(Name+'  '+' '.join(Flatlistdic[U_L_Sfilter])+'\n')
             if TODO=='S' :ObjArgonFILE.write(Name+'  '+' '.join(Argonlistdic[U_L_Sfilter])+'\n')
-            if SEPERATESKY=='Y': ObjSkyFILE.write(Name+'  '+' '.join(Skylistdic[U_L_Sfilter])+'\n')
+            if SEPARATESKY=='Y': ObjSkyFILE.write(Name+'  '+' '.join(Skylistdic[U_L_Sfilter])+'\n')
         ObjFlatFILE.close()
         print('Edit and save the Flat/Argon/Sky list associations for this night :'+night)
         subprocess.call(TEXTEDITOR.split()+[os.path.join(MotherDIR,OUTDIR,night,'AllObjects-Flat.List')])
         if TODO=='S': 
             ObjArgonFILE.close()
             subprocess.call(TEXTEDITOR.split()+[os.path.join(MotherDIR,OUTDIR,night,'AllObjects-Argon.List')])
-        if SEPERATESKY=='Y': 
+        if SEPARATESKY=='Y': 
             ObjSkyFILE.close()
             subprocess.call(TEXTEDITOR.split()+[os.path.join(MotherDIR,OUTDIR,night,'AllObjects-Sky.List')])
 
@@ -1182,11 +1189,11 @@ def SelectionofFrames_subrout():
     
 
 def LoadDirectories(CONF=False):
-    """ Loads the directores and return the list of directories to do analysis """
+    """ Loads the directories and return the list of directories to do analysis """
     try :
         directoriesF=open(os.path.join(MotherDIR,OUTDIR,'directories'),'r')
     except IOError :
-        #Creating a text file containg the directories which has SlopeimagesLog.tx logs to visit if it doesn't already exist
+        #Creating a text file containing the directories which has SlopeimagesLog.tx logs to visit if it doesn't already exist
         directories=[dirs for dirs in os.walk(MotherDIR).next()[1] if os.path.isfile(os.path.join(MotherDIR,dirs,'SlopeimagesLog.txt'))]
         directories.sort()
         with open(os.path.join(MotherDIR,OUTDIR,'directories'),'w') as directoriesF : #Creating directories file
@@ -1203,7 +1210,7 @@ def LoadDirectories(CONF=False):
         InpList=raw_input('Enter the directories to analyse (default: %s) :'%','.join(directories)).strip(' ')
         if InpList : 
             directories=[dirs.rstrip().strip(' ').rstrip('/') for dirs in InpList.split(',')] #Removing spaces or trailing /
-            with open(os.path.join(MotherDIR,OUTDIR,'directories'),'w') as directoriesF : #Updateing directories file
+            with open(os.path.join(MotherDIR,OUTDIR,'directories'),'w') as directoriesF : #Updating directories file
                 directoriesF.write('\n'.join(directories)+'\n')
 
 
@@ -1268,8 +1275,8 @@ for con in configfile:
             IMGCOMBMETHOD=con.split()[1]
         elif con.split()[0] == "DITHERCOMB=" :
             DITHERCOMBMETHOD=con.split()[1]
-        elif con.split()[0] == "SEPERATE_SKY=" :
-            SEPERATESKY=con.split()[1][0].upper()
+        elif con.split()[0] == "SEPARATE_SKY=" :
+            SEPARATESKY=con.split()[1][0].upper()
 
         elif con.split()[0] == "BPMPHOTO=" :
             PhotBadPixelMaskName=con.split()[1]
@@ -1287,8 +1294,8 @@ for con in configfile:
         elif con.split()[0] == "XYMATCHMIN=" :
             XYMATCHMIN=int(con.split()[1])
             
-        elif con.split()[0] == "APPERTURE=" :
-            APPERTURE=con.split()[1]
+        elif con.split()[0] == "APERTURE=" :
+            APERTURE=con.split()[1]
         elif con.split()[0] == "ANNULUS=" :
             ANNULUS=con.split()[1]
         elif con.split()[0] == "DANNULUS=" :
@@ -1317,8 +1324,8 @@ for con in configfile:
 
         elif con.split()[0] == "ARGONDIRECTORY=" :
             LAMPREPODIR=con.split()[1]
-        elif con.split()[0] == "SPECAPPERTURE=" :
-            SPECAPPERTURE=con.split()[1]
+        elif con.split()[0] == "SPECAPERTURE=" :
+            SPECAPERTURE=con.split()[1]
         elif con.split()[0] == "BACKGROUND=" :
             BACKGROUND=con.split()[1]
         elif con.split()[0] == "TRACEFUNC=" :
@@ -1357,7 +1364,7 @@ elif TODO == 'S' : todoinwords='Spectroscopy'
  
 print("\n Very Very Important: Backup your files first. Don't proceed without backup.\n")
 print(" ---------------- Welcome to TIRSPEC \033[91m "+todoinwords+" \033[0m Script --------------- \n")
-print("Enter the Serial numbers (space seperated if more than one task in succession) \n")
+print("Enter the Serial numbers (space separated if more than one task in succession) \n")
 print("0  Backup files in current directory to ../"+BACKUPDIR+"\n")
 print("1  Selection of object frames to reduce \n")
 print("2  Manually inspect and reject object images by displaying one by one to classify \n")
