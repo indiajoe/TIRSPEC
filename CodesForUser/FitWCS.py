@@ -31,7 +31,7 @@ def fitWCSobject(XYRaDecfilename,updatefits=None):
 #    print ip
     newip,ierr=optimize.leastsq(func, ip)
     print('Ierr='+str(ierr))
-    if ier not in [1, 2, 3, 4]:
+    if ierr not in [1, 2, 3, 4]:
         msg = "Fitting WCS failed, optimal parameters not found!! \n Verify "+XYRaDecfilename+" contents are correct and rerun the code."
         raise RuntimeError(msg)
 
