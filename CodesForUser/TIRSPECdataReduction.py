@@ -1396,27 +1396,46 @@ if ("8" in todo) or ("9" in todo) :
 for task in todo :
     CalledTheTask=True
     if task == "0" :
+        print("RUNNING TASK:0  Backup files in current directory to ../"+BACKUPDIR+"\n")
         Backup_subrout()
     elif task == "1" :
+        print("RUNNING TASK:1  Selection of object frames to reduce \n")
         SelectionofFrames_subrout()
     elif task == "2" :
+        print("RUNNING TASK:2  Manually inspect and reject object images by displaying one by one to classify \n")
         Manual_InspectObj_subrout()
     elif task == "3" :
+        print("RUNNING TASK:3  Manually inspect and reject Flats/Sky/Argons by displaying one by one\n")
         Manual_InspectFlat_subrout()
     elif task == "4" :
+        print("RUNNING TASK:4  Combine images in a Dither [,subtract sky], apply Flat Correction and Bad pixel interpolation\n")
         CombDith_FlatCorr_subrout(method=IMGCOMBMETHOD)
     elif task == "5" :
-        if TODO=='P': AlignNcombine_subrout(method=DITHERCOMBMETHOD)
-        elif TODO=='S': SpectralPairSubtraction_subrout()
+        if TODO=='P': 
+            print("RUNNING TASK:5  Align and combine combined images of each Dither in Photometry data \n")
+            AlignNcombine_subrout(method=DITHERCOMBMETHOD)
+        elif TODO=='S': 
+            print("RUNNING TASK:5  Give Spectrum pair subtraction input \n")
+            SpectralPairSubtraction_subrout()
     elif task == "6" :
-        if TODO=='P': Createlist_subrout()
-        elif TODO=='S': SpectralExtraction_subrout()
+        if TODO=='P': 
+            print("RUNNING TASK:6  Make the list of images, Images4Photo.in to do Photometry \n")
+            Createlist_subrout()
+        elif TODO=='S': 
+            print("RUNNING TASK:6  Extract wavelength calibrated 1D spectra from image \n")
+            SpectralExtraction_subrout()
     elif task == "7" :
-        if TODO=='P': Star_sky_subrout()
+        if TODO=='P': 
+            print("RUNNING TASK:7  Select Stars and Sky region of the field on first image \n")
+            Star_sky_subrout()
     elif task == "8" :
-        if TODO=='P': Sextractor_subrout()
+        if TODO=='P': 
+            print("RUNNING TASK:8  Create Sextracter config file & coordinate output of first image in this directory \n")
+            Sextractor_subrout()
     elif task == "9" : 
-        if TODO=='P': Photometry()
+        if TODO=='P': 
+            print("RUNNING TASK:9  Do Photometry \n")
+            Photometry()
 
     else:
         print('Cannot understand the input task: '+task)
