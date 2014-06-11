@@ -1379,6 +1379,13 @@ if TODO=='P':print("7  Select Stars and Sky region of the field on first image \
 if TODO=='P':print("8  Create Sextracter config file & coordinate output of first image in this directory \n")
 if TODO=='P':print("9  Do Photometry \n")
 print("--------------------------------------------------------------- \n")
+try:
+    with open(os.path.join(MotherDIR,OUTDIR,'StepsFinished'),'r') as stepsoverFLS:
+        StepsOver=stepsoverFLS.read()
+except IOError:
+    StepsOver='Nothing...'
+print('Steps you have already finished : '+StepsOver)    
+
 todo=raw_input('Enter the list : ')
 todo=todo.split()
 if ("2" in todo) or ("3" in todo) or ("4" in todo) or ("5" in todo) or ("7" in todo) or ("9" in todo) or (("6" in todo) and (TODO=='S')):
@@ -1387,6 +1394,7 @@ if ("8" in todo) or ("9" in todo) :
     from astropy.io import ascii
     import astropy.table as table  #Requires astropy version >= 0.3 for vstack function
 for task in todo :
+    CalledTheTask=True
     if task == "0" :
         Backup_subrout()
     elif task == "1" :
@@ -1405,12 +1413,20 @@ for task in todo :
         elif TODO=='S': SpectralExtraction_subrout()
     elif task == "7" :
         if TODO=='P': Star_sky_subrout()
-
     elif task == "8" :
         if TODO=='P': Sextractor_subrout()
-
     elif task == "9" : 
         if TODO=='P': Photometry()
+
+    else:
+        print('Cannot understand the input task: '+task)
+        print('Skipping task '+task)
+        CalledTheTask=False
+
+    if CalledTheTask :
+        with open(os.path.join(MotherDIR,OUTDIR,'StepsFinished'),'a') as stepsoverFLS:
+            stepsoverFLS.write(task+' ')
+        
 print("All tasks over....Enjoy!!!_________indiajoe@gmail.com")
             
 
