@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # This script can be used to quickly generate bad pixel mask
 # Use flats  ~5 times different in brightness
 # Enjoy!!!---------------------- indiajoe@gmail.com
