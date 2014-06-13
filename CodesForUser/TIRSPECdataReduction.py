@@ -308,9 +308,10 @@ def Photometry():
                 Inpfirstimg=raw_input("Enter the full path to first image using which coords was generated with sextractor (default: {0}) : ".format(FirstImageName)).strip(' ')
                 if Inpfirstimg : FirstImageName=Inpfirstimg
                 if os.path.isfile(FirstImageName): 
-                    print("Running the xyxy match interactively... Select three same points from both images")
-                    iraf.display(FirstImageName,1)
+                    print("Running the xyxy match interactively... Select three same points from both images by pressing a")
+                    print("IMPORTANT: First select 3 stars in Frame 1 of ds9. Second image to select is in Frame 2")
                     iraf.display(img,2)
+                    iraf.display(FirstImageName,1)
                     if os.path.isfile(img+"xymatch.out") :os.remove(img+"xymatch.out")
                     iraf.xyxymatch.unlearn()
                     iraf.xyxymatch(input="Bright30.coo",reference=os.path.join(MotherDIR,OUTDIR,"FirstImageTop30.coo"),output=img+"xymatch.out", toler=5, matching="tolerance",nmatch=3*XYMATCHMIN,interactive="yes")
@@ -322,8 +323,9 @@ def Photometry():
                     print("ERROR: Cannot find the file :"+FirstImageName)
                     print("Enter the correct full path to the file again after this attempt.")
         
-        
-        iraf.geomap(input=img+"xymatch.out", database=img+"rtran.db", xmin=1, xmax=yxdim[1], ymin=1, ymax=yxdim[0], interactive=0)
+        GeoMapfitgeometry="general"
+        if num_lines < 6 : GeoMapfitgeometry="rotate"  # Just XY shift and rotate
+        iraf.geomap(input=img+"xymatch.out", database=img+"rtran.db", xmin=1, xmax=yxdim[1], ymin=1, ymax=yxdim[0], interactive=0,fitgeometry=GeoMapfitgeometry)
         iraf.geoxytran(input=os.path.join(MotherDIR,OUTDIR,"GoodStars.coo"), output=img+"GoodStarsT.coo",database=img+"rtran.db",transforms=img+"xymatch.out")
         iraf.geoxytran(input=os.path.join(MotherDIR,OUTDIR,"Source.coo"), output=img+"SourceT.coo",database=img+"rtran.db",transforms=img+"xymatch.out")
         iraf.geoxytran(input=os.path.join(MotherDIR,OUTDIR,"BlankSky.coo"), output=img+"BlankSky.coo",database=img+"rtran.db",transforms=img+"xymatch.out")
