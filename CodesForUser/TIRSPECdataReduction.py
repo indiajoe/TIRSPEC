@@ -950,6 +950,8 @@ def Manual_InspectFlat_subrout():
         filelist.append('AllObjects-Sky.List')
         outfilelist.append('AllObjects-FinalSky.List')
 
+    AcceptAllThisNight=False  #Flags to skip this step
+    AcceptAllEveryNight=False
     for night in directories:
         print("Working on night : "+night)
         for inpfile,outfile in zip(filelist,outfilelist):
@@ -964,29 +966,45 @@ def Manual_InspectFlat_subrout():
                 else : continue   #Skipping to next line
                 CalImgs=[imgs for imgs in inplinelist[1:] if imgs not in AlwaysRemove]
                 FinalCalImgs=CalImgs[:]
+                print('-'*5)
+                print('To skip all the remaining verifications, you can enter following two options')
+                print('acceptall       # Accept all remaining images in this night')
+                print('acceptallnights # Accept all images in all remaining nights')
+                print('Use the above two options only when you are sure all the images are good. Do not use them if you are not sure.')
+                print('-'*5)
                 print('For the science image: '+ScienceImg)
-                for img in CalImgs:
-                    if img not in AlwaysAccept:
-                        iraf.display(night+'/'+img,1)
-                        print(night+'/'+img)
-                        verdict=''
-                        verdict=raw_input('Enter "r" to reject, "ra" to reject always in future, "aa" to always accept in future:')
-                        if verdict== 'r' :
-                            FinalCalImgs.remove(img)
-                            print("Removing this image : "+img)
-                        elif verdict== 'ra' :
-                            FinalCalImgs.remove(img)
-                            AlwaysRemove.append(img)
-                            print("Removing this image forever: "+img)
-                        elif verdict== 'aa' :
-                            AlwaysAccept.append(img)
-                            print("Always accept this image forever this night (Dangerous): "+img)
-
+                if not AcceptAllThisNight :
+                    for img in CalImgs:
+                        if img not in AlwaysAccept:
+                            iraf.display(night+'/'+img,1)
+                            print(night+'/'+img)
+                            verdict=''
+                            verdict=raw_input('Enter "r" to reject, "ra" to reject always in future, "aa" to always accept in future:')
+                            if verdict== 'r' :
+                                FinalCalImgs.remove(img)
+                                print("Removing this image : "+img)
+                            elif verdict== 'ra' :
+                                FinalCalImgs.remove(img)
+                                AlwaysRemove.append(img)
+                                print("Removing this image forever: "+img)
+                            elif verdict== 'aa' :
+                                AlwaysAccept.append(img)
+                                print("Always accept this image forever this night : "+img)
+                            elif verdict== 'acceptall' :
+                                AcceptAllThisNight=True
+                                print("Accepting every single remainging images of this night (Dangerous). ")
+                                break
+                            elif verdict== 'acceptallnights' :
+                                AcceptAllEveryNight=True
+                                AcceptAllThisNight=True
+                                print("Accepting all remainging images from all remaining nights (Super Dangerous). ")
+                                break
                 if not FinalCalImgs : print('ALERT: No Calibration Images for {0} {1}'.format(night,ScienceImg))
                 #Writing the final surviving calibration files to output file
                 ouFILE.write(' '.join([ScienceImg]+FinalCalImgs)+'\n')
             ouFILE.close()
             inFILE.close()
+        if not AcceptAllEveryNight : AcceptAllThisNight=False
     print('All nights over...') 
                
     
