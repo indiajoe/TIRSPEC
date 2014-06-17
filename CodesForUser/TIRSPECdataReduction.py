@@ -1265,6 +1265,12 @@ def Backup_subrout():
     print("Copying files to ../"+BACKUPDIR)
     os.system('cp -r * ../'+BACKUPDIR)
 
+
+def KeyboardInterrupt_handler():
+    print('\nYou pressed Ctrl+C!')
+    print('Stoping the reduction abruptly...')
+    sys.exit(2)
+
 #-----Main Program Begins here........
 if __name__ == "__main__":
 
@@ -1407,67 +1413,70 @@ if __name__ == "__main__":
     except IOError:
         StepsOver='Nothing...'
     print('Steps you have already finished : '+StepsOver)    
+    try:
+        todo=raw_input('Enter the list : ')
+        todo=todo.split()
+        if ("2" in todo) or ("3" in todo) or ("4" in todo) or ("5" in todo) or ("7" in todo) or ("9" in todo) or (("6" in todo) and (TODO=='S')):
+            from pyraf import iraf
+        if ("8" in todo) or ("9" in todo) :
+            from astropy.io import ascii
+            import astropy.table as table  #Requires astropy version >= 0.3 for vstack function
 
-    todo=raw_input('Enter the list : ')
-    todo=todo.split()
-    if ("2" in todo) or ("3" in todo) or ("4" in todo) or ("5" in todo) or ("7" in todo) or ("9" in todo) or (("6" in todo) and (TODO=='S')):
-        from pyraf import iraf
-    if ("8" in todo) or ("9" in todo) :
-        from astropy.io import ascii
-        import astropy.table as table  #Requires astropy version >= 0.3 for vstack function
-    for task in todo :
-        CalledTheTask=True
-        if task == "0" :
-            print("RUNNING TASK:0  Backup files in current directory to ../"+BACKUPDIR+"\n")
-            Backup_subrout()
-        elif task == "1" :
-            print("RUNNING TASK:1  Selection of object frames to reduce \n")
-            SelectionofFrames_subrout()
-        elif task == "2" :
-            print("RUNNING TASK:2  Manually inspect and reject object images by displaying one by one to classify \n")
-            Manual_InspectObj_subrout()
-        elif task == "3" :
-            print("RUNNING TASK:3  Manually inspect and reject Flats/Sky/Argons by displaying one by one\n")
-            Manual_InspectFlat_subrout()
-        elif task == "4" :
-            print("RUNNING TASK:4  Combine images in a Dither [,subtract sky], apply Flat Correction and Bad pixel interpolation\n")
-            CombDith_FlatCorr_subrout(method=IMGCOMBMETHOD)
-        elif task == "5" :
-            if TODO=='P': 
-                print("RUNNING TASK:5  Align and combine combined images of each Dither in Photometry data \n")
-                AlignNcombine_subrout(method=DITHERCOMBMETHOD)
-            elif TODO=='S': 
-                print("RUNNING TASK:5  Give Spectrum pair subtraction input \n")
-                SpectralPairSubtraction_subrout()
-        elif task == "6" :
-            if TODO=='P': 
-                print("RUNNING TASK:6  Make the list of images, Images4Photo.in to do Photometry \n")
-                Createlist_subrout()
-            elif TODO=='S': 
-                print("RUNNING TASK:6  Extract wavelength calibrated 1D spectra from image \n")
-                SpectralExtraction_subrout()
-        elif task == "7" :
-            if TODO=='P': 
-                print("RUNNING TASK:7  Select Stars and Sky region of the field on first image \n")
-                Star_sky_subrout()
-        elif task == "8" :
-            if TODO=='P': 
-                print("RUNNING TASK:8  Create Sextracter config file & coordinate output of first image in this directory \n")
-                Sextractor_subrout()
-        elif task == "9" : 
-            if TODO=='P': 
-                print("RUNNING TASK:9  Do Photometry \n")
-                Photometry()
+        for task in todo :
+            CalledTheTask=True
+            if task == "0" :
+                print("RUNNING TASK:0  Backup files in current directory to ../"+BACKUPDIR+"\n")
+                Backup_subrout()
+            elif task == "1" :
+                print("RUNNING TASK:1  Selection of object frames to reduce \n")
+                SelectionofFrames_subrout()
+            elif task == "2" :
+                print("RUNNING TASK:2  Manually inspect and reject object images by displaying one by one to classify \n")
+                Manual_InspectObj_subrout()
+            elif task == "3" :
+                print("RUNNING TASK:3  Manually inspect and reject Flats/Sky/Argons by displaying one by one\n")
+                Manual_InspectFlat_subrout()
+            elif task == "4" :
+                print("RUNNING TASK:4  Combine images in a Dither [,subtract sky], apply Flat Correction and Bad pixel interpolation\n")
+                CombDith_FlatCorr_subrout(method=IMGCOMBMETHOD)
+            elif task == "5" :
+                if TODO=='P': 
+                    print("RUNNING TASK:5  Align and combine combined images of each Dither in Photometry data \n")
+                    AlignNcombine_subrout(method=DITHERCOMBMETHOD)
+                elif TODO=='S': 
+                    print("RUNNING TASK:5  Give Spectrum pair subtraction input \n")
+                    SpectralPairSubtraction_subrout()
+            elif task == "6" :
+                if TODO=='P': 
+                    print("RUNNING TASK:6  Make the list of images, Images4Photo.in to do Photometry \n")
+                    Createlist_subrout()
+                elif TODO=='S': 
+                    print("RUNNING TASK:6  Extract wavelength calibrated 1D spectra from image \n")
+                    SpectralExtraction_subrout()
+            elif task == "7" :
+                if TODO=='P': 
+                    print("RUNNING TASK:7  Select Stars and Sky region of the field on first image \n")
+                    Star_sky_subrout()
+            elif task == "8" :
+                if TODO=='P': 
+                    print("RUNNING TASK:8  Create Sextracter config file & coordinate output of first image in this directory \n")
+                    Sextractor_subrout()
+            elif task == "9" : 
+                if TODO=='P': 
+                    print("RUNNING TASK:9  Do Photometry \n")
+                    Photometry()
 
-        else:
-            print('Cannot understand the input task: '+task)
-            print('Skipping task '+task)
-            CalledTheTask=False
+            else:
+                print('Cannot understand the input task: '+task)
+                print('Skipping task '+task)
+                CalledTheTask=False
 
-        if CalledTheTask :
-            with open(os.path.join(MotherDIR,OUTDIR,'StepsFinished'),'a') as stepsoverFLS:
-                stepsoverFLS.write(task+' ')
-        
+            if CalledTheTask :
+                with open(os.path.join(MotherDIR,OUTDIR,'StepsFinished'),'a') as stepsoverFLS:
+                    stepsoverFLS.write(task+' ')
+    except KeyboardInterrupt :
+        KeyboardInterrupt_handler()
+
     print("All tasks over....Enjoy!!!_________indiajoe@gmail.com")
             
 
