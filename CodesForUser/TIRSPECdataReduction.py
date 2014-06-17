@@ -1266,206 +1266,208 @@ def Backup_subrout():
     os.system('cp -r * ../'+BACKUPDIR)
 
 #-----Main Program Begins here........
-if len(sys.argv)<2 :
-    print('-'*10)
-    print('Usage : {0} TIRSPECscript.conf'.format(sys.argv[0]))
-    print('where,')
-    print('     TIRSPECscript.conf is the configuration file for this run of reduction pipeline')
-    print('-'*10)
-    exit(1)
+if __name__ == "__main__":
 
-try : 
-    configfile=open(sys.argv[1],'r')
-except IOError :
-    print ("Error: Cannot open the file "+sys.argv[1]+". Setup the config file based on TIRSPECscript.conf file correctly, before running the script.")
-    exit(1)
+    if len(sys.argv)<2 :
+        print('-'*10)
+        print('Usage : {0} TIRSPECscript.conf'.format(sys.argv[0]))
+        print('where,')
+        print('     TIRSPECscript.conf is the configuration file for this run of reduction pipeline')
+        print('-'*10)
+        exit(1)
 
-for con in configfile:
-    con=con.rstrip()
-    if len(con.split()) >= 2 :
-        if con.split()[0] == "OUTPUTDIR=" :
-            OUTDIR=con.split()[1]
-        elif con.split()[0] == "VERBOSE=" :
-            VER=con.split()[1]
-        elif con.split()[0] == "TODO=" :
-            TODO=con.split()[1]
-        elif con.split()[0] == "TEXTEDITOR=" :
-            TEXTEDITOR=shlex.split(con)[1]
-        elif con.split()[0] == "IMGCOMB=" :
-            IMGCOMBMETHOD=con.split()[1]
-        elif con.split()[0] == "DITHERCOMB=" :
-            DITHERCOMBMETHOD=con.split()[1]
-        elif con.split()[0] == "SEPARATE_SKY=" :
-            SEPARATESKY=con.split()[1][0].upper()
+    try : 
+        configfile=open(sys.argv[1],'r')
+    except IOError :
+        print ("Error: Cannot open the file "+sys.argv[1]+". Setup the config file based on TIRSPECscript.conf file correctly, before running the script.")
+        exit(1)
 
-        elif con.split()[0] == "BPMPHOTO=" :
-            PhotBadPixelMaskName=con.split()[1]
-        elif con.split()[0] == "BPMSPEC=" :
-            SpecBadPixelMaskName=con.split()[1]
+    for con in configfile:
+        con=con.rstrip()
+        if len(con.split()) >= 2 :
+            if con.split()[0] == "OUTPUTDIR=" :
+                OUTDIR=con.split()[1]
+            elif con.split()[0] == "VERBOSE=" :
+                VER=con.split()[1]
+            elif con.split()[0] == "TODO=" :
+                TODO=con.split()[1]
+            elif con.split()[0] == "TEXTEDITOR=" :
+                TEXTEDITOR=shlex.split(con)[1]
+            elif con.split()[0] == "IMGCOMB=" :
+                IMGCOMBMETHOD=con.split()[1]
+            elif con.split()[0] == "DITHERCOMB=" :
+                DITHERCOMBMETHOD=con.split()[1]
+            elif con.split()[0] == "SEPARATE_SKY=" :
+                SEPARATESKY=con.split()[1][0].upper()
+
+            elif con.split()[0] == "BPMPHOTO=" :
+                PhotBadPixelMaskName=con.split()[1]
+            elif con.split()[0] == "BPMSPEC=" :
+                SpecBadPixelMaskName=con.split()[1]
         
-        elif con.split()[0] == "THRESHOLD=" :
-            threshold=con.split()[1]
-        elif con.split()[0] == "EPADU=" :
-            EPADU=con.split()[1]
-        elif con.split()[0] == "READNOISE=" :
-            READNOISE=con.split()[1]
-        elif con.split()[0] == "DATAMAX=" :
-            DATAMAX=con.split()[1]
-        elif con.split()[0] == "XYMATCHMIN=" :
-            XYMATCHMIN=int(con.split()[1])
+            elif con.split()[0] == "THRESHOLD=" :
+                threshold=con.split()[1]
+            elif con.split()[0] == "EPADU=" :
+                EPADU=con.split()[1]
+            elif con.split()[0] == "READNOISE=" :
+                READNOISE=con.split()[1]
+            elif con.split()[0] == "DATAMAX=" :
+                DATAMAX=con.split()[1]
+            elif con.split()[0] == "XYMATCHMIN=" :
+                XYMATCHMIN=int(con.split()[1])
             
-        elif con.split()[0] == "APERTURE=" :
-            APERTURE=con.split()[1]
-        elif con.split()[0] == "ANNULUS=" :
-            ANNULUS=con.split()[1]
-        elif con.split()[0] == "DANNULUS=" :
-            DANNULUS=con.split()[1]
+            elif con.split()[0] == "APERTURE=" :
+                APERTURE=con.split()[1]
+            elif con.split()[0] == "ANNULUS=" :
+                ANNULUS=con.split()[1]
+            elif con.split()[0] == "DANNULUS=" :
+                DANNULUS=con.split()[1]
 
-        elif con.split()[0] == "EXPTIME=" :
-            EXPTIMEHDR=con.split()[1]
-        elif con.split()[0] == "FILTER=" :
-            FILTERHDR=con.split()[1]
-        elif con.split()[0] == "UT=" :
-            UTHDR=con.split()[1]
-        elif con.split()[0] == "OBJECT=" :
-            OBJECTHDR=con.split()[1]
-        elif con.split()[0] == "COMMENT=" :
-            COMMENTHDR=con.split()[1]
+            elif con.split()[0] == "EXPTIME=" :
+                EXPTIMEHDR=con.split()[1]
+            elif con.split()[0] == "FILTER=" :
+                FILTERHDR=con.split()[1]
+            elif con.split()[0] == "UT=" :
+                UTHDR=con.split()[1]
+            elif con.split()[0] == "OBJECT=" :
+                OBJECTHDR=con.split()[1]
+            elif con.split()[0] == "COMMENT=" :
+                COMMENTHDR=con.split()[1]
 
-        elif con.split()[0] == "OUTPUT=" :
-            OUTPUTfile=con.split()[1]
-        elif con.split()[0] == "BACKUP=" :
-            BACKUPDIR=con.split()[1]
+            elif con.split()[0] == "OUTPUT=" :
+                OUTPUTfile=con.split()[1]
+            elif con.split()[0] == "BACKUP=" :
+                BACKUPDIR=con.split()[1]
 
-        elif con.split()[0] == "CONVOLVEIMG=" :
-            CONVOLVEIMG=con.split()[1]
-        elif con.split()[0] == "DOPSF=" :
-            DOPSF=con.split()[1]
+            elif con.split()[0] == "CONVOLVEIMG=" :
+                CONVOLVEIMG=con.split()[1]
+            elif con.split()[0] == "DOPSF=" :
+                DOPSF=con.split()[1]
 
-        elif con.split()[0] == "ARGONDIRECTORY=" :
-            LAMPREPODIR=con.split()[1]
-        elif con.split()[0] == "SPECAPERTURE=" :
-            SPECAPERTURE=con.split()[1]
-        elif con.split()[0] == "BACKGROUND=" :
-            BACKGROUND=con.split()[1]
-        elif con.split()[0] == "TRACEFUNC=" :
-            TRACEFUNC=con.split()[1]
-        elif con.split()[0] == "TRACEORDER=" :
-            TRACEORDER=con.split()[1]
-        elif con.split()[0] == "NORMFUNC=" :
-            NORMFUNC=con.split()[1]
-        elif con.split()[0] == "NORMORDER=" :
-            NORMORDER=con.split()[1]
-        elif con.split()[0] == "SCOMBINE=" :
-            SCOMBINE=con.split()[1]
-        elif con.split()[0] == "DISPAXIS=" :
-            DISPAXIS=con.split()[1]
+            elif con.split()[0] == "ARGONDIRECTORY=" :
+                LAMPREPODIR=con.split()[1]
+            elif con.split()[0] == "SPECAPERTURE=" :
+                SPECAPERTURE=con.split()[1]
+            elif con.split()[0] == "BACKGROUND=" :
+                BACKGROUND=con.split()[1]
+            elif con.split()[0] == "TRACEFUNC=" :
+                TRACEFUNC=con.split()[1]
+            elif con.split()[0] == "TRACEORDER=" :
+                TRACEORDER=con.split()[1]
+            elif con.split()[0] == "NORMFUNC=" :
+                NORMFUNC=con.split()[1]
+            elif con.split()[0] == "NORMORDER=" :
+                NORMORDER=con.split()[1]
+            elif con.split()[0] == "SCOMBINE=" :
+                SCOMBINE=con.split()[1]
+            elif con.split()[0] == "DISPAXIS=" :
+                DISPAXIS=con.split()[1]
 
 
-configfile.close()
-MotherDIR=os.getcwd()
-#    OUTPUTfilePATH=MotherDIR+'/'+OUTPUTfile
-parentdir=MotherDIR.split('/')[-1]
-print('-'*10)
-print('IMP: All outputs of this run will be written to the directory '+os.path.join(MotherDIR,OUTDIR)+'\n')
-try:
-    os.makedirs(os.path.join(MotherDIR,OUTDIR))
-except OSError:
-    if os.path.isdir(os.path.join(MotherDIR,OUTDIR)) :
-        print("WARNING : Output directory "+os.path.join(MotherDIR,OUTDIR)+" already exists.\n Everything inside it will be overwritten. Be warned...")
+    configfile.close()
+    MotherDIR=os.getcwd()
+    #    OUTPUTfilePATH=MotherDIR+'/'+OUTPUTfile
+    parentdir=MotherDIR.split('/')[-1]
+    print('-'*10)
+    print('IMP: All outputs of this run will be written to the directory '+os.path.join(MotherDIR,OUTDIR)+'\n')
+    try:
+        os.makedirs(os.path.join(MotherDIR,OUTDIR))
+    except OSError:
+        if os.path.isdir(os.path.join(MotherDIR,OUTDIR)) :
+            print("WARNING : Output directory "+os.path.join(MotherDIR,OUTDIR)+" already exists.\n Everything inside it will be overwritten. Be warned...")
+        else:
+            raise
     else:
-        raise
-else:
-    print('Created directory :'+os.path.join(MotherDIR,OUTDIR))
-    
-
-if TODO == 'P' : todoinwords='Photometry'
-elif TODO == 'S' : todoinwords='Spectroscopy'
- 
-print("\n Very Very Important: Backup your files first. Don't proceed without backup.\n")
-print(" ---------------- Welcome to TIRSPEC \033[91m "+todoinwords+" \033[0m Script --------------- \n")
-print("Enter the Serial numbers (space separated if more than one task in succession) \n")
-print("0  Backup files in current directory to ../"+BACKUPDIR+"\n")
-print("1  Selection of object frames to reduce \n")
-print("2  Manually inspect and reject object images by displaying one by one to classify \n")
-print("3  Manually inspect and reject Flats/Sky/Argons by displaying one by one\n")
-print("4  Combine images in a Dither [,subtract sky], apply Flat Correction and Bad pixel interpolation\n")
-if TODO=='P':print("5  Align and combine combined images of each Dither in Photometry data \n")
-elif TODO=='S':print("5  Give Spectrum pair subtraction input \n")
-if TODO=='P':print("6  Make the list of images, Images4Photo.in to do Photometry \n")
-elif TODO=='S':print("6  Extract wavelength calibrated 1D spectra from image \n")
-if TODO=='P':print("7  Select Stars and Sky region of the field on first image \n")
-#print("7  Remove Cosmic Rays on all the images in Images4Photo.in. IMP:It will OVERWRITE original images.\n")
-if TODO=='P':print("8  Create Sextracter config file & coordinate output of first image in this directory \n")
-if TODO=='P':print("9  Do Photometry \n")
-print("--------------------------------------------------------------- \n")
-try:
-    with open(os.path.join(MotherDIR,OUTDIR,'StepsFinished'),'r') as stepsoverFLS:
-        StepsOver=stepsoverFLS.read()
-except IOError:
-    StepsOver='Nothing...'
-print('Steps you have already finished : '+StepsOver)    
-
-todo=raw_input('Enter the list : ')
-todo=todo.split()
-if ("2" in todo) or ("3" in todo) or ("4" in todo) or ("5" in todo) or ("7" in todo) or ("9" in todo) or (("6" in todo) and (TODO=='S')):
-    from pyraf import iraf
-if ("8" in todo) or ("9" in todo) :
-    from astropy.io import ascii
-    import astropy.table as table  #Requires astropy version >= 0.3 for vstack function
-for task in todo :
-    CalledTheTask=True
-    if task == "0" :
-        print("RUNNING TASK:0  Backup files in current directory to ../"+BACKUPDIR+"\n")
-        Backup_subrout()
-    elif task == "1" :
-        print("RUNNING TASK:1  Selection of object frames to reduce \n")
-        SelectionofFrames_subrout()
-    elif task == "2" :
-        print("RUNNING TASK:2  Manually inspect and reject object images by displaying one by one to classify \n")
-        Manual_InspectObj_subrout()
-    elif task == "3" :
-        print("RUNNING TASK:3  Manually inspect and reject Flats/Sky/Argons by displaying one by one\n")
-        Manual_InspectFlat_subrout()
-    elif task == "4" :
-        print("RUNNING TASK:4  Combine images in a Dither [,subtract sky], apply Flat Correction and Bad pixel interpolation\n")
-        CombDith_FlatCorr_subrout(method=IMGCOMBMETHOD)
-    elif task == "5" :
-        if TODO=='P': 
-            print("RUNNING TASK:5  Align and combine combined images of each Dither in Photometry data \n")
-            AlignNcombine_subrout(method=DITHERCOMBMETHOD)
-        elif TODO=='S': 
-            print("RUNNING TASK:5  Give Spectrum pair subtraction input \n")
-            SpectralPairSubtraction_subrout()
-    elif task == "6" :
-        if TODO=='P': 
-            print("RUNNING TASK:6  Make the list of images, Images4Photo.in to do Photometry \n")
-            Createlist_subrout()
-        elif TODO=='S': 
-            print("RUNNING TASK:6  Extract wavelength calibrated 1D spectra from image \n")
-            SpectralExtraction_subrout()
-    elif task == "7" :
-        if TODO=='P': 
-            print("RUNNING TASK:7  Select Stars and Sky region of the field on first image \n")
-            Star_sky_subrout()
-    elif task == "8" :
-        if TODO=='P': 
-            print("RUNNING TASK:8  Create Sextracter config file & coordinate output of first image in this directory \n")
-            Sextractor_subrout()
-    elif task == "9" : 
-        if TODO=='P': 
-            print("RUNNING TASK:9  Do Photometry \n")
-            Photometry()
-
-    else:
-        print('Cannot understand the input task: '+task)
-        print('Skipping task '+task)
-        CalledTheTask=False
-
-    if CalledTheTask :
-        with open(os.path.join(MotherDIR,OUTDIR,'StepsFinished'),'a') as stepsoverFLS:
-            stepsoverFLS.write(task+' ')
+        print('Created directory :'+os.path.join(MotherDIR,OUTDIR))
         
-print("All tasks over....Enjoy!!!_________indiajoe@gmail.com")
+        
+    if TODO == 'P' : todoinwords='Photometry'
+    elif TODO == 'S' : todoinwords='Spectroscopy'
+ 
+    print("\n Very Very Important: Backup your files first. Don't proceed without backup.\n")
+    print(" ---------------- Welcome to TIRSPEC \033[91m "+todoinwords+" \033[0m Script --------------- \n")
+    print("Enter the Serial numbers (space separated if more than one task in succession) \n")
+    print("0  Backup files in current directory to ../"+BACKUPDIR+"\n")
+    print("1  Selection of object frames to reduce \n")
+    print("2  Manually inspect and reject object images by displaying one by one to classify \n")
+    print("3  Manually inspect and reject Flats/Sky/Argons by displaying one by one\n")
+    print("4  Combine images in a Dither [,subtract sky], apply Flat Correction and Bad pixel interpolation\n")
+    if TODO=='P':print("5  Align and combine combined images of each Dither in Photometry data \n")
+    elif TODO=='S':print("5  Give Spectrum pair subtraction input \n")
+    if TODO=='P':print("6  Make the list of images, Images4Photo.in to do Photometry \n")
+    elif TODO=='S':print("6  Extract wavelength calibrated 1D spectra from image \n")
+    if TODO=='P':print("7  Select Stars and Sky region of the field on first image \n")
+    #print("7  Remove Cosmic Rays on all the images in Images4Photo.in. IMP:It will OVERWRITE original images.\n")
+    if TODO=='P':print("8  Create Sextracter config file & coordinate output of first image in this directory \n")
+    if TODO=='P':print("9  Do Photometry \n")
+    print("--------------------------------------------------------------- \n")
+    try:
+        with open(os.path.join(MotherDIR,OUTDIR,'StepsFinished'),'r') as stepsoverFLS:
+            StepsOver=stepsoverFLS.read()
+    except IOError:
+        StepsOver='Nothing...'
+    print('Steps you have already finished : '+StepsOver)    
+
+    todo=raw_input('Enter the list : ')
+    todo=todo.split()
+    if ("2" in todo) or ("3" in todo) or ("4" in todo) or ("5" in todo) or ("7" in todo) or ("9" in todo) or (("6" in todo) and (TODO=='S')):
+        from pyraf import iraf
+    if ("8" in todo) or ("9" in todo) :
+        from astropy.io import ascii
+        import astropy.table as table  #Requires astropy version >= 0.3 for vstack function
+    for task in todo :
+        CalledTheTask=True
+        if task == "0" :
+            print("RUNNING TASK:0  Backup files in current directory to ../"+BACKUPDIR+"\n")
+            Backup_subrout()
+        elif task == "1" :
+            print("RUNNING TASK:1  Selection of object frames to reduce \n")
+            SelectionofFrames_subrout()
+        elif task == "2" :
+            print("RUNNING TASK:2  Manually inspect and reject object images by displaying one by one to classify \n")
+            Manual_InspectObj_subrout()
+        elif task == "3" :
+            print("RUNNING TASK:3  Manually inspect and reject Flats/Sky/Argons by displaying one by one\n")
+            Manual_InspectFlat_subrout()
+        elif task == "4" :
+            print("RUNNING TASK:4  Combine images in a Dither [,subtract sky], apply Flat Correction and Bad pixel interpolation\n")
+            CombDith_FlatCorr_subrout(method=IMGCOMBMETHOD)
+        elif task == "5" :
+            if TODO=='P': 
+                print("RUNNING TASK:5  Align and combine combined images of each Dither in Photometry data \n")
+                AlignNcombine_subrout(method=DITHERCOMBMETHOD)
+            elif TODO=='S': 
+                print("RUNNING TASK:5  Give Spectrum pair subtraction input \n")
+                SpectralPairSubtraction_subrout()
+        elif task == "6" :
+            if TODO=='P': 
+                print("RUNNING TASK:6  Make the list of images, Images4Photo.in to do Photometry \n")
+                Createlist_subrout()
+            elif TODO=='S': 
+                print("RUNNING TASK:6  Extract wavelength calibrated 1D spectra from image \n")
+                SpectralExtraction_subrout()
+        elif task == "7" :
+            if TODO=='P': 
+                print("RUNNING TASK:7  Select Stars and Sky region of the field on first image \n")
+                Star_sky_subrout()
+        elif task == "8" :
+            if TODO=='P': 
+                print("RUNNING TASK:8  Create Sextracter config file & coordinate output of first image in this directory \n")
+                Sextractor_subrout()
+        elif task == "9" : 
+            if TODO=='P': 
+                print("RUNNING TASK:9  Do Photometry \n")
+                Photometry()
+
+        else:
+            print('Cannot understand the input task: '+task)
+            print('Skipping task '+task)
+            CalledTheTask=False
+
+        if CalledTheTask :
+            with open(os.path.join(MotherDIR,OUTDIR,'StepsFinished'),'a') as stepsoverFLS:
+                stepsoverFLS.write(task+' ')
+        
+    print("All tasks over....Enjoy!!!_________indiajoe@gmail.com")
             
 
