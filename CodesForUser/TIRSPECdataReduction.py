@@ -72,8 +72,13 @@ def SpectralExtraction_subrout():
                 for lft in leftover :
                     shutil.move(lft,'Leftover/')
 
+            #Calculate the effective epadu gain for apall
+            ImagesAveraged=int(pyfits.convenience.getval(img,'NCOMBINE'))  #Reading from Headers
+            ImageScaleFactor=int(pyfits.convenience.getval(img,'NDRS'))-1  #Since ADU is flux/ single NDR; -1 because effective integration time is No# of NDRS -1
+            EffectiveGain=EPADU*ImagesAveraged*ImageScaleFactor
+
             # Running apall
-            iraf.apall(input=img,nfind=1,lower=-15,upper=15,llimit=-15,ulimit=15,b_sample=BACKGROUND,background ='fit',weights ='variance',readnoi=READNOISE,gain=EPADU,t_function=TRACEFUNC,t_order=TRACEORDER,t_niterate=1,ylevel=SPECAPERTURE,interactive=VER)
+            iraf.apall(input=img,nfind=1,lower=-15,upper=15,llimit=-15,ulimit=15,b_sample=BACKGROUND,background ='fit',weights ='variance',readnoi=READNOISE,gain=EffectiveGain,t_function=TRACEFUNC,t_order=TRACEORDER,t_niterate=1,ylevel=SPECAPERTURE,interactive=VER)
             #Extracting the Argon arc for this spectra as img_arc.fits
             iraf.apall(input=os.path.join(MotherDIR,night,Img2Argon[img]),reference=img,out=img[:-5]+'_arc',recenter='no',trace='no',background='none',interactive='no')
             #Now reidentify the lines in this spectra
@@ -261,6 +266,10 @@ def Photometry():
         StartUT=pyfits.convenience.getval(img,UTHDR)  #Reading from Headers
         h,m,s=StartUT.split(':')
         StartUT=int(h)*60*60+int(m)*60+int(s)   #Converting to seconds
+        #Calculate the effective epadu gain for daophot's photometry error estimation
+        ImagesAveraged=int(pyfits.convenience.getval(img,'NCOMBINE'))  #Reading from Headers
+        ImageScaleFactor=int(pyfits.convenience.getval(img,'NDRS'))-1  #Since ADU is flux/ single NDR; -1 because effective integration time is No# of NDRS -1
+        EffectiveGain=EPADU*ImagesAveraged*ImageScaleFactor
         print(wdir, img)
         TrueSigma=0.01      #Will be updated later for every img. Here it should be very small quantity
         yxdim=pyfits.getdata(img).shape  #Storing the (Ymax,Xmax) of image
@@ -433,7 +442,7 @@ def Photometry():
             iraf.datapar.setParam('datamin',datamin)
             iraf.datapar.setParam('datamax',DATAMAX)
             iraf.datapar.setParam('readnoi',READNOISE)
-            iraf.datapar.setParam('epadu',EPADU)
+            iraf.datapar.setParam('epadu',EffectiveGain)
             iraf.datapar.setParam('itime',intime)
 #            iraf.datapar.setParam('ifilter',filterr)
 
@@ -495,7 +504,7 @@ def Photometry():
                     with open('qphotSource.Tcoo','w') as foo2 :
                         foo2.write(obj[0]+'  '+obj[1])
 
-                    iraf.qphot(image=img , coords='qphotSource.Tcoo', cbox=5, annulus=obj[3], dannulus=obj[4], aperture=obj[2], exposur="intime", epadu=EPADU ,interactive=0 )
+                    iraf.qphot(image=img , coords='qphotSource.Tcoo', cbox=5, annulus=obj[3], dannulus=obj[4], aperture=obj[2], exposur="intime", epadu=EffectiveGain ,interactive=0 )
                 
                 foo.close()
             #Now, Writing the Mag to output file
@@ -700,6 +709,7 @@ def Createlist_subrout():
     """ Creates the Images4Photo.in containing the image name , filter, exposure time, threshold """
     fooOUT=open(os.path.join(MotherDIR,OUTDIR,'Images4Photo.in'),'w')
     directories=LoadDirectories(CONF=False)
+#WARNING 4 JOE: Right now we are taking Itime=1 sec. But It is actually 0.9 sec. Will Becomes an issue in subarray data.
     Exptime=1  #By default, all TIRSPEC images are scaled to per second.
     for night in directories:
         print('Working on night: '+night)
@@ -1323,7 +1333,7 @@ if __name__ == "__main__":
             elif con.split()[0] == "THRESHOLD=" :
                 threshold=con.split()[1]
             elif con.split()[0] == "EPADU=" :
-                EPADU=con.split()[1]
+                EPADU=float(con.split()[1])
             elif con.split()[0] == "READNOISE=" :
                 READNOISE=con.split()[1]
             elif con.split()[0] == "DATAMAX=" :
