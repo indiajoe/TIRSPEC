@@ -232,7 +232,7 @@ def Photometry():
         print('-'*60)
         traceback.print_exc(file=sys.stdout)
         print('-'*60)
-        exit(1)
+        sys.exit(1)
 
     # Setting flag by checking whether the size of qphotinput.txt is Zero or not.
     if os.stat(os.path.join(MotherDIR,OUTDIR,"qphotinput.txt"))[6]!=0 : QPHOT_todo='Y'
@@ -579,7 +579,7 @@ def Sextractor_subrout(img=None,N=30):
     except OSError:
         print('ERROR: Cannot find the command: sex')
         print('SExtractor needs to be installed before running this task')
-        exit(1)
+        sys.exit(1)
 
     backupPWD=os.getcwd()
     os.chdir(os.path.join(MotherDIR,OUTDIR))  #Going to output directory of this run.
@@ -603,7 +603,7 @@ def Sextractor_subrout(img=None,N=30):
             print('-'*60)
             traceback.print_exc(file=sys.stdout)
             print('-'*60)
-            exit(1)
+            sys.exit(1)
 
         imgline=imgfile.readline()  #First line only
         imgline=imgline.rstrip()
@@ -639,7 +639,7 @@ def Star_sky_subrout(img=None) :
             print('-'*60)
             traceback.print_exc(file=sys.stdout)
             print('-'*60)
-            exit(1)
+            sys.exit(1)
 
         imgline=imgfile.readline()  #First line only
         imgline=imgline.rstrip()
@@ -1230,6 +1230,12 @@ def LoadDirectories(CONF=False):
         InpList=raw_input('Enter the directories to analyse (default: %s) :'%','.join(directories)).strip(' ')
         if InpList : 
             directories=[dirs.rstrip().strip(' ').rstrip('/') for dirs in InpList.split(',')] #Removing spaces or trailing /
+            for dirs in list(directories): # iterating over a copy of the list
+                if not os.path.isdir(os.path.join(MotherDIR,dirs)):
+                    print('Cannot find the data directory: {0} in the current directory {1}'.format(dirs,MotherDIR))
+                    print('WARNING: Removing the non-existing directory : {0} from the list'.format(dirs))
+                    directories.remove(dirs)
+                          
             with open(os.path.join(MotherDIR,OUTDIR,'directories'),'w') as directoriesF : #Updating directories file
                 directoriesF.write('\n'.join(directories)+'\n')
 
@@ -1253,8 +1259,9 @@ def LoadDirectories(CONF=False):
 
     
     if len(directories) == 0 : 
-        print('Atleast one directory containing data to be given as input')
-        exit(1)
+        print('ERROR: No valid directories to reduce data found.')
+        print('Atleast one directory containing data should be given as input.')
+        sys.exit(1)
     else :
         return directories
     
@@ -1279,14 +1286,16 @@ if __name__ == "__main__":
         print('Usage : {0} TIRSPECscript.conf'.format(sys.argv[0]))
         print('where,')
         print('     TIRSPECscript.conf is the configuration file for this run of reduction pipeline')
+        print(' ')
+        print("Note: This script should be run from the directory containing all the night's data directories.")
         print('-'*10)
-        exit(1)
+        sys.exit(1)
 
     try : 
         configfile=open(sys.argv[1],'r')
     except IOError :
         print ("Error: Cannot open the file "+sys.argv[1]+". Setup the config file based on TIRSPECscript.conf file correctly, before running the script.")
-        exit(1)
+        sys.exit(1)
 
     for con in configfile:
         con=con.rstrip()
@@ -1394,7 +1403,7 @@ if __name__ == "__main__":
     print(" ---------------- Welcome to TIRSPEC \033[91m "+todoinwords+" \033[0m Script --------------- \n")
     print("Enter the Serial numbers (space separated if more than one task in succession) \n")
     print("0  Backup files in current directory to ../"+BACKUPDIR+"\n")
-    print("1  Selection of object frames to reduce \n")
+    print("1  Selection of object frames, Flats/Sky/Argons to reduce \n")
     print("2  Manually inspect and reject object images by displaying one by one to classify \n")
     print("3  Manually inspect and reject Flats/Sky/Argons by displaying one by one\n")
     print("4  Combine images in a Dither [,subtract sky], apply Flat Correction and Bad pixel interpolation\n")
