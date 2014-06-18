@@ -6,6 +6,7 @@ import numpy as np
 import numpy.ma
 import scipy.interpolate as interp
 import scipy.constants
+import scipy.optimize
 import matplotlib.pyplot as plt
 from astropy.io import fits  #Needed only to load fits spectra
 
@@ -27,7 +28,96 @@ def RichardsonLucy(Signal,PSF,IniKernel,niter):
         inikernel = inikernel* error_est
         
     return inikernel
+
+
+
+#------------------------------------1D gaussian fitting functions...
+def moments1D(inpData):
+    """ Returns the (amplitude, center,sigma, bkgC, bkgSlope) estimated from moments in the 1d input array inpData """
+
+    bkgC=inpData[0]  #Taking first point as intercept and fitting a straght line for slope
+    bkgSlope=(inpData[-1]-inpData[0])/(len(inpData)-1.0)
     
+    Data=np.ma.masked_less(inpData-(bkgC+bkgSlope*np.arange(len(inpData))),0)   #Removing the background for calculating moments of pure gaussian
+    #We also masked any negative values before measuring moments
+
+    amplitude=Data.max()
+
+    total=float(Data.sum())
+    Xcoords=np.arange(Data.shape[0])
+
+    center=(Xcoords*Data).sum()/total
+ 
+    sigma=np.sqrt(np.ma.sum((Data*(Xcoords-center)**2))/total)
+
+    return amplitude,center,sigma,bkgC,bkgSlope
+
+def Gaussian1D(amplitude, center,sigma,bkgC,bkgSlope):
+    """ Returns a 1D Gaussian function with input parameters. """
+    Xc=center  #Center
+    #Now lets define the 1D gaussian function
+    def Gauss1D(x) :
+        """ Returns the values of the defined 1d gaussian at x """
+        return amplitude*np.exp(-(((x-Xc)/sigma)**2)/2) +bkgC+bkgSlope*x
+
+    return Gauss1D
+
+def FitGauss1D(Data,ip=None):
+    """ Fits 1D gaussian to Data with optional Initial conditions ip=(amplitude, center, sigma, bkgC, bkgSlope)
+    Example: 
+    >>> X=np.arange(40,dtype=np.float)
+    >>> Data=np.exp(-(((X-25)/5)**2)/2) +1+X*0.5
+    >>> FitGauss1D(Data)
+    (array([  1. ,  25. ,   5. ,   1. ,   0.5]), 2)
+     """
+    if ip is None:   #Estimate the initial parameters from moments 
+        ip=moments1D(Data)
+    
+    def errfun(ip):
+        return np.ravel(Gaussian1D(*ip)(*np.indices(Data.shape)) - Data)
+
+    p, success = scipy.optimize.leastsq(errfun, ip)
+
+    return p,success
+
+#------------------------------------------------------------#
+
+def FitGaussianLineProfile(XYDataToFit,absorption=True,displayfit=True):
+    """ Fits a 1 D gaussian to XYDataToFit numpy array. And returns the best fitted gaussian
+    Input :
+         XYDataToFit : 2 coulumn numpy array with X and Y data.
+         absorption : True to fit absorption line gaussian, and False to fit emission line gaussian 
+         displayfit : True to finally display the best fit plot, False to not show any fit at the end.
+    Output:
+         BestFitPureGaussian : Best Fit pure gaussian of on the input data without any background
+         p                   : Full set of parameters of best fit Gaussian1D
+    """
+    Ydata=XYDataToFit[:,1].copy()
+    if absorption : Ydata*=-1   # To make it emission
+    
+    p,succ=FitGauss1D(Ydata,ip=None)
+
+    if absorption : 
+        p[0]*=-1  #Amplitude
+        p[3]*=-1  #Background
+        p[4]*=-1  #Background's Slope
+
+    centerW=XYDataToFit[p[1],0]
+    sigma=p[2]*(XYDataToFit[1,0]-XYDataToFit[0,0])
+    print('Amplitude:{0}, Center:{1}, Sigma:{2}, Bkg:{3}, Bkg Slope:{4}'.format(p[0],centerW,sigma,p[3],p[4]))
+    pureGauss=[p[0],p[1],[2],0,0]  # ie. with Bkg and Bkg Slope set to Zero
+    BestFitGaussian=Gaussian1D(*p)(np.arange(len(Ydata)))
+    BestFitPureGaussian=Gaussian1D(*pureGauss)(np.arange(len(Ydata)))
+    if displayfit:
+        plt.close() #Closing any previously open window
+        fig = plt.figure()
+        ax=fig.add_subplot(1,1,1)
+        ax.plot(XYDataToFit[:,0],XYDataToFit[:,1],marker='.',alpha=0.5) 
+        ax.plot(XYDataToFit[:,0],BestFitGaussian,color='k') 
+        ax.plot(XYDataToFit[:,0],XYDataToFit[:,1]-BestFitPureGaussian,color='red') 
+        plt.show()
+
+    return BestFitPureGaussian,p
 
 def BlackBodyFlux(InWavelengths,Temp):
     """ Returns an array of median scaled flux from blackbody corresponding to the input list of wavelengths, and given Temperature 
@@ -416,6 +506,8 @@ def AskAndCleanStellarLines(Inspec):
         sys.exit(1)
 
     StdConvolved=False
+    GaussSubtracted=False
+    FittedGaussians=dict()
     WLshift=0.0
     ratio=1
     plt.close()
@@ -443,13 +535,23 @@ def AskAndCleanStellarLines(Inspec):
             NewRatioLine,=ax1.plot(spec[:,1]/Std4Spec,'--',drawstyle='steps',color='black')
             RatioPlotlist.append(NewRatioLine)
             ax1,RatioPlotlist=AdjustAlphaPlots(ax1,RatioPlotlist,PlotHistLength)
+        elif GaussSubtracted :
+            TempSpec=spec.copy()
+            for x,y in FittedGaussians.keys(): TempSpec[x:y,1]-=FittedGaussians[(x,y)]
+            NewRatioLine,=ax1.plot(TempSpec[:,1],'--',drawstyle='steps',color='black')
+            RatioPlotlist.append(NewRatioLine)
+            ax1,RatioPlotlist=AdjustAlphaPlots(ax1,RatioPlotlist,PlotHistLength)
             
         plt.draw()
         print('-'*20)
         print("Following example shows various input option available to you.")
+        print("Note: fk and gs are mutually exclusive options, you can chose only one out of them")
         print(" me 210 251  #Select region from 210 to 250 for matching the equivalent width of line")
         print(" fk 210 251  #Select region from 210 to 250 for finding convolution kernel and apply")
         print(" sh 20       #Shift stellar line profiles by +20 Angstrom")
+        print(" --OR--")
+        print(" gs 210 251  #Select region from 210 to 250 for fitting Gaussian profile and subtract")
+        print(" gs H        #Automatically fit all Hydrogen lines with Gaussian profiles and subtract")
         print(" wq          #Exit this section returning the cleaned Telluric line spectra")
         print(" q           #Exit this section discarding everything")
         choice=raw_input("Enter your option : ").strip(' ')
@@ -465,26 +567,50 @@ def AskAndCleanStellarLines(Inspec):
                 end=int(choice.split()[2])
                 ratio=RatioToScaleEQW(Std4Spec[start:end],spec[start:end,:])
             elif choice[0] == 'f' and len(choice.split())==3: #Find the instrumental convolution kernel
-                start=int(choice.split()[1])
-                end=int(choice.split()[2])
-                Wstart=spec[start,0]-WLshift
-                Wend=spec[end,0]-WLshift
-                SNstart=np.argmax(StdNorm[:,0] > Wstart)
-                SNend=np.argmax(StdNorm[:,0] > Wend)
-                kernel=FindConvolutionKernel(StdNorm[SNstart:SNend,:],spec[start:end,:],wlshift=WLshift,Ratio=ratio)
-                #Applying the kernel
-                confirm=raw_input("Do you want to apply the newly made kernel? (Enter y to apply) : ").strip(' ')
-                if confirm.lower() == 'y' :
-                    print("Convolving the line profiles with newly made kernal")
-                    StdNorm[:,1]=np.convolve(StdNorm[:,1],kernel,mode='same')
-                    StdConvolved=True
-                else : print("Discarding the kernel generated for convolution.")
+                if not GaussSubtracted: 
+                    start=int(choice.split()[1])
+                    end=int(choice.split()[2])
+                    Wstart=spec[start,0]-WLshift
+                    Wend=spec[end,0]-WLshift
+                    SNstart=np.argmax(StdNorm[:,0] > Wstart)
+                    SNend=np.argmax(StdNorm[:,0] > Wend)
+                    kernel=FindConvolutionKernel(StdNorm[SNstart:SNend,:],spec[start:end,:],wlshift=WLshift,Ratio=ratio)
+                    #Applying the kernel
+                    confirm=raw_input("Do you want to apply the newly made kernel? (Enter y to apply) : ").strip(' ')
+                    if confirm.lower() == 'y' :
+                        print("Convolving the line profiles with newly made kernal")
+                        StdNorm[:,1]=np.convolve(StdNorm[:,1],kernel,mode='same')
+                        StdConvolved=True
+                    else : print("Discarding the kernel generated for convolution.")
+                else:
+                    print('You have already choosen to do gaussian subtraction, so this step is not allowed. \n However you can quit this section and return back to choose this process')
+            elif choice[0] == 'g' and len(choice.split())==3: #Gaussian fitting of absorption profiles
+                if not StdConvolved:
+                    start=int(choice.split()[1])
+                    end=int(choice.split()[2])
+                    Gaussianline,params=FitGaussianLineProfile(spec[start:end,:],absorption=True)
+                    confirm=raw_input("Do you want to subtract the fitted gaussian? (Enter y to subtract) : ").strip(' ')
+                    if confirm.lower() == 'y' :
+                        print("Subtracting the best fit gaussian line profile.")
+                        FittedGaussians[(start,end)]=Gaussianline   #Storing the line for subtracting in future
+                        GaussSubtracted=True
+                    else : print("Discarding the fitted gaussian line.")
+                else:
+                    print('You have already choosen to do star template division, so this step is not allowed. \n However you can quit this section and return back to choose this process')
+
+            elif choice[0] == 'g' and choice.split()[1].upper()=='H': #Gaussian fitting of all hydrogen lines
+                print('Not yet implemented..: Please use "gs start end" for each line.')
+                pass
+
             elif choice[0] == 's': #Shifting of Telluric spectra
                 print("Previous spectral shift was %f points"%(WLshift))
                 WLshift+=float(choice.split()[1])
                 print("New spectral shift is %f points"%(WLshift))
             elif choice[0:2] == 'wq' :  # Exit returning the Spectral line removed profile
-                spec[:,1]=spec[:,1]/Std4Spec
+                if StdConvolved:
+                    spec[:,1]=spec[:,1]/Std4Spec
+                elif GaussSubtracted:
+                    for x,y in FittedGaussians.keys(): spec[x:y,1]-=FittedGaussians[(x,y)]
                 break
             else :
                 print("Error: Unknown choice, please retype correctly.")
