@@ -73,7 +73,10 @@ def SpectralExtraction_subrout():
                     shutil.move(lft,'Leftover/')
 
             #Calculate the effective epadu gain for apall
-            ImagesAveraged=int(pyfits.convenience.getval(img,'NCOMBINE'))  #Reading from Headers
+            try:
+                ImagesAveraged=int(pyfits.convenience.getval(img,'NCOMBINE'))  #Reading from Headers
+            except KeyError:  #This image is not combined by anything.
+                ImagesAveraged=1
             ImageScaleFactor=int(pyfits.convenience.getval(img,'NDRS'))-1  #Since ADU is flux/ single NDR; -1 because effective integration time is No# of NDRS -1
             EffectiveGain=EPADU*ImagesAveraged*ImageScaleFactor
 
@@ -267,7 +270,10 @@ def Photometry():
         h,m,s=StartUT.split(':')
         StartUT=int(h)*60*60+int(m)*60+int(s)   #Converting to seconds
         #Calculate the effective epadu gain for daophot's photometry error estimation
-        ImagesAveraged=int(pyfits.convenience.getval(img,'NCOMBINE'))  #Reading from Headers
+        try :
+            ImagesAveraged=int(pyfits.convenience.getval(img,'NCOMBINE'))  #Reading from Headers
+        except KeyError:  #This image is not combined by anything.
+            ImagesAveraged=1
         ImageScaleFactor=int(pyfits.convenience.getval(img,'NDRS'))-1  #Since ADU is flux/ single NDR; -1 because effective integration time is No# of NDRS -1
         EffectiveGain=EPADU*ImagesAveraged*ImageScaleFactor
         print(wdir, img)
