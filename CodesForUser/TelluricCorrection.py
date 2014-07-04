@@ -105,7 +105,7 @@ def FitGaussianLineProfile(XYDataToFit,absorption=True,displayfit=True):
     centerW=XYDataToFit[p[1],0]
     sigma=p[2]*(XYDataToFit[1,0]-XYDataToFit[0,0])
     print('Amplitude:{0}, Center:{1}, Sigma:{2}, Bkg:{3}, Bkg Slope:{4}'.format(p[0],centerW,sigma,p[3],p[4]))
-    pureGauss=[p[0],p[1],[2],0,0]  # ie. with Bkg and Bkg Slope set to Zero
+    pureGauss=[p[0],p[1],p[2],0,0]  # ie. with Bkg and Bkg Slope set to Zero
     BestFitGaussian=Gaussian1D(*p)(np.arange(len(Ydata)))
     BestFitPureGaussian=Gaussian1D(*pureGauss)(np.arange(len(Ydata)))
     if displayfit:
@@ -758,7 +758,7 @@ def AskAndLoadData(toask="Enter Filename : ",Skipascii=69):
             elif filename[-4:] == '.npy' : #User has inputed a numpy .npy array file
                 Data=np.load(filename)
             else:   #We assume it is an ascii spectra
-                Data=LoadAsciiSpectra(filename,skiprows=Skipascii)
+                Data=LoadAsciiSpectra(filename,Skipascii=Skipascii)
             break
         except IOError :
             print("Error: Cannot find the file %s, Please give the correct file name."%(filename))
