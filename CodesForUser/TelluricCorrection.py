@@ -62,8 +62,9 @@ def Gaussian1D(amplitude, center,sigma,bkgC,bkgSlope):
 
     return Gauss1D
 
-def FitGauss1D(Data,ip=None):
+def FitGauss1D(Data,ip=None,FitBkgFromEdge=True):
     """ Fits 1D gaussian to Data with optional Initial conditions ip=(amplitude, center, sigma, bkgC, bkgSlope)
+    If FitBkgFromEdge is True, it will fit the bkg seperately after removing the gaussian, and refit gaussian without bkg.
     Example: 
     >>> X=np.arange(40,dtype=np.float)
     >>> Data=np.exp(-(((X-25)/5)**2)/2) +1+X*0.5
@@ -77,6 +78,23 @@ def FitGauss1D(Data,ip=None):
         return np.ravel(Gaussian1D(*ip)(*np.indices(Data.shape)) - Data)
 
     p, success = scipy.optimize.leastsq(errfun, ip)
+
+    if FitBkgFromEdge :   #Refit the gaussian by firt estimating bkg seperately
+        BkgData=np.ma.array(Data)
+        RadtoMask=2*p[2]  # 2 sigma radius to mask
+        BkgData[max(1,p[1]-RadtoMask):min(p[1]+RadtoMask,len(Data)-1)]=np.ma.masked
+        #Now fit a straight line continuum background
+        BkgCoeffs=np.ma.polyfit(np.arange(len(Data),dtype=np.float),BkgData,1)
+        bkgSlope=BkgCoeffs[0]
+        bkgC=BkgCoeffs[1]
+
+        def errfunWithoutBkg(ip2):
+            params = np.append(ip2,[bkgC,bkgSlope])
+            return np.ravel(Gaussian1D(*params)(*np.indices(Data.shape)) - Data)
+        
+        ip2 = p[:-2]
+        p, success = scipy.optimize.leastsq(errfunWithoutBkg, ip2)
+        p = np.append(p, [bkgC,bkgSlope])
 
     return p,success
 
@@ -95,7 +113,7 @@ def FitGaussianLineProfile(XYDataToFit,absorption=True,displayfit=True):
     Ydata=XYDataToFit[:,1].copy()
     if absorption : Ydata*=-1   # To make it emission
     
-    p,succ=FitGauss1D(Ydata,ip=None)
+    p,succ=FitGauss1D(Ydata,ip=None,FitBkgFromEdge=False)
 
     if absorption : 
         p[0]*=-1  #Amplitude
@@ -614,8 +632,9 @@ def AskAndCleanStellarLines(Inspec):
                 break
             else :
                 print("Error: Unknown choice, please retype correctly.")
-        except (IndexError,ValueError):
+        except (IndexError,ValueError) as e:
             print("Error: Unknown choice, please retype correctly..")
+            print(e)
 
     plt.close()
     return spec
