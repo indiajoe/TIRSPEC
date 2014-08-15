@@ -1447,6 +1447,7 @@ if __name__ == "__main__":
         todo=todo.split()
         if ("2" in todo) or ("3" in todo) or ("4" in todo) or ("5" in todo) or ("7" in todo) or ("9" in todo) or (("6" in todo) and (TODO=='S')):
             from pyraf import iraf
+            iraf.imexamine.unlearn()
         if ("8" in todo) or ("9" in todo) :
             from astropy.io import ascii
             import astropy.table as table  #Requires astropy version >= 0.3 for vstack function
