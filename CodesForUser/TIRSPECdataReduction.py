@@ -663,7 +663,7 @@ def Star_sky_subrout(img=None) :
 
     if not ( os.path.isfile("Source.coo") and os.path.isfile("GoodStars.coo") and os.path.isfile("BlankSky.coo") )  : #If the .coo files doesn't exist already
         iraf.display(img,1)
-        print ('\n For taking coordinates of Source. Press _a_ over Primary Sources.')
+        print ('\n For taking coordinates of Source. Press _a_ over Primary Sources (atleast one).')
         imx=iraf.imexam(Stdout=1)
         with open('Source.coo','w') as foo :    #Creating text file containing coords of science sources of primary interest
             i=2
@@ -671,7 +671,7 @@ def Star_sky_subrout(img=None) :
                 foo.write(imx[i].split()[0] +'  '+imx[i].split()[1]+'\n')
                 i=i+2
 
-        print ('\n For taking coordinates of good stars. Press _a_ over some good stars. \n Non saturated among them will be used for psf fitting.')
+        print ('\n For taking coordinates of good stars. Press _a_ over a few good stars. \n Non saturated among them will be used for psf fitting.')
         print ('IMP: Press coordinate of Stars in standard required order')
         imx=iraf.imexam(Stdout=1)
         with open('GoodStars.coo','w') as foo :    #Creating good stars coords files
@@ -787,7 +787,7 @@ def AlignNcombine_subrout(method="average"):
                 Xref=eval(XYfiledic[Comb2Firstdic[Refimage]][0])
                 Yref=eval(XYfiledic[Comb2Firstdic[Refimage]][1])
                 iraf.display(os.path.join(MotherDIR,OUTDIR,night,Refimage),1) 
-                print ('Press _a_ over some good stars to align, u can press s also, but DONT press r \n')
+                print ('Press _a_ over a few (~ 4 or 5) good stars to align, u can press s also, but DONT press r \n')
                 imx=iraf.imexam(Stdout=1)
                 with open(os.path.join(MotherDIR,OUTDIR,night,OutCoofile),'w') as foo :
                     i=2
@@ -949,7 +949,7 @@ def CombDith_FlatCorr_subrout(method="median",FullFlatStatSection='[200:800,200:
             #     outlogFILE.write('\n')  #Entering a blank line no matter what. We will ask user to change is they want to move and add.
             outlogFILE.write(imglist[0]+' '+OutFCimg+'\n')
         outlogFILE.close()
-        if TODO=='P': print('Edit the spaces between image sets in file '+os.path.join(MotherDIR,OUTDIR,night,'FirstoneANDcombinedImages.List')+' to align and combine them in next step.')
+        if TODO=='P': print('Edit the spaces (if required) between image sets in file '+os.path.join(MotherDIR,OUTDIR,night,'FirstoneANDcombinedImages.List')+' to align and combine them in next step.')
     print('All nights over...')             
                 
                 
@@ -1030,8 +1030,8 @@ def Manual_InspectFlat_subrout():
 def Manual_InspectObj_subrout():
     """ This will display one image after other, and based on user input classify images of each dither position """
     directories=LoadDirectories(CONF=True)
-    if TODO=='P': print("Press _a_ and then _q_ over a good central star for selecting image")
-    if TODO=='S': print("Press _j_ and then _q_ over a good part of spectra for selecting image")
+    if TODO=='P': print("Press _a_ and then _q_ over one good central star for selecting image")
+    if TODO=='S': print("Press _j_ and then _q_ over one good position on dispersed spectrum for selecting image")
     for night in directories:
         print("Working on night : "+night)
         ObjFILE=open(os.path.join(MotherDIR,OUTDIR,night,'AllObjects.List'),'r')
@@ -1099,6 +1099,7 @@ def Manual_InspectObj_subrout():
         Obj2CombFILE.close()
         ObjFILE.close()
         print('We have made the selected list of images in '+os.path.join(MotherDIR,OUTDIR,night,'AllObjects2Combine.List')+' \n Add blank lines between file names to prevent them from median combining. \n Remove the blank line between file names, which you want to combine.')
+        raw_input("Press Enter to continue...")
         subprocess.call(TEXTEDITOR.split()+[os.path.join(MotherDIR,OUTDIR,night,'AllObjects2Combine.List')])
 
     print('All nights over...')
@@ -1214,7 +1215,8 @@ def SelectionofFrames_subrout():
             if TODO=='S' :ObjArgonFILE.write(Name+'  '+' '.join(Argonlistdic[U_L_Sfilter])+'\n')
             if SEPARATESKY=='Y': ObjSkyFILE.write(Name+'  '+' '.join(Skylistdic[U_L_Sfilter])+'\n')
         ObjFlatFILE.close()
-        print('Edit and save the Flat/Argon/Sky list associations for this night :'+night)
+        print('Edit, save (if required) and close the Flat/Argon/Sky list associations for this night :'+night)
+        raw_input("Press Enter to continue...")
         subprocess.call(TEXTEDITOR.split()+[os.path.join(MotherDIR,OUTDIR,night,'AllObjects-Flat.List')])
         if TODO=='S': 
             ObjArgonFILE.close()
