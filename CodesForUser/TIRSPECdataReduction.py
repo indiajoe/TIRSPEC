@@ -393,15 +393,23 @@ def Photometry():
         for img in convIMGS :
             imx=iraf.imexam(input=img,frame=1,use_display=0,defkey='a',imagecur=OriginalIMG+'GoodStars.coo',Stdout=1)
             print imx           #DEBUGGING---------------------------------------**
-            #Calculating median FWHM
+            #Calculating median FWHM, ellipticity and position angle
             fwhmlist=[]
+            ellipticitylist=[]
+            positionanglelist=[]
             i=3
             while i < len(imx) :               
                 fwhmlist.append(eval(imx[i].split()[10]))
+                ellipticitylist.append(eval(imx[i].split()[5]))
+                positionanglelist.append(eval(imx[i].split()[6]))
                 i=i+2
             #Median FWHM is
             fwhm=np.median(fwhmlist)  
-            print('Setted value of FWHM =' + str(fwhm))
+            print('Setting value of FWHM =' + str(fwhm))
+            ellipticity=np.median(ellipticitylist)
+            print('Setting value of ellipticity =' + str(ellipticity))
+            positionangle=np.median(positionanglelist)
+            print('Setting value of positionangle =' + str(positionangle))
             #Calculating sky mean and stdev
             imx=iraf.imexam(input=img,frame=1,use_display=0,defkey='m',imagecur=OriginalIMG+'BlankSky.coo',Stdout=1)
             print imx            #DEBUGGING--------------------------------------**
@@ -446,7 +454,11 @@ def Photometry():
             
             aperture = eval(APERTURE)  # 4*fwhm
             iraf.photpar.setParam('apertur',aperture)
+
             iraf.findpars.setParam('threshold',threshold)
+            iraf.findpars.setParam('ratio',1-ellipticity)  # ellipticity = 1 - b/a
+            iraf.findpars.setParam('theta',positionanglelist)
+
             if OriginalIMG == img :
                 TrueSigma=sigma   #Setting the correct sigma of sky
                 iraf.daofind(image=img,output="default",verify=VER)
