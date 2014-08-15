@@ -7,7 +7,7 @@ import os.path
 import glob
 #import pyfits  #Deprecated and merged to astropy
 import astropy.io.fits as pyfits
-import pyfits.convenience
+#import pyfits.convenience
 import sys, traceback 
 import numpy as np
 import warnings
@@ -971,7 +971,9 @@ def Manual_InspectFlat_subrout():
     for night in directories:
         print("Working on night : "+night)
         for inpfile,outfile in zip(filelist,outfilelist):
+            print('-*-'*8)
             print('Files in:'+os.path.join(MotherDIR,OUTDIR,night,inpfile))
+            print('-*-'*8)
             inFILE=open(os.path.join(MotherDIR,OUTDIR,night,inpfile),'r')
             ouFILE=open(os.path.join(MotherDIR,OUTDIR,night,outfile),'w')
             AlwaysRemove=[]
