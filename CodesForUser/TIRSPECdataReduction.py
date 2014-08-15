@@ -289,22 +289,11 @@ def Photometry():
         if not os.path.isfile(os.path.join(MotherDIR,OUTDIR,"sextractor.sex")) :  #Incase the parameter file is not already created
             Sextractor_subrout(img=imgline[0])
 
-        subprocess.call(["sex",img,"-c",os.path.join(MotherDIR,OUTDIR,"sextractor.sex"),"-PARAMETERS_NAME",os.path.join(MotherDIR,OUTDIR,"default.param"),"-FILTER_NAME",os.path.join(MotherDIR,OUTDIR,"default.conv"),'-PIXEL_SCALE','0.3'])
 
+        # Calling sextractor for this new image
         N=30  #Number of bright stars to take
-        SExtractCat=ascii.read('test.cat')
-        # Selecting only good stars without any major problems
-        GoodStarCat= SExtractCat[SExtractCat['FLAGS']<2]  # Flag 0 is good and 1 is contaminated by less than 10% in flux by neighbor
-        #Sort in descending order of Flux
-        GoodStarCat.sort('FLUX_AUTO')
-        GoodStarCat.reverse()
-        #Write X and Y coordinates of First N number of brightest stars in text file
-        GoodStarCat['X_IMAGE','Y_IMAGE'][:N].write('Bright{0}.coo'.format(N),format='ascii.no_header')
+        Sextractor_subrout(img=img,N=N,OutFilePrefix='Bright',OutDir='.')
 
-
-#        os.system("sex "+img+" -c "+MotherDIR+"/sextractor.sex -PARAMETERS_NAME "+MotherDIR+"/default.param -FILTER_NAME "+MotherDIR+"/default.conv")
-#        os.system("awk 'NR>7{print $3,$5,$6}' test.cat | sort -nr | head -30 | awk '{print $2,$3}' > Bright30.coo")
-#        os.system("awk 'NR>7{if ($7 == 0){print $3,$5,$6}}' test.cat | sort -nr | cut -d' ' -f 2,3 | head -30 > Bright30.coo")
         #Runing xyxymatch and geo map and geotran to create new SourceT.coo , GoodStarsT.coo, BlankSky.coo
         Nmatch=32
         num_lines=0
@@ -587,24 +576,32 @@ def is_number(s):   # A function to check whether string s is a number or not.
     except ValueError:
         return False
 
-def Sextractor_subrout(img=None,N=30):
+def Sextractor_subrout(img=None,N=30,OutFilePrefix='FirstImageTop',OutDir=None):
     """ Calls the Sextractor and create the sextractor parameter files if it doesn't already exists. And also create coord file of the brightest N=30 number of stars."""
     try :
         subprocess.call(['sex','--version'])
+        SEXTRACTOR= 'sex'
     except OSError:
-        print('ERROR: Cannot find the command: sex')
-        print('SExtractor needs to be installed before running this task')
-        sys.exit(1)
+        try :
+            subprocess.call(['sextractor','--version'])
+            SEXTRACTOR= 'sextractor'
+        except OSError:            
+            print('ERROR: Cannot find the command: sex')
+            print('SExtractor needs to be installed before running this task')
+            sys.exit(1)
 
-    backupPWD=os.getcwd()
-    os.chdir(os.path.join(MotherDIR,OUTDIR))  #Going to output directory of this run.
+    if OutDir is None:
+        OutDir=os.path.join(MotherDIR,OUTDIR)
 
-    if not os.path.isfile("sextractor.sex") : #If a config file doesn't exist already
-        with open('sextractor.sex','w') as sexConfigFile:
-            subprocess.call(['sex','-d'],stdout=sexConfigFile)
-        with open('default.conv','w') as convolutionFile:
+
+    if not os.path.isfile(os.path.join(MotherDIR,OUTDIR,"sextractor.sex")) : #If a config file doesn't exist already
+        with open(os.path.join(MotherDIR,OUTDIR,'sextractor.sex'),'w') as sexConfigFile:
+            subprocess.call([SEXTRACTOR,'-d'],stdout=sexConfigFile)
+        #Change PIXEL_SCALE to 0.3
+        subprocess.call(['sed','-i',"'s/^\(PIXEL_SCALE\s*\)\([0-9]*\.[0-9]*\)/\10.3/'",os.path.join(MotherDIR,OUTDIR,'sextractor.sex')])
+        with open(os.path.join(MotherDIR,OUTDIR,'default.conv'),'w') as convolutionFile:
             convolutionFile.write("""CONV NORM\n# 3x3 ``all-ground'' convolution mask with FWHM = 2 pixels.\n1 2 1\n2 4 2\n1 2 1\n""")
-        with open('default.param','w') as sexCatParamFile:
+        with open(os.path.join(MotherDIR,OUTDIR,'default.param'),'w') as sexCatParamFile:
             sexCatParamFile.write('\n'.join(['NUMBER','FLUXERR_ISO','FLUX_AUTO','FLUXERR_AUTO','X_IMAGE','Y_IMAGE','FLAGS'])+'\n')
         
         print("Sextractor Config file sextractor.sex, default.parm and default.conv created. \n If required u can edit it before calling Photometry")
@@ -625,19 +622,19 @@ def Sextractor_subrout(img=None,N=30):
         img=imgline.split()[0]
         imgfile.close()
 
-    subprocess.call(["sex",img,"-c",os.path.join(MotherDIR,OUTDIR,"sextractor.sex"),"-PARAMETERS_NAME",os.path.join(MotherDIR,OUTDIR,"default.param"),"-FILTER_NAME",os.path.join(MotherDIR,OUTDIR,"default.conv"),'-PIXEL_SCALE','0.3'])
-#    subprocess.call(["sex",img,"-c","sextractor.sex"])
-    SExtractCat=ascii.read('test.cat')
+    subprocess.call([SEXTRACTOR,img,"-c",os.path.join(MotherDIR,OUTDIR,"sextractor.sex"),"-PARAMETERS_NAME",os.path.join(MotherDIR,OUTDIR,"default.param"),"-FILTER_NAME",os.path.join(MotherDIR,OUTDIR,"default.conv"),'-CATALOG_NAME',os.path.join(OutDir,'SextractorOutput.cat')])
+
+    SExtractCat=ascii.read(os.path.join(OutDir,'SextractorOutput.cat'))
     # Selecting only good stars without any major problems
     GoodStarCat= SExtractCat[SExtractCat['FLAGS']<2]  # Flag 0 is good and 1 is contaminated by less than 10% in flux by neighbor
     #Sort in descending order of Flux
     GoodStarCat.sort('FLUX_AUTO')
     GoodStarCat.reverse()
     #Write X and Y coordinates of First N number of brightest stars in text file
-    GoodStarCat['X_IMAGE','Y_IMAGE'][:N].write('FirstImageTop{0}.coo'.format(N),format='ascii.no_header')
-#    os.system("awk 'NR>7{if ($7 == 0){print $3,$5,$6}}' test.cat | sort -nr | cut -d' ' -f 2,3 | head -"+N+" > FirstImageTop"+N+".coo")
-    print("Brightest {0} stars coordinates of first image created in FirstImageTop{0}.coo".format(N))
-    os.chdir(backupPWD)
+    GoodStarCat['X_IMAGE','Y_IMAGE'][:N].write(os.path.join(OutDir,OutFilePrefix+'{0}.coo'.format(N)),format='ascii.no_header')
+
+    print("Brightest {0} stars coordinates of first image created in {1}{0}.coo".format(N,os.path.join(OutDir,OutFilePrefix)))
+
 
 
 def Star_sky_subrout(img=None) :
