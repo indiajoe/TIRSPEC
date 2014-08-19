@@ -408,8 +408,8 @@ def Photometry():
             print('Setting value of FWHM =' + str(fwhm))
             ellipticity=np.median(ellipticitylist)
             print('Setting value of ellipticity =' + str(ellipticity))
-            positionangle=np.median(positionanglelist)
-            print('Setting value of positionangle =' + str(positionangle))
+            positionangle=np.median(positionanglelist)%180   #addition modulo 180 to keep values in 0 to 180 range
+            print('Setting value of positionangle %180 =' + str(positionangle))
             #Calculating sky mean and stdev
             imx=iraf.imexam(input=img,frame=1,use_display=0,defkey='m',imagecur=OriginalIMG+'BlankSky.coo',Stdout=1)
             print imx            #DEBUGGING--------------------------------------**
