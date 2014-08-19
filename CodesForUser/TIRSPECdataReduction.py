@@ -457,7 +457,7 @@ def Photometry():
 
             iraf.findpars.setParam('threshold',threshold)
             iraf.findpars.setParam('ratio',1-ellipticity)  # ellipticity = 1 - b/a
-            iraf.findpars.setParam('theta',positionanglelist)
+            iraf.findpars.setParam('theta',positionangle)
 
             if OriginalIMG == img :
                 TrueSigma=sigma   #Setting the correct sigma of sky
