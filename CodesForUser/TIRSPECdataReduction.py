@@ -476,7 +476,11 @@ def Photometry():
                     gsY=eval(gsY)
                     tablelist.append(magtable[((magtable['XCENTER']-gsX)**2<4) & ((magtable['YCENTER']-gsY)**2<4)]['XCENTER','YCENTER','MAG','ID'])
 
-            goodstarsTable=table.vstack(tablelist)
+            if len(tablelist) > 1 : 
+                goodstarsTable=table.vstack(tablelist)
+            else : 
+                goodstarsTable = tablelist[0]
+
             if DOPSF == 'YES' :  # IF PSF photometry has to be done...
                 #Creating the imcommands file by finding Star IDs
 #                os.system(MotherDIR+'/Finding_StarID_Curser_File.sh ' + img +' '+OriginalIMG+'GoodStars.coo' )  #OLD Way...
@@ -537,7 +541,12 @@ def Photometry():
                         ssX=eval(ssX)
                         ssY=eval(ssY)
                         tablelist.append(alstable[((alstable['XCENTER']-ssX)**2<4) & ((alstable['YCENTER']-ssY)**2<4)]['XCENTER','YCENTER','MAG'])
-                SourcestarsALSTable=table.vstack(tablelist)
+
+                if len(tablelist) > 1 : 
+                    SourcestarsALSTable=table.vstack(tablelist)
+                else:
+                    SourcestarsALSTable=tablelist[0]
+
                 for rows in SourcestarsALSTable: 
                     foo.write(' %f %f %f'%(rows['XCENTER'],rows['YCENTER'],rows['MAG']))
                 foo.write(' | ')  #Adding a separator after Source Mags
@@ -550,7 +559,11 @@ def Photometry():
                         gsY=eval(gsY)
                         tablelist.append(alstable[((alstable['XCENTER']-gsX)**2<4) & ((alstable['YCENTER']-gsY)**2<4)]['XCENTER','YCENTER','MAG'])
 
-                goodstarsALSTable=table.vstack(tablelist)
+                if len(tablelist) > 1 : 
+                    goodstarsALSTable=table.vstack(tablelist)
+                else :
+                    goodstarsALSTable=tablelist[0]
+
                 for rows in goodstarsALSTable:
                     foo.write(' %f %f %f'%(rows['XCENTER'],rows['YCENTER'],rows['MAG']))
                 foo.write(' | ')  #Adding a separator after Good stars X Y Mags
