@@ -17,6 +17,7 @@ import readline
 import shutil
 import subprocess
 import time
+from astropy.time import Time
 
 # Other modules inserted inside the code are
 # pyraf.iraf
@@ -210,6 +211,19 @@ def SpectralPairSubtraction_subrout():
     print('All nights over...')                    
         
 
+def NoOfDaophotApertures(aperture_str):
+    """ Returns the number of appertures daophot generates from daotphot's multiple apperture syntax """
+    NoOfAper=0
+    for aper in aperture_str.split(','):
+        if ':' in aper:
+            # Generate list of apertures from daophot's closed interval range 
+            # syntax ap1:apN:apstep
+            ap1, apN, apstep = (float(i) for i in aper.split(':'))
+            NoOfAper += int((apN - ap1)/apstep) +1
+        else:
+            NoOfAper += 1
+
+    return(NoOfAper)
 
 def Photometry():
     """ Does the photometry of images in MotherDIR/OUTDIR/Images4Photo.in """
@@ -266,9 +280,17 @@ def Photometry():
         filterr=imgline[1]
         intime=imgline[2]
         threshold=imgline[3]
-        StartUT=pyfits.convenience.getval(img,UTHDR)  #Reading from Headers
-        h,m,s=StartUT.split(':')
+        try :
+            DateStr=pyfits.convenience.getval(img,DATEHDR)  #Reading from Headers
+            Year,month,day=DateStr.split('.')
+        except KeyError:    #Old data didn't have this header
+            Year,month,day=wdir[:4],wdir[4:6],wdir[6:8]  # Will work only if the directory was named YYYYMMDD
+
+        StartUTStr=pyfits.convenience.getval(img,UTHDR)  #Reading from Headers
+        h,m,s=StartUTStr.split(':')
         StartUT=int(h)*60*60+int(m)*60+int(s)   #Converting to seconds
+
+        obstime = Time('-'.join([Year,month,day])+' '+StartUTStr, format='iso', scale='utc')
         #Calculate the effective epadu gain for daophot's photometry error estimation
         try :
             ImagesAveraged=int(pyfits.convenience.getval(img,'NCOMBINE'))  #Reading from Headers
@@ -279,7 +301,7 @@ def Photometry():
         print(wdir, img)
         TrueSigma=0.01      #Will be updated later for every img. Here it should be very small quantity
         yxdim=pyfits.getdata(img).shape  #Storing the (Ymax,Xmax) of image
-        leftover=glob.glob(img+'.*')
+        leftover=glob.glob(img+'?*')
         if len(leftover) > 0 :
             if not os.path.isdir('Leftover'): os.makedirs('Leftover') 
             for lft in leftover :
@@ -432,9 +454,28 @@ def Photometry():
             with open(os.path.join(MotherDIR,OUTDIR,OUTPUTfile),'a') as foo:    #Appending into the log file to write output of photometry
                 foo.write(img +'  '+str(round(fwhm,2)) + '  "'+filterr+'"  '+str(intime) +'  '+str(StartUT)+'  '+ str(round(mean,3)) +'  ' + str(round(sigma,3)) +'  '+str(round(datamin,3)) + ' | ')
 
+            #Creating a full table with same information
+            FullOutputTable = Table([[obstime.iso.split()[0]], [obstime.iso.split()[1]], [obstime.jd]], names=('Date', 'UT', 'JD'))
+            FullOutputTable['Filter'] = filterr
+            FullOutputTable['ExpTime'] = intime
+            FullOutputTable['FWHM'] = round(fwhm,2)
+            FullOutputTable['Ellipticity'] = round(ellipticity,3)
+            FullOutputTable['PositionAngle'] = round(positionangle,1)
+            FullOutputTable['SkyMean'] = round(mean,3)
+            FullOutputTable['SkySigma'] = round(sigma,3)
+            FullOutputTable['Datamin'] = round(datamin,3)
+            FullOutputTable['ReadNoise'] = READNOISE
+            FullOutputTable['GainEffective'] = EffectiveGain
+            FullOutputTable['SkyAnnulus'] = eval(ANNULUS)
+            FullOutputTable['SkyDannulus'] = eval(DANNULUS)
+            FullOutputTable['Threshold'] = threshold
+
             #Now starts photometry processes....
             # First is daopar, Press :w then :q to continue if everything is fine
             psfradi= 4*fwhm +1
+
+#            aperture = eval(APERTURE)  # 4*fwhm
+            aperture = ','.join([':'.join([str(eval(x)) for x in y.split(':')]) for y in APERTURE.split(',')])  #For multiple apperture syntax
 
             iraf.daopars.setParam('matchrad',fwhm)
             iraf.daopars.setParam('psfrad',psfradi)
@@ -452,7 +493,6 @@ def Photometry():
             iraf.fitskypar.setParam('annulus',eval(ANNULUS))
             iraf.fitskypar.setParam('dannulu',eval(DANNULUS))
             
-            aperture = eval(APERTURE)  # 4*fwhm
             iraf.photpar.setParam('apertur',aperture)
 
             iraf.findpars.setParam('threshold',threshold)
@@ -467,14 +507,28 @@ def Photometry():
             #Going forward to do phot
             iraf.phot(image=img,coords="default",output="default",verify=VER)
 
-            magtable=ascii.read(img+'.mag.1')
+            magtable=ascii.read(img+'.mag.1',format='ascii.daophot')
+            aperheader = magtable.meta['keywords']['APERTURES']['value']
+            NoOfAper = NoOfDaophotApertures(aperheader)  #Number of daophot appertures
+            FullOutputTable['NoOfAper'] = NoOfAper
             with open(OriginalIMG+'GoodStars.coo','r') as goodstarsFILE :
                 tablelist=[]
-                for goodstarXY in goodstarsFILE:
+                for SiD,goodstarXY in zip(starlist.strip('_').split('_'), goodstarsFILE):
                     gsX,gsY=goodstarXY.rstrip().split()
                     gsX=eval(gsX)
                     gsY=eval(gsY)
-                    tablelist.append(magtable[((magtable['XCENTER']-gsX)**2<4) & ((magtable['YCENTER']-gsY)**2<4)]['XCENTER','YCENTER','MAG','ID'])
+                    Starsmagtable= magtable[((magtable['XCENTER']-gsX)**2<4) & ((magtable['YCENTER']-gsY)**2<4)]
+                    tablelist.append(Starsmagtable['XCENTER','YCENTER','MAG','ID'])
+                    #Adding to Full output table
+                    FullOutputTable['GoodStarS'+SiD+'_XCENTER']= Starsmagtable['XCENTER']
+                    FullOutputTable['GoodStarS'+SiD+'_YCENTER']= Starsmagtable['YCENTER']
+                    FullOutputTable['GoodStarS'+SiD+'_RAPERT1']= Starsmagtable['RAPERT']
+                    FullOutputTable['GoodStarS'+SiD+'_MAG1']= Starsmagtable['MAG']
+                    FullOutputTable['GoodStarS'+SiD+'_MERR1']= Starsmagtable['MERR']
+                    for i in range(2,NoOfAper+1): #For appertures more than 1
+                        FullOutputTable['GoodStarS'+SiD+'_RAPERT'+str(i)]= Starsmagtable['RAPERT'+str(i)]
+                        FullOutputTable['GoodStarS'+SiD+'_MAG'+str(i)]= Starsmagtable['MAG'+str(i)]
+                        FullOutputTable['GoodStarS'+SiD+'_MERR'+str(i)]= Starsmagtable['MERR'+str(i)]
 
             if len(tablelist) > 1 : 
                 goodstarsTable=table.vstack(tablelist)
@@ -500,13 +554,29 @@ def Photometry():
             #Doing the phot again on Source, Just in case Daofind didn't detect it and Good stars...
             iraf.datapar.setParam('datamin',mean-5*max(sigma,TrueSigma))
             iraf.phot(image=img,coords=OriginalIMG+'Source.coo',output="default",verify=VER)
-            Sourcemagtable=ascii.read(img+'.mag.2')
+            Sourcemagtable=ascii.read(img+'.mag.2',format='ascii.daophot')
+            aperheader = Sourcemagtable.meta['keywords']['APERTURES']['value']
+            NoOfAper = NoOfDaophotApertures(aperheader)  #Number of daophot appertures
+            #Adding to Full output table
+            for SiD, rows in enumerate(Sourcemagtable):  #Source Mags
+                SiD = str(SiD +1)
+                FullOutputTable['SourceS'+SiD+'_XCENTER']= rows['XCENTER']
+                FullOutputTable['SourceS'+SiD+'_YCENTER']= rows['YCENTER']
+                FullOutputTable['SourceS'+SiD+'_RAPERT1']= rows['RAPERT']
+                FullOutputTable['SourceS'+SiD+'_MAG1']= rows['MAG']
+                FullOutputTable['SourceS'+SiD+'_MERR1']= rows['MERR']
+                for i in range(2,NoOfAper+1): #For appertures more than 1
+                    FullOutputTable['SourceS'+SiD+'_RAPERT'+str(i)]= rows['RAPERT'+str(i)]
+                    FullOutputTable['SourceS'+SiD+'_MAG'+str(i)]= rows['MAG'+str(i)]
+                    FullOutputTable['SourceS'+SiD+'_MERR'+str(i)]= rows['MERR'+str(i)]
+
 #            iraf.phot(image=img,coords=OriginalIMG+'GoodStars.coo',output="default",verify=VER)
 #            SecondPhotresults=iraf.txdump(textfiles=img+".mag.2",fields="XCENTER,YCENTER,MAG",expr="yes",Stdout=1)
 #            SecondPhotresults.extend(iraf.txdump(textfiles=img+".mag.3",fields="XCENTER,YCENTER,MAG",expr="yes",Stdout=1))
 
             iraf.hedit(img, "intime", intime, add=1, ver=0)
             #Doing qphot at all the points in qphotinput.txt with the corresponding parameters.
+            NoOfQphots=0
             if QPHOT_todo=='Y' :  #If there exist some qphot sources
                 foo=open(OriginalIMG+"qphotinput.txt",'r')
                 for qphotobj in foo:
@@ -516,6 +586,7 @@ def Photometry():
                         foo2.write(obj[0]+'  '+obj[1])
 
                     iraf.qphot(image=img , coords='qphotSource.Tcoo', cbox=5, annulus=obj[3], dannulus=obj[4], aperture=obj[2], exposur="intime", epadu=EffectiveGain ,interactive=0 )
+                    NoOfQphots += 1
                 
                 foo.close()
             #Now, Writing the Mag to output file
@@ -523,24 +594,57 @@ def Photometry():
 #            os.system(MotherDIR+'/Creating_Log_File.sh '+img+' '+OriginalIMG+'GoodStars.coo'+' '+OriginalIMG+'Source.coo'+' '+MotherDIR+'/'+OUTPUTfile ) 
 
             #First append the qphot magnitudes to the Photometry output file
-            magfiles=glob.glob(img+'.mag.*')
-            magfiles.sort()
-            for filemag in magfiles:
-                if eval(filemag.split('.')[-1]) > 2 : # The qphot output files
-                    qphottable=ascii.read(filemag)
-                    foo.write(' {0}'.format(qphottable['MAG'][-1])) #Writing the last Mag in file
+            for i in range(NoOfQphots):
+                filemag=img+'.mag.'+str(i+3)
+                qphottable=ascii.read(filemag,format='ascii.daophot')
+                foo.write(' {0}'.format(qphottable['MAG'][-1])) #Writing the last Mag in file
+
+                aperheaderQphot = qphottable.meta['keywords']['APERTURES']['value']
+                NoOfQphotAper = NoOfDaophotApertures(aperheaderQphot)  #Number of qphot appertures
+                #Adding to Full output table
+                FullOutputTable['QphotS'+str(i+1)+'_SKYANNUL'] = qphottable.meta['keywords']['ANNULUS']['value']
+                FullOutputTable['QphotS'+str(i+1)+'_SKYDANNUL'] = qphottable.meta['keywords']['DANNULUS']['value']
+                FullOutputTable['QphotS'+str(i+1)+'_XCENTER']= qphottable['XCENTER'][-1]
+                FullOutputTable['QphotS'+str(i+1)+'_YCENTER']= qphottable['YCENTER'][-1]
+                FullOutputTable['QphotS'+str(i+1)+'_RAPERT1']= qphottable['RAPERT'][-1]
+                FullOutputTable['QphotS'+str(i+1)+'_MAG1']= qphottable['MAG'][-1]
+                FullOutputTable['QphotS'+str(i+1)+'_MERR1']= qphottable['MERR'][-1]
+                for j in range(2,NoOfQphotAper+1): #For appertures more than 1
+                    FullOutputTable['QphotS'+str(i+1)+'_RAPERT'+str(j)]= qphottable['RAPERT'+str(j)][-1]
+                    FullOutputTable['QphotS'+str(i+1)+'_MAG'+str(j)]= qphottable['MAG'+str(j)][-1]
+                    FullOutputTable['QphotS'+str(i+1)+'_MERR'+str(j)]= qphottable['MERR'+str(j)][-1]
+                
+
+#            magfiles=glob.glob(img+'.mag.*')
+#            magfiles.sort()
+#            for filemag in magfiles:
+#                if eval(filemag.split('.')[-1]) > 2 : # The qphot output files
+#                    qphottable=ascii.read(filemag)
+#                    foo.write(' {0}'.format(qphottable['MAG'][-1])) #Writing the last Mag in file
+
             foo.write(' | ')  #Adding a separator after qphot mags
             # If PSF photometry as done, adding those mags to the file.
             if DOPSF == 'YES' :  # IF PSF photometry was done...
                 #First the mags of Source stars
-                alstable=ascii.read(img+'.als.1')
+                alstable=ascii.read(img+'.als.1',format='ascii.daophot')
+                FullOutputTable['PSFRAD'] = alstable.meta['keywords']['PSFRAD']['value']
+                FullOutputTable['PSFFITRAD'] = alstable.meta['keywords']['FITRAD']['value']
                 with open(OriginalIMG+'Source.coo','r') as SourcestarsFILE :
                     tablelist=[]
-                    for sourstarXY in SourcestarsFILE:
+                    for SiD, sourstarXY in enumerate(SourcestarsFILE):
+                        SiD = str(SiD +1)
                         ssX,ssY=sourstarXY.rstrip().split()
                         ssX=eval(ssX)
                         ssY=eval(ssY)
-                        tablelist.append(alstable[((alstable['XCENTER']-ssX)**2<4) & ((alstable['YCENTER']-ssY)**2<4)]['XCENTER','YCENTER','MAG'])
+                        Starsalstable= alstable[((alstable['XCENTER']-ssX)**2<4) & ((alstable['YCENTER']-ssY)**2<4)]
+                        tablelist.append(Starsalstable['XCENTER','YCENTER','MAG'])
+                        #Adding to Full output table
+                        FullOutputTable['SourceS'+SiD+'_PSFXCENTER']= Starsalstable['XCENTER']
+                        FullOutputTable['SourceS'+SiD+'_PSFYCENTER']= Starsalstable['YCENTER']
+                        FullOutputTable['SourceS'+SiD+'_PSFMAG']= Starsalstable['MAG']
+                        FullOutputTable['SourceS'+SiD+'_PSFMERR']= Starsalstable['MERR']
+                        FullOutputTable['SourceS'+SiD+'_PSFCHI']= Starsalstable['CHI']
+                        
 
                 if len(tablelist) > 1 : 
                     SourcestarsALSTable=table.vstack(tablelist)
@@ -553,11 +657,18 @@ def Photometry():
                 #Now the psf magnitudes of the good stars
                 with open(OriginalIMG+'GoodStars.coo','r') as goodstarsFILE :
                     tablelist=[]
-                    for goodstarXY in goodstarsFILE:
+                    for SiD,goodstarXY in zip(starlist.strip('_').split('_'), goodstarsFILE):
                         gsX,gsY=goodstarXY.rstrip().split()
                         gsX=eval(gsX)
                         gsY=eval(gsY)
-                        tablelist.append(alstable[((alstable['XCENTER']-gsX)**2<4) & ((alstable['YCENTER']-gsY)**2<4)]['XCENTER','YCENTER','MAG'])
+                        Starsalstable= alstable[((alstable['XCENTER']-gsX)**2<4) & ((alstable['YCENTER']-gsY)**2<4)]
+                        tablelist.append(Starsalstable['XCENTER','YCENTER','MAG'])
+                        #Adding to Full output table
+                        FullOutputTable['GoodStarS'+SiD+'_PSFXCENTER']= Starsalstable['XCENTER']
+                        FullOutputTable['GoodStarS'+SiD+'_PSFYCENTER']= Starsalstable['YCENTER']
+                        FullOutputTable['GoodStarS'+SiD+'_PSFMAG']= Starsalstable['MAG']
+                        FullOutputTable['GoodStarS'+SiD+'_PSFMERR']= Starsalstable['MERR']
+                        FullOutputTable['GoodStarS'+SiD+'_PSFCHI']= Starsalstable['CHI']
 
                 if len(tablelist) > 1 : 
                     goodstarsALSTable=table.vstack(tablelist)
@@ -581,6 +692,18 @@ def Photometry():
 
             foo.write(' '+starlist+' \n') # Ending this image line with Good star's ID.
             foo.close()
+
+            # Now also append the Full output table also to an ascii file.
+            FullOutputTable['Image'] = img
+            try :
+                PreviousFullTable = ascii.read(os.path.join(MotherDIR,OUTDIR,OUTPUTfile+'_FullOutput.txt'),delimiter='|',format='ascii.commented_header')
+            except IOError :
+                print('No previous photometry output found, hence we will be creating a new file.')
+                OutputTableToWrite = FullOutputTable
+            else :
+                OutputTableToWrite = table.vstack([PreviousFullTable,FullOutputTable], join_type='outer')
+            # Writing the final appended table
+            ascii.write(OutputTableToWrite, os.path.join(MotherDIR,OUTDIR,OUTPUTfile+'_FullOutput.txt'),delimiter='|',format='ascii.commented_header')
            
             print ("Photometry of "+img+" over. \n Now proceeding to next image")
             #END of the photometry of convolved images set..
@@ -649,7 +772,7 @@ def Sextractor_subrout(img=None,N=30,OutFilePrefix='FirstImageTop',OutDir=None):
 
     subprocess.call([SEXTRACTOR,img,"-c",os.path.join(MotherDIR,OUTDIR,"sextractor.sex"),"-PARAMETERS_NAME",os.path.join(MotherDIR,OUTDIR,"default.param"),"-FILTER_NAME",os.path.join(MotherDIR,OUTDIR,"default.conv"),'-CATALOG_NAME',os.path.join(OutDir,'SextractorOutput.cat')])
 
-    SExtractCat=ascii.read(os.path.join(OutDir,'SextractorOutput.cat'))
+    SExtractCat=ascii.read(os.path.join(OutDir,'SextractorOutput.cat'),format='ascii.sextractor')
     # Selecting only good stars without any major problems
     GoodStarCat= SExtractCat[SExtractCat['FLAGS']<2]  # Flag 0 is good and 1 is contaminated by less than 10% in flux by neighbor
     #Sort in descending order of Flux
@@ -1386,6 +1509,9 @@ if __name__ == "__main__":
                 FILTERHDR=con.split()[1]
             elif con.split()[0] == "UT=" :
                 UTHDR=con.split()[1]
+            elif con.split()[0] == "ODATE=" :
+                DATEHDR=con.split()[1]
+
             elif con.split()[0] == "OBJECT=" :
                 OBJECTHDR=con.split()[1]
             elif con.split()[0] == "COMMENT=" :
