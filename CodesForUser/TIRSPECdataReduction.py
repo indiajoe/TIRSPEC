@@ -278,8 +278,8 @@ def Photometry():
         
         img=imgline[0].split('/')[-1]
         filterr=imgline[1]
-        intime=imgline[2]
-        threshold=imgline[3]
+        intime=float(imgline[2])
+        threshold=float(imgline[3])
         try :
             DateStr=pyfits.convenience.getval(img,DATEHDR)  #Reading from Headers
             Year,month,day=DateStr.split('.')
@@ -422,8 +422,8 @@ def Photometry():
             i=3
             while i < len(imx) :               
                 fwhmlist.append(eval(imx[i].split()[10]))
-                ellipticitylist.append(eval(imx[i].split()[5]))
-                positionanglelist.append(eval(imx[i].split()[6]))
+                if imx[i].split()[5] != 'INDEF' : ellipticitylist.append(eval(imx[i].split()[5]))
+                if imx[i].split()[6] != 'INDEF' : positionanglelist.append(eval(imx[i].split()[6]))
                 i=i+2
             #Median FWHM is
             fwhm=np.median(fwhmlist)  
@@ -455,7 +455,7 @@ def Photometry():
                 foo.write(img +'  '+str(round(fwhm,2)) + '  "'+filterr+'"  '+str(intime) +'  '+str(StartUT)+'  '+ str(round(mean,3)) +'  ' + str(round(sigma,3)) +'  '+str(round(datamin,3)) + ' | ')
 
             #Creating a full table with same information
-            FullOutputTable = Table([[obstime.iso.split()[0]], [obstime.iso.split()[1]], [obstime.jd]], names=('Date', 'UT', 'JD'))
+            FullOutputTable = table.Table([[obstime.iso.split()[0]], [obstime.iso.split()[1]], [obstime.jd]], names=('Date', 'UT', 'JD'),masked=True)
             FullOutputTable['Filter'] = filterr
             FullOutputTable['ExpTime'] = intime
             FullOutputTable['FWHM'] = round(fwhm,2)
@@ -507,13 +507,13 @@ def Photometry():
             #Going forward to do phot
             iraf.phot(image=img,coords="default",output="default",verify=VER)
 
-            magtable=ascii.read(img+'.mag.1',format='ascii.daophot')
+            magtable=ascii.read(img+'.mag.1',format='daophot')
             aperheader = magtable.meta['keywords']['APERTURES']['value']
             NoOfAper = NoOfDaophotApertures(aperheader)  #Number of daophot appertures
             FullOutputTable['NoOfAper'] = NoOfAper
             with open(OriginalIMG+'GoodStars.coo','r') as goodstarsFILE :
                 tablelist=[]
-                for SiD,goodstarXY in zip(starlist.strip('_').split('_'), goodstarsFILE):
+                for SiD,goodstarXY in zip(starlist.strip().strip('_').split('_'), goodstarsFILE):
                     gsX,gsY=goodstarXY.rstrip().split()
                     gsX=eval(gsX)
                     gsY=eval(gsY)
@@ -554,7 +554,7 @@ def Photometry():
             #Doing the phot again on Source, Just in case Daofind didn't detect it and Good stars...
             iraf.datapar.setParam('datamin',mean-5*max(sigma,TrueSigma))
             iraf.phot(image=img,coords=OriginalIMG+'Source.coo',output="default",verify=VER)
-            Sourcemagtable=ascii.read(img+'.mag.2',format='ascii.daophot')
+            Sourcemagtable=ascii.read(img+'.mag.2',format='daophot')
             aperheader = Sourcemagtable.meta['keywords']['APERTURES']['value']
             NoOfAper = NoOfDaophotApertures(aperheader)  #Number of daophot appertures
             #Adding to Full output table
@@ -596,14 +596,14 @@ def Photometry():
             #First append the qphot magnitudes to the Photometry output file
             for i in range(NoOfQphots):
                 filemag=img+'.mag.'+str(i+3)
-                qphottable=ascii.read(filemag,format='ascii.daophot')
+                qphottable=ascii.read(filemag,format='daophot')
                 foo.write(' {0}'.format(qphottable['MAG'][-1])) #Writing the last Mag in file
 
                 aperheaderQphot = qphottable.meta['keywords']['APERTURES']['value']
                 NoOfQphotAper = NoOfDaophotApertures(aperheaderQphot)  #Number of qphot appertures
                 #Adding to Full output table
-                FullOutputTable['QphotS'+str(i+1)+'_SKYANNUL'] = qphottable.meta['keywords']['ANNULUS']['value']
-                FullOutputTable['QphotS'+str(i+1)+'_SKYDANNUL'] = qphottable.meta['keywords']['DANNULUS']['value']
+                FullOutputTable['QphotS'+str(i+1)+'_SKYANNUL'] = float(qphottable.meta['keywords']['ANNULUS']['value'])
+                FullOutputTable['QphotS'+str(i+1)+'_SKYDANNUL'] = float(qphottable.meta['keywords']['DANNULUS']['value'])
                 FullOutputTable['QphotS'+str(i+1)+'_XCENTER']= qphottable['XCENTER'][-1]
                 FullOutputTable['QphotS'+str(i+1)+'_YCENTER']= qphottable['YCENTER'][-1]
                 FullOutputTable['QphotS'+str(i+1)+'_RAPERT1']= qphottable['RAPERT'][-1]
@@ -626,9 +626,9 @@ def Photometry():
             # If PSF photometry as done, adding those mags to the file.
             if DOPSF == 'YES' :  # IF PSF photometry was done...
                 #First the mags of Source stars
-                alstable=ascii.read(img+'.als.1',format='ascii.daophot')
-                FullOutputTable['PSFRAD'] = alstable.meta['keywords']['PSFRAD']['value']
-                FullOutputTable['PSFFITRAD'] = alstable.meta['keywords']['FITRAD']['value']
+                alstable=ascii.read(img+'.als.1',format='daophot')
+                FullOutputTable['PSFRAD'] = float(alstable.meta['keywords']['PSFRAD']['value'])
+                FullOutputTable['PSFFITRAD'] = float(alstable.meta['keywords']['FITRAD']['value'])
                 with open(OriginalIMG+'Source.coo','r') as SourcestarsFILE :
                     tablelist=[]
                     for SiD, sourstarXY in enumerate(SourcestarsFILE):
@@ -657,7 +657,7 @@ def Photometry():
                 #Now the psf magnitudes of the good stars
                 with open(OriginalIMG+'GoodStars.coo','r') as goodstarsFILE :
                     tablelist=[]
-                    for SiD,goodstarXY in zip(starlist.strip('_').split('_'), goodstarsFILE):
+                    for SiD,goodstarXY in zip(starlist.strip().strip('_').split('_'), goodstarsFILE):
                         gsX,gsY=goodstarXY.rstrip().split()
                         gsX=eval(gsX)
                         gsY=eval(gsY)
@@ -696,14 +696,14 @@ def Photometry():
             # Now also append the Full output table also to an ascii file.
             FullOutputTable['Image'] = img
             try :
-                PreviousFullTable = ascii.read(os.path.join(MotherDIR,OUTDIR,OUTPUTfile+'_FullOutput.txt'),delimiter='|',format='ascii.commented_header')
+                PreviousFullTable = ascii.read(os.path.join(MotherDIR,OUTDIR,OUTPUTfile+'_FullOutput.txt'),delimiter='|',format='commented_header',fill_values=('--','0'))
             except IOError :
                 print('No previous photometry output found, hence we will be creating a new file.')
                 OutputTableToWrite = FullOutputTable
             else :
                 OutputTableToWrite = table.vstack([PreviousFullTable,FullOutputTable], join_type='outer')
             # Writing the final appended table
-            ascii.write(OutputTableToWrite, os.path.join(MotherDIR,OUTDIR,OUTPUTfile+'_FullOutput.txt'),delimiter='|',format='ascii.commented_header')
+            ascii.write(OutputTableToWrite, os.path.join(MotherDIR,OUTDIR,OUTPUTfile+'_FullOutput.txt'),delimiter='|',format='commented_header')
            
             print ("Photometry of "+img+" over. \n Now proceeding to next image")
             #END of the photometry of convolved images set..
@@ -772,7 +772,7 @@ def Sextractor_subrout(img=None,N=30,OutFilePrefix='FirstImageTop',OutDir=None):
 
     subprocess.call([SEXTRACTOR,img,"-c",os.path.join(MotherDIR,OUTDIR,"sextractor.sex"),"-PARAMETERS_NAME",os.path.join(MotherDIR,OUTDIR,"default.param"),"-FILTER_NAME",os.path.join(MotherDIR,OUTDIR,"default.conv"),'-CATALOG_NAME',os.path.join(OutDir,'SextractorOutput.cat')])
 
-    SExtractCat=ascii.read(os.path.join(OutDir,'SextractorOutput.cat'),format='ascii.sextractor')
+    SExtractCat=ascii.read(os.path.join(OutDir,'SextractorOutput.cat'),format='sextractor')
     # Selecting only good stars without any major problems
     GoodStarCat= SExtractCat[SExtractCat['FLAGS']<2]  # Flag 0 is good and 1 is contaminated by less than 10% in flux by neighbor
     #Sort in descending order of Flux
@@ -1486,11 +1486,11 @@ if __name__ == "__main__":
                 SpecBadPixelMaskName=con.split()[1]
         
             elif con.split()[0] == "THRESHOLD=" :
-                threshold=con.split()[1]
+                threshold=float(con.split()[1])
             elif con.split()[0] == "EPADU=" :
                 EPADU=float(con.split()[1])
             elif con.split()[0] == "READNOISE=" :
-                READNOISE=con.split()[1]
+                READNOISE=float(con.split()[1])
             elif con.split()[0] == "DATAMAX=" :
                 DATAMAX=con.split()[1]
             elif con.split()[0] == "XYMATCHMIN=" :
