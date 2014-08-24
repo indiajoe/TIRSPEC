@@ -518,6 +518,11 @@ def Photometry():
                     gsX=eval(gsX)
                     gsY=eval(gsY)
                     Starsmagtable= magtable[((magtable['XCENTER']-gsX)**2<4) & ((magtable['YCENTER']-gsY)**2<4)]
+                    if len(Starsmagtable) > 1 :
+                        print('**WARNING** : More than two stars detected for Good Star No:{0} in magfile'.format(SiD))
+                        print('Taking only the first detection to Output table')
+                        Starsmagtable = Starsmagtable[0:1]
+
                     tablelist.append(Starsmagtable['XCENTER','YCENTER','MAG','ID'])
                     #Adding to Full output table
                     FullOutputTable['GoodStarS'+SiD+'_XCENTER']= Starsmagtable['XCENTER']
