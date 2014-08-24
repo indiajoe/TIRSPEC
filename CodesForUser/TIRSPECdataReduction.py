@@ -986,6 +986,34 @@ def FixBadPixels(images,nightdir):
     iraf.fixpix.unlearn()
     iraf.fixpix(images=images,masks=PixelMask)
 
+def ImgCombineWithZeroFloating(imglistfname,outputfile,cmethod="median",czero="median",creject="avgsigclip",cstatsection='[200:800,200:800]'):
+    """ Returns the combined image with actuall average median flux, It does zero scaleing only for sigma rejection of stars. This is needed to remove faint stars in rejection algorithm when the background sky itself is varying from frame to frame. """
+    Xmin=float(cstatsection[1:-1].split(',')[0].split(':')[0])  #Everything now in fits coordinates
+    Xmax=float(cstatsection[1:-1].split(',')[0].split(':')[1])
+    Ymin=float(cstatsection[1:-1].split(',')[1].split(':')[0])
+    Ymax=float(cstatsection[1:-1].split(',')[1].split(':')[1])
+
+    if czero == "median" : statfunction = np.median
+    elif czero == "average" : statfunction = np.mean
+    else : 
+        print('Error: cmethod should be median or average. Unknonwn option {0}'.format(czero))
+        raise
+
+    with open(imglistfname,'r') as imgfile:
+        statlist=[]
+        for img in imgfile:
+            img = img.rstrip()
+            statlist.append(statfunction(pyfits.getdata(img)[Ymin-1:Ymax,Xmin-1:Xmax]))
+    print('{0} of images: {1}'.format(czero,str(statlist)))
+    Zeroshifts= np.array(statlist) - statlist[0]
+    AvgZeroshift= np.mean(Zeroshifts)
+    print('Zeroshifts of images: {0} :: Avg ={1}'.format(str(Zeroshifts),AvgZeroshift))
+    # Now call iraf imcombine with zero scaling
+    iraf.imcombine(input='@'+imglistfname, output=outputfile+'_Temp.fits', combine=cmethod, reject=creject, statsec=cstatsection, zero=czero)
+    print('Subtracting the Average Zero shift')
+    iraf.imarith(operand1=outputfile+'_Temp.fits',op="+",operand2=AvgZeroshift,result=outputfile)
+    
+
 def CombDith_FlatCorr_subrout(method="median",FullFlatStatSection='[200:800,200:800]',YJFlatStatSection='[200:800,200:800]',HKFlatStatSection='[307:335,658:716]',SSFlatStatSection='[200:800,200:800]'):
     """ This will combine (default=median) with avsigclip the images in single dither and also create corresponding normalized flats [,sky] and divide[,subtract] for flat [,sky] correction """
     iraf.imcombine.unlearn()
@@ -1076,7 +1104,8 @@ def CombDith_FlatCorr_subrout(method="median",FullFlatStatSection='[200:800,200:
             #If we are subtracting sky, doing it before flat fielding.
             if SEPARATESKY=='Y':
                 outskyname=os.path.join(MotherDIR,OUTDIR,night,OutCombimg[:-5]+'_sky.fits')
-                iraf.imcombine (input='@'+imgskylistfname, output=outskyname, combine="median",reject="pclip")
+                ImgCombineWithZeroFloating(imgskylistfname,outskyname,cmethod="median",czero="median",creject="pclip",cstatsection=FlatStatSection)
+#                iraf.imcombine (input='@'+imgskylistfname, output=outskyname, combine="median",reject="pclip")
                 #Now subtract the sky form the science frame
                 OutSSimg=OutCombimg[:-5]+'_SS.fits'
                 iraf.imarith(operand1=os.path.join(MotherDIR,OUTDIR,night,OutCombimg),op="-",operand2=outskyname,result=os.path.join(MotherDIR,OUTDIR,night,OutSSimg))
