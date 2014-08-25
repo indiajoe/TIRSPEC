@@ -502,6 +502,39 @@ def Photometry():
             if OriginalIMG == img :
                 TrueSigma=sigma   #Setting the correct sigma of sky
                 iraf.daofind(image=img,output="default",verify=VER)
+                # Check GoodStars and Source are identified in daofind. else add forcefully
+                cootable= ascii.read(img+'.coo.1',format='daophot')
+                with open(OriginalIMG+'GoodStars.coo','r') as goodstarsFILE :
+                    for SiD,goodstarXY in zip(starlist.strip().strip('_').split('_'), goodstarsFILE):
+                        gsX,gsY=goodstarXY.rstrip().split()
+                        gsX=eval(gsX)
+                        gsY=eval(gsY)
+                        NoOfStarcoo= len(cootable[((cootable['XCENTER']-gsX)**2<4) & ((cootable['YCENTER']-gsY)**2<4)])
+                        if NoOfStarcoo == 0: # Star missing in output coo file
+                            print('**ERROR** : Something wrong with Good Star No:{0}'.format(SiD))
+                            print('It is missing from the daofind output .coo.1')
+                            print('Adding it forcefully into the .coo.1 file')
+                            with open(img+'.coo.1','a') as CooOfstarsFILE :
+                                CooOfstarsFILE.write(' {0} {1} \n'.format(gsX,gsY))
+                        elif NoOfStarcoo > 1 :
+                            print('**Warning** : {0} Multiple detection of Good Star No:{1}'.format(NoOfStarcoo,SiD))
+                # Simillarly also add any missing Primary Source
+                with open(OriginalIMG+'Source.coo','r') as SourcestarsFILE :
+                    for SiD,SourcestarXY in enumerate(SourcestarsFILE):
+                        psX,psY=SourcestarXY.rstrip().split()
+                        psX=eval(psX)
+                        psY=eval(psY)
+                        NoOfStarcoo= len(cootable[((cootable['XCENTER']-psX)**2<4) & ((cootable['YCENTER']-psY)**2<4)])
+                        if NoOfStarcoo == 0: # Star missing in output coo file
+                            print('**ERROR** : Something wrong with Primary Source No:{0}'.format(SiD+1))
+                            print('It is missing from the daofind output .coo.1')
+                            print('Adding it forcefully into the .coo.1 file')
+                            with open(img+'.coo.1','a') as CooOfstarsFILE :
+                                CooOfstarsFILE.write(' {0} {1} \n'.format(psX,psY))
+                        elif NoOfStarcoo > 1 :
+                            print('**Warning** : {0} Multiple detection of Primary Source No:{1}'.format(NoOfStarcoo,SiD+1))
+                            
+                
             else :
                 shutil.copy(OriginalIMG+'.coo.1',img+'.coo.1')
             #Going forward to do phot
