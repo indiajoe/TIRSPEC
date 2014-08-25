@@ -19,6 +19,7 @@ if len(sys.argv) < 3 or not os.path.isdir(sys.argv[1]):
 #import pyfits
 import astropy.io.fits as pyfits
 from pyraf import iraf
+iraf.imexamine.unlearn()
 
 pwd=os.getcwd()
 wildcard=sys.argv[-1]
