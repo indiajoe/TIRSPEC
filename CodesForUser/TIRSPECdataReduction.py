@@ -1034,7 +1034,7 @@ def ImgCombineWithZeroFloating(imglistfname,outputfile,cmethod="median",czero="m
     if czero == "median" : statfunction = np.median
     elif czero == "average" : statfunction = np.mean
     else : 
-        print('Error: cmethod should be median or average. Unknonwn option {0}'.format(czero))
+        print('Error: czero should be median or average. Unknown option {0}'.format(czero))
         raise
 
     with open(imglistfname,'r') as imgfile:
@@ -1043,13 +1043,14 @@ def ImgCombineWithZeroFloating(imglistfname,outputfile,cmethod="median",czero="m
             img = img.rstrip()
             statlist.append(statfunction(pyfits.getdata(img)[Ymin-1:Ymax,Xmin-1:Xmax]))
     print('{0} of images: {1}'.format(czero,str(statlist)))
-    Zeroshifts= np.array(statlist) - statlist[0]
-    AvgZeroshift= np.mean(Zeroshifts)
-    print('Zeroshifts of images: {0} :: Avg ={1}'.format(str(Zeroshifts),AvgZeroshift))
+    statAvg=np.mean(statlist)
+    Zeroshifts= statAvg - np.array(statlist)
+    print('Zeroshifts of images: {0} :: ImgAvg ={1}'.format(str(Zeroshifts),statAvg))
+    with open(outputfile+'_zeroshifts.txt','w') as zeroshiftFILE:
+        for shift in Zeroshifts: 
+            zeroshiftFILE.write('{0} \n'.format(shift))
     # Now call iraf imcombine with zero scaling
-    iraf.imcombine(input='@'+imglistfname, output=outputfile+'_Temp.fits', combine=cmethod, reject=creject, statsec=cstatsection, zero=czero)
-    print('Subtracting the Average Zero shift')
-    iraf.imarith(operand1=outputfile+'_Temp.fits',op="+",operand2=AvgZeroshift,result=outputfile)
+    iraf.imcombine(input='@'+imglistfname, output=outputfile, combine=cmethod, reject=creject, statsec=cstatsection, zero='@'+outputfile+'_zeroshifts.txt')
     
 
 def CombDith_FlatCorr_subrout(method="median",FullFlatStatSection='[200:800,200:800]',YJFlatStatSection='[200:800,200:800]',HKFlatStatSection='[307:335,658:716]',SSFlatStatSection='[200:800,200:800]'):
