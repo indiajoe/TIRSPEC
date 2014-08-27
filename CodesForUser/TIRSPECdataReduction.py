@@ -1537,6 +1537,19 @@ if __name__ == "__main__":
         print ("Error: Cannot open the file "+sys.argv[1]+". Setup the config file based on TIRSPECscript.conf file correctly, before running the script.")
         sys.exit(1)
 
+    Banner="""
+___________._____________  _______________________________________  
+\__    ___/|   \______   \/   _____/\______   \_   _____/\_   ___ \ 
+  |    |   |   ||       _/\_____  \  |     ___/|    __)_ /    \  \/ 
+  |    |   |   ||    |   \/        \ |    |    |        \\     \____
+  |____|   |___||____|_  /_______  / |____|   /_______  / \______  /
+                       \/        \/                   \/         \/ 
+
+                                          Data Reduction Pipeline...
+"""
+    print(Banner)  # Ascii art courtesy : http://patorjk.com/software/taag/
+
+
     for con in configfile:
         con=con.rstrip()
         if len(con.split()) >= 2 :
