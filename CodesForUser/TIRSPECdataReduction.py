@@ -414,7 +414,7 @@ def Photometry():
         # Now the loop of  doing the photometry for all the convolved) images
         for img in convIMGS :
             imx=iraf.imexam(input=img,frame=1,use_display=0,defkey='a',imagecur=OriginalIMG+'GoodStars.coo',Stdout=1)
-            print imx           #DEBUGGING---------------------------------------**
+            print('\n'.join(imx)+'\n')           #DEBUGGING---------------------------------------**
             #Calculating median FWHM, ellipticity and position angle
             fwhmlist=[]
             ellipticitylist=[]
@@ -434,7 +434,7 @@ def Photometry():
             print('Setting value of positionangle %180 =' + str(positionangle))
             #Calculating sky mean and stdev
             imx=iraf.imexam(input=img,frame=1,use_display=0,defkey='m',imagecur=OriginalIMG+'BlankSky.coo',Stdout=1)
-            print imx            #DEBUGGING--------------------------------------**
+            print('\n'.join(imx)+'\n')            #DEBUGGING--------------------------------------**
             #Calculating average Sigma and mean of sky
             skylist=[]
             sigmalist=[]
@@ -1003,7 +1003,7 @@ def AlignNcombine_subrout(method="average"):
                     ImgCombineWithZeroFloating(imcombineInputfname,os.path.join(MotherDIR,OUTDIR,night,OutCombimg),cmethod=method,czero="median",creject="sigclip",cstatsection='[250:750,250:750]')
                 except iraf.IrafError as e :
                     print ('IRAF ERROR : Some image might be having problem. Remove it and try later')
-                    print e
+                    print (e)
                     print('-'*60)
                     traceback.print_exc(file=sys.stdout)
                     print('-'*60)
@@ -1283,7 +1283,7 @@ def Manual_InspectObj_subrout():
                 imx=iraf.imexam(Stdout=1)
             except iraf.IrafError as e :
                 print ('IRAF ERROR : This image %s might be having problem, still choosing it'%(night+'/'+img))
-                print e
+                print (e)
                 if len(imx) < 1 :imx=['center= %f  peak fwhm= %f bkg'%(newsX,FWHM)]  #A dummy entry..
                 
             if len(imx) < 1 : #Then discard this image
