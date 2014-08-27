@@ -935,7 +935,7 @@ def AlignNcombine_subrout(method="average"):
         print("You are doing Spectroscopy. So no align and combining to do on this raw images. \n Skipping...")
         return()
     
-    iraf.imcombine.unlearn()
+    iraf.imalign.unlearn()
     directories=LoadDirectories(CONF=False)
     for night in directories:
         print('Working on night: '+night)
@@ -982,20 +982,25 @@ def AlignNcombine_subrout(method="average"):
                 with open(os.path.join(MotherDIR,OUTDIR,night,'shifts.in'),'w') as foo2 :
                     alignInpfname=os.path.join(MotherDIR,OUTDIR,night,OutCombimg[:-5]+'.ditherList')
                     alignOutfname=os.path.join(MotherDIR,OUTDIR,night,OutCombimg[:-5]+'.AlignedditherList')
+                    imcombineInputfname=os.path.join(MotherDIR,OUTDIR,night,OutCombimg[:-5]+'.imcombineInputList')
                     imgs2align=open(alignInpfname,'w')    #Once the world migrates to Python 2.7+, these files also should be opened in the same with command above...
                     imgs2alignOUT=open(alignOutfname,'w')
+                    imcombineInputFILE=open(imcombineInputfname,'w')
+                    imcombineInputFILE.write(os.path.join(MotherDIR,OUTDIR,night,imglist[0])+'\n') #First reference image
                     for img in imglist[1:]:
                         Xin=eval(XYfiledic[Comb2Firstdic[img]][0])  
                         Yin=eval(XYfiledic[Comb2Firstdic[img]][1])
                         foo2.write(str(Xref-Xin)+'   '+str(Yref-Yin)+'\n')
                         imgs2align.write(os.path.join(MotherDIR,OUTDIR,night,img)+'\n')
                         imgs2alignOUT.write(os.path.join(MotherDIR,OUTDIR,night,'s'+img)+'\n')
+                        imcombineInputFILE.write(os.path.join(MotherDIR,OUTDIR,night,'s'+img)+'\n')
 
                 imgs2align.close()
                 imgs2alignOUT.close()
+                imcombineInputFILE.close()
                 try :  #Now align and if succeeded combine those images....
                     iraf.imalign(input='@'+alignInpfname, reference=os.path.join(MotherDIR,OUTDIR,night,Refimage), coords=os.path.join(MotherDIR,OUTDIR,night,OutCoofile), output='@'+alignOutfname, shifts=os.path.join(MotherDIR,OUTDIR,night,'shifts.in'), interp_type="nearest",boundary_type="constant",trimimages="no")
-                    iraf.imcombine(input=os.path.join(MotherDIR,OUTDIR,night,Refimage)+','+'@'+alignOutfname, output=os.path.join(MotherDIR,OUTDIR,night,OutCombimg),combine=method,reject="sigclip")
+                    ImgCombineWithZeroFloating(imcombineInputfname,os.path.join(MotherDIR,OUTDIR,night,OutCombimg),cmethod=method,czero="median",creject="sigclip",cstatsection='[250:750,250:750]')
                 except iraf.IrafError as e :
                     print ('IRAF ERROR : Some image might be having problem. Remove it and try later')
                     print e
@@ -1026,6 +1031,7 @@ def FixBadPixels(images,nightdir):
 
 def ImgCombineWithZeroFloating(imglistfname,outputfile,cmethod="median",czero="median",creject="avgsigclip",cstatsection='[200:800,200:800]'):
     """ Returns the combined image with actuall average median flux, It does zero scaleing only for sigma rejection of stars. This is needed to remove faint stars in rejection algorithm when the background sky itself is varying from frame to frame. """
+    iraf.imcombine.unlearn()
     Xmin=float(cstatsection[1:-1].split(',')[0].split(':')[0])  #Everything now in fits coordinates
     Xmax=float(cstatsection[1:-1].split(',')[0].split(':')[1])
     Ymin=float(cstatsection[1:-1].split(',')[1].split(':')[0])
@@ -1092,6 +1098,18 @@ def CombDith_FlatCorr_subrout(method="median",FullFlatStatSection='[200:800,200:
         #Now iterate through every list of images to combine
         outlogFILE=open(os.path.join(MotherDIR,OUTDIR,night,'FirstoneANDcombinedImages.List'),'w')
         for imglist in ListofLists:
+            #First of all, If spectroscopy of short slit cross disperse mode : change the FlatStatSection
+            if Filtrfiledic[imglist[0]][1:-1].split(',')[2].strip().strip("'")[0] == 'S' :
+                if Filtrfiledic[imglist[0]][1:-1].split(',')[0].strip().strip("'") == 'GHKX' :
+                    FlatStatSection= HKFlatStatSection
+                elif Filtrfiledic[imglist[0]][1:-1].split(',')[0].strip().strip("'") == 'GYJX' :
+                    FlatStatSection= YJFlatStatSection
+                else :   #Short slit single order spectra
+                    FlatStatSection= SSFlatStatSection
+            else :
+                FlatStatSection= FullFlatStatSection
+
+
             if len(imglist) == 1 : #Single image. no need to combine
                 OutCombimg=imglist[0][6:]   #Removing the Slope- prefix
                 shutil.copy2(night+'/'+imglist[0],os.path.join(MotherDIR,OUTDIR,night,OutCombimg))  #Copying the file dito..
@@ -1099,7 +1117,8 @@ def CombDith_FlatCorr_subrout(method="median",FullFlatStatSection='[200:800,200:
                 OutCombimg=imglist[0][6:-5]+'_'+method+'_'+imglist[-1][6:-5]+'.fits'  #Removing the Slope- prefix
                 with open(os.path.join(MotherDIR,OUTDIR,night,OutCombimg+'.imcombine.List'),'w') as imcombineinputFile:
                     imcombineinputFile.write('\n'.join([night+'/'+img for img in imglist])+'\n')
-                iraf.imcombine(input='@'+os.path.join(MotherDIR,OUTDIR,night,OutCombimg+'.imcombine.List'), output=os.path.join(MotherDIR,OUTDIR,night,OutCombimg),combine=method,reject="sigclip")
+                ImgCombineWithZeroFloating(os.path.join(MotherDIR,OUTDIR,night,OutCombimg+'.imcombine.List'),os.path.join(MotherDIR,OUTDIR,night,OutCombimg),cmethod=method,czero="median",creject="sigclip",cstatsection=FlatStatSection)
+
             #Now make list of flats to be combined for this image set
             Flats2Comb=[]
             for img in imglist:
@@ -1121,17 +1140,6 @@ def CombDith_FlatCorr_subrout(method="median",FullFlatStatSection='[200:800,200:
                     imgskylistFILE.write('\n'.join([night+'/'+sky for sky in Skys2Comb])+'\n')
 
 
-            #If spectroscopy of short slit cross disperse mode : change the FlatStatSection
-            if Filtrfiledic[imglist[0]][1:-1].split(',')[2].strip().strip("'")[0] == 'S' :
-                if Filtrfiledic[imglist[0]][1:-1].split(',')[0].strip().strip("'") == 'GHKX' :
-                    FlatStatSection= HKFlatStatSection
-                elif Filtrfiledic[imglist[0]][1:-1].split(',')[0].strip().strip("'") == 'GYJX' :
-                    FlatStatSection= YJFlatStatSection
-                else :   #Short slit single order spectra
-                    FlatStatSection= SSFlatStatSection
-            else :
-                FlatStatSection= FullFlatStatSection
-
             print('Image section used for normalising Flat is '+FlatStatSection)
             outflatname=os.path.join(MotherDIR,OUTDIR,night,OutCombimg[:-5]+'_flat.fits')
             iraf.imcombine(input='@'+imgflatlistfname, output=outflatname, combine="median", scale="median",reject="sigclip", statsec=FlatStatSection)
@@ -1144,7 +1152,6 @@ def CombDith_FlatCorr_subrout(method="median",FullFlatStatSection='[200:800,200:
             if SEPARATESKY=='Y':
                 outskyname=os.path.join(MotherDIR,OUTDIR,night,OutCombimg[:-5]+'_sky.fits')
                 ImgCombineWithZeroFloating(imgskylistfname,outskyname,cmethod="median",czero="median",creject="pclip",cstatsection=FlatStatSection)
-#                iraf.imcombine (input='@'+imgskylistfname, output=outskyname, combine="median",reject="pclip")
                 #Now subtract the sky form the science frame
                 OutSSimg=OutCombimg[:-5]+'_SS.fits'
                 iraf.imarith(operand1=os.path.join(MotherDIR,OUTDIR,night,OutCombimg),op="-",operand2=outskyname,result=os.path.join(MotherDIR,OUTDIR,night,OutSSimg))
