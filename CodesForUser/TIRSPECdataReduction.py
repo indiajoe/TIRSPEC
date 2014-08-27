@@ -784,7 +784,7 @@ def Sextractor_subrout(img=None,N=30,OutFilePrefix='FirstImageTop',OutDir=None):
         with open(os.path.join(MotherDIR,OUTDIR,'sextractor.sex'),'w') as sexConfigFile:
             subprocess.call([SEXTRACTOR,'-d'],stdout=sexConfigFile)
         #Change PIXEL_SCALE to 0.3
-        subprocess.call(['sed','-i',"'s/^\(PIXEL_SCALE\s*\)\([0-9]*\.[0-9]*\)/\10.3/'",os.path.join(MotherDIR,OUTDIR,'sextractor.sex')])
+        subprocess.call(['sed','-i',r's/^\(PIXEL_SCALE\s*\)\([0-9]*\.[0-9]*\)/\10.3/',os.path.join(MotherDIR,OUTDIR,'sextractor.sex')])
         with open(os.path.join(MotherDIR,OUTDIR,'default.conv'),'w') as convolutionFile:
             convolutionFile.write("""CONV NORM\n# 3x3 ``all-ground'' convolution mask with FWHM = 2 pixels.\n1 2 1\n2 4 2\n1 2 1\n""")
         with open(os.path.join(MotherDIR,OUTDIR,'default.param'),'w') as sexCatParamFile:
