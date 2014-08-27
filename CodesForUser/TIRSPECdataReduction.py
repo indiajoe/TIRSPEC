@@ -82,7 +82,7 @@ def SpectralExtraction_subrout():
             EffectiveGain=EPADU*ImagesAveraged*ImageScaleFactor
 
             # Running apall
-            iraf.apall(input=img,nfind=1,lower=-15,upper=15,llimit=-15,ulimit=15,b_sample=BACKGROUND,background ='fit',weights ='variance',readnoi=READNOISE,gain=EffectiveGain,t_function=TRACEFUNC,t_order=TRACEORDER,t_niterate=1,ylevel=SPECAPERTURE,interactive=VER)
+            iraf.apall(input=img,nfind=1,lower=-15,upper=15,llimit=-15,ulimit=15,b_sample=BACKGROUND,background ='fit',weights ='none',readnoi=READNOISE,gain=EffectiveGain,t_function=TRACEFUNC,t_order=TRACEORDER,t_niterate=1,ylevel=SPECAPERTURE,interactive=VER)  #weights= 'variance' seems to be unstable for our high effective gain
             #Extracting the Argon arc for this spectra as img_arc.fits
             iraf.apall(input=os.path.join(MotherDIR,night,Img2Argon[img]),reference=img,out=img[:-5]+'_arc',recenter='no',trace='no',background='none',interactive='no')
             #Now reidentify the lines in this spectra
