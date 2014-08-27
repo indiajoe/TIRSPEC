@@ -231,12 +231,13 @@ def Photometry():
     iraf.digiphot(_doprint=0)
     iraf.apphot(_doprint=0)
     iraf.daophot(_doprint=0)
-    iraf.ptools(_doprint=0)  #for txdump
 
     iraf.images(_doprint=0) 
     iraf.immatch(_doprint=0) #Loading for xyxymatch, geomap, geotran of coords
     iraf.imfilter(_doprint=0)  #Loading packages for convolution of Gauss
 
+    iraf.apphot.unlearn()
+    iraf.daophot.unlearn()
     iraf.phot.unlearn()   #Setting everything to default
     iraf.psf.unlearn()
     iraf.allstar.unlearn()
