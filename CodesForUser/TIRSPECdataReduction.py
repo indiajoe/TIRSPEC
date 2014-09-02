@@ -1346,7 +1346,9 @@ def SelectionofFrames_subrout():
     for night in directories:
         print("Working on night : "+night)
         with open(night+'/SlopeimagesLog.txt','r') as slopeimgFILE :
-            slopeimgFILElines=list(slopeimgFILE)
+            # Skip blank lines and Commented out lines with #
+            slopeimgFILElines=[imageLINE for imageLINE in slopeimgFILE if ((imageLINE.strip() is not '') and (imageLINE[0] !='#'))]
+
         ObjList=[imgline.rstrip() for imgline in slopeimgFILElines if regexpObj.search(imgline.split()[0]) is not None ]
         FiltList=set()  #Set to store the list of filters needed to find flat/Argon for
         with open(os.path.join(MotherDIR,OUTDIR,night,'AllObjects.List'),'w') as ObjFILE :
