@@ -539,7 +539,7 @@ def Photometry():
             else :
                 shutil.copy(OriginalIMG+'.coo.1',img+'.coo.1')
             #Going forward to do phot
-            iraf.phot(image=img,coords="default",output="default",verify=VER)
+            iraf.phot(image=img,coords="default",output="default",interactive='no',verify=VER)
 
             magtable=ascii.read(img+'.mag.1',format='daophot')
             aperheader = magtable.meta['keywords']['APERTURES']['value']
@@ -592,7 +592,7 @@ def Photometry():
 
             #Doing the phot again on Source, Just in case Daofind didn't detect it and Good stars...
             iraf.datapar.setParam('datamin',mean-5*max(sigma,TrueSigma))
-            iraf.phot(image=img,coords=OriginalIMG+'Source.coo',output="default",verify=VER)
+            iraf.phot(image=img,coords=OriginalIMG+'Source.coo',output="default",interactive='no',verify=VER)
             Sourcemagtable=ascii.read(img+'.mag.2',format='daophot')
             aperheader = Sourcemagtable.meta['keywords']['APERTURES']['value']
             NoOfAper = NoOfDaophotApertures(aperheader)  #Number of daophot appertures
