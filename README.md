@@ -15,6 +15,8 @@ Webpage of this repository: http://indiajoe.github.io/TIRSPEC/
 
 #####For TIRSPEC instrument webpage, visit : http://web.tifr.res.in/~daa/tirspec/  #####
 
+For detailed instruction on how to install and run the pipeline, see the wiki page : https://github.com/indiajoe/TIRSPEC/wiki
+
 Contents
 ================
 ### CodesForUser: ###
