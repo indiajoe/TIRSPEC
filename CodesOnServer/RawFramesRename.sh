@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/env bash
 # This script is to rename all the raw frames an exposure of tirspec.
 #-------------------------------------indiajoe
 
