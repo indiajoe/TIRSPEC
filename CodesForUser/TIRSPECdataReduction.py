@@ -1551,7 +1551,7 @@ ___________._____________  _______________________________________
                                           Data Reduction Pipeline...
 """
     print(Banner)  # Ascii art courtesy : http://patorjk.com/software/taag/
-
+    print("Time: {0}".format(time.strftime("%c")))
 
     for con in configfile:
         con=con.rstrip()
@@ -1692,6 +1692,7 @@ ___________._____________  _______________________________________
             import astropy.table as table  #Requires astropy version >= 0.3 for vstack function
 
         for task in todo :
+            print("Time now: {0}".format(time.strftime("%c")))
             CalledTheTask=True
             if task == "0" :
                 print("RUNNING TASK:0  Backup files in current directory to ../"+BACKUPDIR+"\n")
