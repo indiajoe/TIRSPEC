@@ -1252,7 +1252,7 @@ def Manual_InspectObj_subrout():
     """ This will display one image after other, and based on user input classify images of each dither position """
     directories=LoadDirectories(CONF=True)
     if TODO=='P': print("Press _a_ and then _q_ over one good central star for selecting image")
-    if TODO=='S': print("Press _j_ and then _q_ over one good position on dispersed spectrum for selecting image")
+    if TODO=='S': print("Press _j_ and then _q_ over one good position on dispersed spectrum for selecting image \n IMP: Press j on some good part of star spectrum, not on the sky region around.")
     for night in directories:
         print("Working on night : "+night)
         ObjFILE=open(os.path.join(MotherDIR,OUTDIR,night,'AllObjects.List'),'r')
