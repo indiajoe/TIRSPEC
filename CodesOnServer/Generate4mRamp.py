@@ -97,7 +97,7 @@ def ReplaceCRhits(imagelist,NoofNDRs=None,tile=FullTile):
     imgcube=LoadDataCube(imglist[0],RampNDRsuffix,NoofNDRs=NoofNDRs,tile=tile)
     T,X,Y=CRhitslocation(imgcube,thresh=10) #Locations of CR hit
     Tlength=imgcube.shape[0]
-    XYlist=np.unique(zip(X,Y))
+    XYlist=list(set(zip(X,Y)))
     for img in imglist[1:]:  
         nextcube=LoadDataCube(img,RampNDRsuffix,NoofNDRs=NoofNDRs,tile=tile)
         foundk=[]
@@ -125,12 +125,12 @@ def AverageWithCRrej(imagelist,NoofNDRs=None,tile=FullTile):
         imgcube=LoadDataCube(img,RampNDRsuffix,NoofNDRs=NoofNDRs,tile=tile)
         imgcube=np.ma.array(imgcube,fill_value=0) #Keeping fill value to zero for removing the CR hit pixels
         T,X,Y=CRhitslocation(imgcube,thresh=10) #Locations of CR hit
-        for i,j in np.unique(zip(X,Y)): imgcube[:,i,j]=np.ma.masked
+        for i,j in set(zip(X,Y)): imgcube[:,i,j]=np.ma.masked
         sumcube+=imgcube.filled()
         N[~np.ma.getmaskarray(imgcube[0,:,:])]+=1
     #If there are still some pixels which were hit by CR in every single frame we shall replace it with the last frame's values
     X,Y=np.where(N==0)
-    for i,j in np.unique(zip(X,Y)):
+    for i,j in set(zip(X,Y)):
         print("CR hit couldn't be removed for the pixel : (%d,%d)" %(i,j))   #For debugging 
         sumcube[:,i,j]=imgcube.data[:,i,j]
         N[i,j]=1
@@ -199,7 +199,7 @@ def FitSlope(imgcube,time, CRcorr=False):
         if len(T) > 1000 :  #Sanity check
             print("More than 1000 CR hits are not possible and worth removing. \n So better discard this image. Skipping CR hit removal.")
             return (beta,alpha)   #Exiting this function skipping CR hit removal...
-        for i,j in np.unique(zip(X,Y)):
+        for i,j in set(zip(X,Y)):
             localbeta=[]
             localalpha=[]
             localn=[]
