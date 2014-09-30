@@ -815,13 +815,20 @@ def main():
     plt.show()
     #Save the generated spectras values as numpy arrays
     fnameSuffix=raw_input("Enter any suffix, you want to add to the output spectra file names: ")
-    scifname=scifname.split('.')[0]+'_'+fnameSuffix
-    stdfname=stdfname.split('.')[0]+'_'+fnameSuffix
-    np.save(scifname+'_Y_',np.array(np.ma.compressed(CorrSci)))  #Adding extra np.array to fix the bug in numpy till a fix 
-    np.save(scifname+'_X_',np.array(np.ma.compressed(CorrSciWL)))
-    np.save(stdfname+'_XY_',np.array(np.ma.compress_rows(Telluric)))
+    scifnameNew=scifname.split('.')[0]+'_'+fnameSuffix
+    stdfnameNew=stdfname.split('.')[0]+'_'+fnameSuffix
+    np.save(scifnameNew+'_Y_',np.array(np.ma.compressed(CorrSci)))  #Adding extra np.array to fix the bug in numpy till a fix 
+    np.save(scifnameNew+'_X_',np.array(np.ma.compressed(CorrSciWL)))
+    np.save(stdfnameNew+'_XY_',np.array(np.ma.compress_rows(Telluric)))
     print('The spectra saved by the following names')
-    print(scifname+'_Y_.npy',scifname+'_X_.npy',stdfname+'_XY_.npy')
+    print(scifnameNew+'_Y_.npy',scifnameNew+'_X_.npy',stdfnameNew+'_XY_.npy')
+    if scifname[-5:] == '.fits': #Also save the final spectrum in fits
+        outfits=fits.open(scifname)
+        outfits[0].data = np.array(CorrSci)
+        outfits[0].header.add_history('Telluric and Instrumental Response Corrected')
+        outfits.writeto(scifnameNew+'.fits')
+        outfits.close()
+        print(scifnameNew+'.fits')
     print('Enjoy!!_________________________indiajoe')
 
 if __name__ == "__main__":
