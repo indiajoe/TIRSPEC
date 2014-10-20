@@ -1521,8 +1521,62 @@ def KeyboardInterrupt_handler():
     print('Stoping the reduction abruptly...')
     sys.exit(2)
 
+def InitialTest():
+    #Check login.cl file exist in ~/iraf/ directory.
+    if not os.path.isfile(os.path.expanduser('~/iraf/login.cl')):
+        print('login.cl file not found in {0} directory. Copy your login.cl file into {0}'.format(os.path.expanduser('~/iraf/')))
+        raise IOError(os.path.expanduser('~/iraf/login.cl'))
+
+    #Check the "set     stdimage        = imt1024" is present in login.cl file.
+    with open(os.path.expanduser('~/iraf/login.cl')) as clfile:
+        for line in clfile:
+            line=line.rstrip().split()
+            if len(line) >= 3:
+                if line[0]=='set' and line[1]=='stdimage' and line[2] =='=' :
+                    clstdimage=line[3]
+        if clstdimage != 'imt1024':
+            print('WARNING: Image size 1024 not set in login.cl file')
+            print('Please set the following line in {0} file.'.format(os.path.expanduser('~/iraf/login.cl')))
+            print('set     stdimage        = imt1024')
+            print('This is to avoid a certain bug in new version of IRAF and ds9')
+            raise Exception('Image size 1024 not set in login.cl file')
+            
+    #Check for SExtractor installation
+    if TODO == 'P':
+        with open('/dev/null','w') as devnull:
+            try :
+                subprocess.call(['sex','--version'],stdout=devnull)
+            except OSError:
+                try :
+                    subprocess.call(['sextractor','--version'],stdout=devnull)
+                except OSError:            
+                    print('Cannot find the command: sex OR sextractor')
+                    print('SExtractor needs to be installed from http://www.astromatic.net/software/sextractor')
+                    raise
+
+    #Check LampRepo directory exists.
+    if TODO == 'S':
+        if not os.path.exists(LAMPREPODIR):
+            print('Lamp Repository directory not found: {0}'.format(LAMPREPODIR))
+            print('Please add the correct path to Lamp Repository before proceeding')
+            raise IOError(LAMPREPODIR)
+        
 #-----Main Program Begins here........
 if __name__ == "__main__":
+
+    Banner="""
+___________._____________  _______________________________________  
+\__    ___/|   \______   \/   _____/\______   \_   _____/\_   ___ \ 
+  |    |   |   ||       _/\_____  \  |     ___/|    __)_ /    \  \/ 
+  |    |   |   ||    |   \/        \ |    |    |        \\     \____
+  |____|   |___||____|_  /_______  / |____|   /_______  / \______  /
+                       \/        \/                   \/         \/ 
+
+                                          Data Reduction Pipeline...
+"""
+    print(Banner)  # Ascii art courtesy : http://patorjk.com/software/taag/
+    print("Time: {0}".format(time.strftime("%c")))
+
 
     if len(sys.argv)<2 :
         print('-'*10)
@@ -1539,19 +1593,6 @@ if __name__ == "__main__":
     except IOError :
         print ("Error: Cannot open the file "+sys.argv[1]+". Setup the config file based on TIRSPECscript.conf file correctly, before running the script.")
         sys.exit(1)
-
-    Banner="""
-___________._____________  _______________________________________  
-\__    ___/|   \______   \/   _____/\______   \_   _____/\_   ___ \ 
-  |    |   |   ||       _/\_____  \  |     ___/|    __)_ /    \  \/ 
-  |    |   |   ||    |   \/        \ |    |    |        \\     \____
-  |____|   |___||____|_  /_______  / |____|   /_______  / \______  /
-                       \/        \/                   \/         \/ 
-
-                                          Data Reduction Pipeline...
-"""
-    print(Banner)  # Ascii art courtesy : http://patorjk.com/software/taag/
-    print("Time: {0}".format(time.strftime("%c")))
 
     for con in configfile:
         con=con.rstrip()
@@ -1642,6 +1683,14 @@ ___________._____________  _______________________________________
     MotherDIR=os.getcwd()
     #    OUTPUTfilePATH=MotherDIR+'/'+OUTPUTfile
     parentdir=MotherDIR.split('/')[-1]
+    print('Running Initial Tests...')
+    try :
+        InitialTest()  # Some important Initial tests for Sanity before running the code.
+    except Exception as e :
+        print(e)
+        sys.exit(1)
+
+
     print('-'*10)
     print('IMP: All outputs of this run will be written to the directory '+os.path.join(MotherDIR,OUTDIR)+'\n')
     try:
