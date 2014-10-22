@@ -36,7 +36,14 @@ def CheckNDRexist(imgname,RampNDRsuffix,NoofNDRs=None):
     """ Checks the Non distructive Readouts (NDR) exists in the current directory for given image.
         Only if they exist we should proceed with Slope calculation from them """
     NDRfiles=glob.glob(imgname[:-5]+RampNDRsuffix)
-    if NoofNDRs is None : NoofNDRs=pyfits.convenience.getval(imgname,'NDRS')
+    if NoofNDRs is None : 
+        try :
+            NoofNDRs=pyfits.convenience.getval(imgname,'NDRS')
+        except IndexError :
+            print("WARNING: Cannot find header keyword NDRS in {0}".format(imgname))
+            print("Discarding this image: {0}".format(imgname))
+            return False
+
     if len(NDRfiles) == NoofNDRs :
         return True
     else:
@@ -562,7 +569,7 @@ def main():
         print("-"*30)
         exit(1)
     os.chdir(sys.argv[1])
-    listOFimgsT= [f for f in os.listdir('.') if re.match(r'^(?!(.*debug.*|.*[Tt]est.*|.*[Ff]ocus.*)).*\.fits', f)]
+    listOFimgsT= [f for f in os.listdir('.') if re.match(r'^(?!(.*debug.*|.*[Tt]est.*|.*[Ff]ocus.*)).*\.fits$', f)]
     listOFimgs= [f for f in listOFimgsT if CheckNDRexist(f,RampNDRsuffix)]
     for lostimgs in list(set(listOFimgsT)-set(listOFimgs)) :
         print('Warning: Discarded %s because of missing NDR files'%lostimgs)
