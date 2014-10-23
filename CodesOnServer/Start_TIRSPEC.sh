@@ -16,6 +16,11 @@ if [ $? -eq 20 ] ; then
     exit 1
 fi
 
+# Check for free space in /data/
+freespace=$(df | gawk '$NF=="/data"{print $4}')
+if [ $freespace -lt 50000000 ] ; then 
+    xmessage -buttons Continue:10 -default Continue "WARNING: Free space in /data less than 50GB, Backup data and make space before next night. Free = ${freespace:0:$((${#freespace}-6))} GB"
+fi
 
 NOW=$(date +"%Y%m%d-%H%M%S")
 #gnome-terminal --working-directory=$binDIR -e " bash -c \"./mkmac_h1_as | tee $logDIR/mkmac-$NOW.log ; exec bash \" "
