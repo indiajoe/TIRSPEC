@@ -1,0 +1,8 @@
+site_name: TIRSPEC Pipeline
+pages:
+- ['index.md','Home']
+- ['Installing-Pipeline-Requirements.md', 'User Guide', 'Installation']
+- ['Getting-Started.md', 'User Guide', 'Getting Started']
+- ['Cookbook-of-Tips-and-Tricks.md', 'User Guide', 'Cookbook']
+- ['Understanding-various-I-O-files-of-pipeline.md', 'User Guide', 'Advanced']
+- ['FAQ.md', 'FAQ']
