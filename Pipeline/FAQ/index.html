@@ -188,11 +188,13 @@ For doing safe renaming in bulk, cd to the night's directory and run <code>Renam
 <p><a href="./#frequently-asked-questions-faq">Back to Top</a></p>
 <h3 id="5-how-do-i-specify-my-favourite-text-editor">5. How do I specify my favourite text editor?</h3>
 <p>It is important that whatever text editor you use, it should be opening in blocking mode. So that the execution of the script will be paused till you save and close the editor.</p>
-<p>Following are the ways you can specify some of the commonly used text editors.
-<em> Emacs : <code>"emacs -nw"</code>
-</em> vi    : <code>"vi"</code>
-<em> gedit : <code>"gedit -w"</code>
-</em> nano  : <code>"nano"</code></p>
+<p>Following are the ways you can specify some of the commonly used text editors.</p>
+<ul>
+<li>Emacs : <code>"emacs -nw"</code></li>
+<li>vi    : <code>"vi"</code></li>
+<li>gedit : <code>"gedit -w"</code></li>
+<li>nano  : <code>"nano"</code></li>
+</ul>
 <p><a href="./#frequently-asked-questions-faq">Back to Top</a></p>
 <h3 id="6-why-do-we-have-to-give-filename-instead-of-filename-in-regexp">6. Why do we have to give <code>.*filename.*</code> instead of <code>*filename*</code> in regexp?</h3>
 <p><code>.*</code> is the standard regular expression which python follows for matching any character multiple number of times. It is equivalent to <code>*</code> in shell terminal. Hence in python, instead of <code>*filename*</code> one should follow the standard regexp, ie. <code>.*filename.*</code> to match filenames containing the string <code>filename</code> in it.</p>
