@@ -1,9 +1,9 @@
 
-# TIRSPEC data reduction wiki
+# TIRSPEC Pipeline
 
 This page is to provide various tips and help on reducing tirspec data.
 
-For TIRSPEC instrument related details visit: [TIRSPEC Webpage](http://web.tifr.res.in/~daa/tirspec/)
+For TIRSPEC instrument related details visit: [TIRSPEC Webpage](http://www.tifr.res.in/~daa/tirspec/)
 
 Table of contents
 

@@ -13,6 +13,7 @@ to prevent any conflict with default scripts for other users.
 You may also find some helpful scripts in the following link: http://indiajoe.github.io/HandyTools4Astronomers/
 
 Webpage of this repository: http://indiajoe.github.io/TIRSPEC/
+Documentation for Pipeline : http://indiajoe.github.io/TIRSPEC/Pipeline/
 
 #####For TIRSPEC instrument webpage, visit : http://web.tifr.res.in/~daa/tirspec/  #####
 
@@ -24,8 +25,8 @@ Contents
 *    **TIRSPECdataReduction.py** (needs **TIRSPECscript.conf**) *:* This script is to help the astronomer reduce tirspec data (output of *Generate4mRamp.py*) . It will semi-automate and guide the user through : *image selection, flat correction, aligning and combining of NIR dithered frames* for final photometry/spectroscopy.
 
 The image below shows the major steps in TIRSPEC data reduction script. The boxes marked with faces needs human supervision.
-![Photometry flowchart](docs/PhotometryPipeline.png)
-![Spectroscopy flowchart](docs/SpectroscopyPipeline.png)
+![Photometry flowchart](docs/imgs/PhotometryPipeline.png)
+![Spectroscopy flowchart](docs/imgs/SpectroscopyPipeline.png)
 For automated wavelength calibration, one needs to keep a calibrated template of the argon spectra in a directory.
 
 *Module requirements: astropy, numpy and pyraf*
@@ -34,7 +35,7 @@ For automated wavelength calibration, one needs to keep a calibrated template of
 
 *    **TelluricCorrection.py** *:* This is to remove the telluric lines and do continuum correction of final NIR spectra.
 The flow chart of the processes one can take in telluric correction are shown below.
-![Telluric correction flowchart](docs/TelluricCorrectionAlgorithm.png)
+![Telluric correction flowchart](docs/imgs/TelluricCorrectionAlgorithm.png)
 Make sure, the theoretical stellar line profiles of Vega star is available in same directory.
 
 *Module requirements: astropy, numpy, scipy and matplotlib*
@@ -57,7 +58,7 @@ Make sure, the theoretical stellar line profiles of Vega star is available in sa
 Intended for use on tirspec machine while observing.
 
 *    **Generate4mRamp.py**  *:* This script generates the slope calculation from up-the-ramp readout raw data. It produces the dark subtracted final slope images. A log file is also generated. The flow chart below shows the major steps done in generating the final images before downloading to Hoskote from Hanle.
-![Generate4mRamp flowchart](docs/SlopeImageGenerationPipeline.png)
+![Generate4mRamp flowchart](docs/imgs/SlopeImageGenerationPipeline.png)
 Module requirements: astropy and numpy
 
 You can load this also as a module in IPython, and use the collection of functions in it for an interactive analysis of tirspec's raw data. The available functions inside this module are

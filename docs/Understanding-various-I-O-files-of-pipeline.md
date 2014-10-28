@@ -66,7 +66,7 @@ Parameters related to Spectroscopy using iraf binaries
 
 ### Input/Output files in each stage of pipeline
 #### Photometry
-Photometric pipeline stages are as shown in the figure below. ![Photometry Pipeline Stages](PhotometryPipeline.png)
+Photometric pipeline stages are as shown in the figure below. ![Photometry Pipeline Stages](imgs/PhotometryPipeline.png)
 
 **0: Backup ::** Copies everything in the present working directory to ../BACKUP
 
@@ -224,7 +224,7 @@ Output files
 
 
 #### Spectroscopy
-Spectroscopy pipeline stages are as shown in the figure below. ![Spectroscopy pipeline stages](SpectroscopyPipeline.png)
+Spectroscopy pipeline stages are as shown in the figure below. ![Spectroscopy pipeline stages](imgs/SpectroscopyPipeline.png)
 
 Stages 0,1,2,3 and 4 are exactly same as already explained in the Photometry pipeline above. The steps differ only after these initial steps are over.
 
