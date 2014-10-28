@@ -55,6 +55,7 @@ After finishing the run on remaining directories, you can choose to restore the 
 Note: In Stage 9 of Photometry pipeline (the last actual photometry part). You may want to choose at image level instead of directories. The file you have to backup and edit is OUTPUTDIR/Images4Photo.in file. After Step 6 in Photometry pipeline, OUTPUTDIR/directories does not have any role in deciding the pipelines action.
 
 ###4) Some general tips which will help users ###
+
 * If you know which frames are totally useless from your observation book written during night. After you get the data, simply prefix the line corresponding to those images in SlopeimageLog.txt with # to tell data pipeline to completely ignore those files.
 * Set focus-follows-mouse  : This will make life a lot easier and will help to avoid many tiresome clicks while switching between windows. (this is especially difficult in OS X)
 * Load the FoV_of_tirspec.vot in Aladdin and Flip X axis in ds9 to match TIRSPEC's FoV with 2MASS in Aladdin.

@@ -67,6 +67,7 @@ Remember to backup your data before doing operations like renaming.
 It is important that whatever text editor you use, it should be opening in blocking mode. So that the execution of the script will be paused till you save and close the editor.
 
 Following are the ways you can specify some of the commonly used text editors.
+
 * Emacs : `"emacs -nw" `
 * vi    : `"vi"`
 * gedit : `"gedit -w"`
