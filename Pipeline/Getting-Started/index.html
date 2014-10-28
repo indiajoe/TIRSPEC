@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        
+        <link rel="shortcut icon" href="../img/favicon.ico">
+
+        <title>Getting Started - TIRSPEC Pipeline</title>
+
+        <link href="../css/bootstrap-custom.min.css" rel="stylesheet">
+        <link href="../css/font-awesome-4.0.3.css" rel="stylesheet">
+        <link href="../css/prettify-1.0.css" rel="stylesheet">
+        <link href="../css/base.css" rel="stylesheet">
+        
+
+        <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!--[if lt IE 9]>
+            <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+            <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+
+        
+    </head>
+
+    <body>
+
+        <div class="navbar navbar-default navbar-fixed-top" role="navigation">
+    <div class="container">
+
+        <!-- Collapsed navigation -->
+        <div class="navbar-header">
+            
+            <!-- Expander button -->
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            
+
+            <!-- Main title -->
+            <a class="navbar-brand" href="..">TIRSPEC Pipeline</a>
+        </div>
+
+        <!-- Expanded navigation -->
+        <div class="navbar-collapse collapse">
+            
+                <!-- Main navigation -->
+                <ul class="nav navbar-nav">
+                
+                
+                    <li >
+                        <a href="..">Home</a>
+                    </li>
+                
+                
+                
+                    <li class="dropdown active">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">User Guide <b class="caret"></b></a>
+                        <ul class="dropdown-menu">
+                        
+                            <li >
+                                <a href="../Installing-Pipeline-Requirements/">Installation</a>
+                            </li>
+                        
+                            <li class="active">
+                                <a href="./">Getting Started</a>
+                            </li>
+                        
+                            <li >
+                                <a href="../Cookbook-of-Tips-and-Tricks/">Cookbook</a>
+                            </li>
+                        
+                            <li >
+                                <a href="../Understanding-various-I-O-files-of-pipeline/">Advanced</a>
+                            </li>
+                        
+                        </ul>
+                    </li>
+                
+                
+                
+                    <li >
+                        <a href="../FAQ/">FAQ</a>
+                    </li>
+                
+                
+                </ul>
+            
+
+            
+            <!-- Search, Navigation and Repo links -->
+            <ul class="nav navbar-nav navbar-right">
+                
+                
+                <li >
+                    <a rel="next" href="../Installing-Pipeline-Requirements/">
+                        <i class="fa fa-arrow-left"></i> Previous
+                    </a>
+                </li>
+                <li >
+                    <a rel="prev" href="../Cookbook-of-Tips-and-Tricks/">
+                        Next <i class="fa fa-arrow-right"></i>
+                    </a>
+                </li>
+                
+                
+            </ul>
+            
+        </div>
+    </div>
+</div>
+
+        <div class="container">
+            <div class="col-md-3"><div class="bs-sidebar hidden-print affix well" role="complementary">
+    <ul class="nav bs-sidenav">
+    
+        <li class="main active"><a href="#getting-started">Getting Started</a></li>
+        
+    
+    </ul>
+</div></div>
+            <div class="col-md-9" role="main">
+
+<h1 id="getting-started">Getting Started</h1>
+<p>I presume you have already finished installing IRAF and required python modules. If not visit <a href="../Installing-Pipeline-Requirements/">Installation page</a>.</p>
+<p><strong>Step one:</strong> Download the latest version of TIRSPEC data reduction pipeline from <a href="https://github.com/indiajoe/TIRSPEC/tarball/master">nightly tarball</a>.</p>
+<p>Extract the downloaded file to some location.
+You will find two directories in it. CodesOnServer and CodesForUser. As far as TIRSPEC data reduction is concerned, you can completely ignore codes in CodesOnServer directory. </p>
+<p><strong>Step two:</strong> Read the CodesForUser subsection in Contents section of the <a href="https://github.com/indiajoe/TIRSPEC">TIRSPEC's github cover page</a>.
+This section summarises the purpose of each script in CodesForUser directory.</p>
+<p><strong>Step three:</strong> Put all the TIRSPEC data of different nights under some directory. You can name that directory whatever you want except same name as any of your night's data directory. For example let us call this directory <em>MotherDirectory/</em>. Before starting reduction you should have all the different night's data directories (Eg: <em>20140825/, 20140930/, 20141220/</em>) inside this <em>MotherDirectory/</em>.</p>
+<p><strong>Step four (optional):</strong> If you want to rename some wrongly named files. You can cd to that night's directory and run RenameImgs.sh . </p>
+<p>Note: Never change the <em>Slope-</em> prefix as well and <em>filenumber</em> in the filename when you rename. You are allowed to change on the central name part of the filename.</p>
+<p><strong>Step five (optional):</strong> If you want to discard some frames of a particular night open the SlopeimagesLog.txt file inside that night's directory and prefix # to the line of that particular image. Don't worry if you don't know which frames to discard. You can do that while running the data reduction pipeline also.</p>
+<p><strong>Step six :</strong> Copy the TIRSPECscript.conf file to some place. say inside <em>MotherDirectory/</em> . You can rename that file to something which hint which source you are reducting. For example TIRSPECscrip_M31.conf.</p>
+<p><strong>Step seven :</strong> Open the .conf file and edit the parameters in it. Parameters in it are self explanatory. If not, see the TIRSPECscript.conf section in the page <a href="../Understanding-various-I-O-files-of-pipeline/#tirspecscriptconf">here</a>.</p>
+<p><strong>Step eight (optional):</strong> If you are doing spectroscopy. Extract the contents in data.tar.gz into the <em>MotherDirectory/</em>. They contain wavelength calibrated Argon lamps and Vega template.</p>
+<p><strong>Step nine :</strong> cd to <em>MotherDirectory/</em> in terminal. And run the TIRSPECdataReduction.py script with your edited .conf file as 1st argument.</p>
+<p>That is all. See the <a href="../Cookbook-of-Tips-and-Tricks/">Cookbook of Tips and Tricks</a> page from some useful tips and tricks.</p>
+<p>To obtain enlightenment and become a Zen Master of TIRSPEC data reduction pipeline. Learn about the Input and Output files of each stage in pipeline from <a href="../Understanding-various-I-O-files-of-pipeline/">here</a>.</p>
+</div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            
+            <p>Documentation built with <a href="http://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+
+        
+
+        <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
+        <script src="../js/bootstrap-3.0.3.min.js"></script>
+        <script src="../js/prettify-1.0.min.js"></script>
+        <script src="../js/base.js"></script>
+        
+    </body>
+</html>

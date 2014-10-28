@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        
+        <link rel="shortcut icon" href="../img/favicon.ico">
+
+        <title>Advanced - TIRSPEC Pipeline</title>
+
+        <link href="../css/bootstrap-custom.min.css" rel="stylesheet">
+        <link href="../css/font-awesome-4.0.3.css" rel="stylesheet">
+        <link href="../css/prettify-1.0.css" rel="stylesheet">
+        <link href="../css/base.css" rel="stylesheet">
+        
+
+        <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!--[if lt IE 9]>
+            <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+            <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+        <![endif]-->
+
+        
+    </head>
+
+    <body>
+
+        <div class="navbar navbar-default navbar-fixed-top" role="navigation">
+    <div class="container">
+
+        <!-- Collapsed navigation -->
+        <div class="navbar-header">
+            
+            <!-- Expander button -->
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            
+
+            <!-- Main title -->
+            <a class="navbar-brand" href="..">TIRSPEC Pipeline</a>
+        </div>
+
+        <!-- Expanded navigation -->
+        <div class="navbar-collapse collapse">
+            
+                <!-- Main navigation -->
+                <ul class="nav navbar-nav">
+                
+                
+                    <li >
+                        <a href="..">Home</a>
+                    </li>
+                
+                
+                
+                    <li class="dropdown active">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">User Guide <b class="caret"></b></a>
+                        <ul class="dropdown-menu">
+                        
+                            <li >
+                                <a href="../Installing-Pipeline-Requirements/">Installation</a>
+                            </li>
+                        
+                            <li >
+                                <a href="../Getting-Started/">Getting Started</a>
+                            </li>
+                        
+                            <li >
+                                <a href="../Cookbook-of-Tips-and-Tricks/">Cookbook</a>
+                            </li>
+                        
+                            <li class="active">
+                                <a href="./">Advanced</a>
+                            </li>
+                        
+                        </ul>
+                    </li>
+                
+                
+                
+                    <li >
+                        <a href="../FAQ/">FAQ</a>
+                    </li>
+                
+                
+                </ul>
+            
+
+            
+            <!-- Search, Navigation and Repo links -->
+            <ul class="nav navbar-nav navbar-right">
+                
+                
+                <li >
+                    <a rel="next" href="../Cookbook-of-Tips-and-Tricks/">
+                        <i class="fa fa-arrow-left"></i> Previous
+                    </a>
+                </li>
+                <li >
+                    <a rel="prev" href="../FAQ/">
+                        Next <i class="fa fa-arrow-right"></i>
+                    </a>
+                </li>
+                
+                
+            </ul>
+            
+        </div>
+    </div>
+</div>
+
+        <div class="container">
+            <div class="col-md-3"><div class="bs-sidebar hidden-print affix well" role="complementary">
+    <ul class="nav bs-sidenav">
+    
+        <li class="main active"><a href="#understanding-various-io-files-of-the-pipeline">Understanding various I/O files of the pipeline</a></li>
+        
+            <li><a href="#tirspecscriptconf">TIRSPECscript.conf</a></li>
+        
+            <li><a href="#inputoutput-files-in-each-stage-of-pipeline">Input/Output files in each stage of pipeline</a></li>
+        
+    
+    </ul>
+</div></div>
+            <div class="col-md-9" role="main">
+
+<h1 id="understanding-various-io-files-of-the-pipeline">Understanding various I/O files of the pipeline</h1>
+<p>This page is to explain various input text files and output text files pipeline uses in each stage of the run. Learning this will give user power to tweak or edit the list of image files pipeline will use at each stage.</p>
+<h3 id="tirspecscriptconf">TIRSPECscript.conf</h3>
+<p>This is the one and only configuration file of this pipeline. While running the TIRSPECdataReduction.py script, this file is to be given as the first argument. </p>
+<p>The settings of each variables available user can set in this file are as explained below.</p>
+<p>Note: The format should be exactly  VARIABLE=<space>Value</p>
+<ul>
+<li>TODO= P   # P for Photometry and S for Spectroscopy</li>
+<li>OUTPUTDIR= MyFirstReduction   #Directory to which output files of this run has to be send.</li>
+<li>VERBOSE= yes     # Print as much information as possible while running</li>
+<li>
+<p>TEXTEDITOR= "emacs -nw"  #Your favourite text editor. Other Egs: "vi"</p>
+</li>
+<li>
+<p>IMGCOMB= median  # Combining method while combining same dither position images</p>
+</li>
+<li>DITHERCOMB= average   # Combining method while combining different dither position images</li>
+<li>
+<p>SEPERATE_SKY= N #Give Y/N below if you need to subtract a seperate sky field. (Not needed if you are using that sky field as flat)</p>
+</li>
+<li>
+<p>BPMPHOTO= SlopeTIRSPECphoto-BP.pl   #Maskfile name for imaging images</p>
+</li>
+<li>
+<p>BPMSPEC= SlopeTIRSPECspec-BP.pl    #Maskfile name for spectroscopy images</p>
+</li>
+<li>
+<p>THRESHOLD= 5    #threshold for daofind</p>
+</li>
+<li>EPADU= 1         # effective epadu gain for daophot</li>
+<li>READNOISE= 0.05   #effective readnoise of the image</li>
+<li>DATAMAX= 4000     #Saturation limit in image</li>
+<li>APPERTURE= 4*fwhm    #Aperture to be used for photometry (can be written as equation of variable 'fwhm')</li>
+<li>ANNULUS= 4*fwhm  #Sky annulus to be used for photometry (can be written as equation of variable 'fwhm')</li>
+<li>
+<p>DANNULUS= 15 #Sky dannulas to be used for photometry (can be written as equation of variable 'fwhm')</p>
+</li>
+<li>
+<p>XYMATCHMIN= 4  # Minimum number of stars to match while xyxy matching photometric fields</p>
+</li>
+<li>
+<p>UT= TIME  #Header Key words for UT time in image header</p>
+</li>
+<li>
+<p>EXPTIME= ITIME  #Header Keywords. Not used now, but for future</p>
+</li>
+<li>FILTER= LOWER   #Header Keywords. Not used now, but for future</li>
+<li>OBJECT= TARGET   #Header Keywords. Not used now, but for future</li>
+<li>
+<p>COMMENT= TCOMMENT   #Header Keywords. Not used now, but for future</p>
+</li>
+<li>
+<p>OUTPUT= TIRSPECPhotometry_Output.txt  #Output file to write the selected magnitudes of the important sources. Note that all the .mag files of daophot will be there in each directory anyway.</p>
+</li>
+<li>
+<p>BACKUP= DataBackup  #Name of Directory to copy backup</p>
+</li>
+<li>
+<p>CONVOLVEIMG= NO  # To convolve images by gaussians set CONVOLVEIMG= [0.5,1.0,1.5,2.0,2.5,3.0] . Else to not do any convolving of images with gaussian set CONVOLVEIMG= NO</p>
+</li>
+<li>
+<p>DOPSF= NO # Set DOPSF= YES to do psf photometry, else put DOPSF= NO</p>
+</li>
+</ul>
+<p>Parameters related to Spectroscopy using iraf binaries
+* ARGONDIRECTORY= LampRepo  #Directory containing already identified spectral lines of Argon for each band. This will be used to reidentify lines in spectrum.</p>
+<ul>
+<li>SPECAPPERTURE= 0.1   #The ratio of peak, which decides apperture to be used on the spectrum.</li>
+<li>BACKGROUND= -25:-15,15:25    #Iraf style background region to use to subtract background.</li>
+<li>TRACEFUNC= spline3    #Available trace functions in iraf's apall</li>
+<li>TRACEORDER= 1    # Order of trace function</li>
+<li>NORMFUNC= spline3  #Function to use for continuum fitting to normalise it</li>
+<li>
+<p>NORMORDER= 3   # Order of the above function</p>
+</li>
+<li>
+<p>DISPAXIS= 2 # Disp axis is always =2 for TIRSPEC data</p>
+</li>
+<li>
+<p>SCOMBINE= YES  #Set YES if you want to average final spectra, otherwise NO.</p>
+</li>
+</ul>
+<h3 id="inputoutput-files-in-each-stage-of-pipeline">Input/Output files in each stage of pipeline</h3>
+<h4 id="photometry">Photometry</h4>
+<p>Photometric pipeline stages are as shown in the figure below. <img alt="Photometry Pipeline Stages" src="imgs/PhotometryPipeline.png" /></p>
+<p><strong>0: Backup ::</strong> Copies everything in the present working directory to ../BACKUP</p>
+<p>*Note: when ever I use upper case words like BACKUP, it refers to the variable set by that name in the TIRSPECscript.conf file </p>
+<p><strong>1: Choose frames for Reduction ::</strong> Asks user for regular expression to choose frames of a particular object. Its related Flat, Sky, Argon etc.</p>
+<p>Input files</p>
+<ul>
+<li>OUTPUTDIR/directories  (optional)# List of directories of night to run the pipeline in to reduce data in it.</li>
+<li>night/SlopeimagesLog.txt # The SlopeimagesLog.txt file which was generated at Hanle, and is present in every night directory of tirspec data</li>
+</ul>
+<p>Output files</p>
+<ul>
+<li>OUTPUTDIR/night/AllObjects.List  # List of all object frames to reduce and their filters</li>
+<li>OUTPUTDIR/night/AllObjects-Flat.List  # List of all object frames and their corresponding flats</li>
+<li>OUTPUTDIR/night/AllObjects-Argon.List  # List of all object frames and their corresponding Argon</li>
+<li>OUTPUTDIR/night/AllObjects-Sky.List  # List of all object frames and their corresponding Sky</li>
+</ul>
+<p><strong>2: Inspect Science frames ::</strong> Displays objects frames one by one to accept or discard.</p>
+<p>Input files</p>
+<ul>
+<li>OUTPUTDIR/directories   # Nights to run the pipeline</li>
+<li>OUTPUTDIR/night/AllObjects.List  # Created in previous step 1</li>
+</ul>
+<p>Output files</p>
+<ul>
+<li>OUTPUTDIR/night/AllObjects2Combine.List # File containing list of selected frames separated by blank line to mark the sets of images of each dither to combine</li>
+</ul>
+<p><strong>3: Inspect Flat frames ::</strong> Displays Flat/Sky/Argon frames one by one to accept or discard.</p>
+<p>Input files</p>
+<ul>
+<li>OUTPUTDIR/directories   # Nights to run the pipeline</li>
+<li>OUTPUTDIR/night/AllObjects-Flat.List  # Created in previous step 1</li>
+<li>OUTPUTDIR/night/AllObjects-Argon.List # Created in previous step 1</li>
+<li>OUTPUTDIR/night/AllObjects-Sky.List   # Created in previous step 1</li>
+</ul>
+<p>Output files</p>
+<ul>
+<li>OUTPUTDIR/night/AllObjects-FinalFlat.List  # Selected Flat list</li>
+<li>OUTPUTDIR/night/AllObjects-FinalArgon.List # Selected Argon list</li>
+<li>OUTPUTDIR/night/AllObjects-FinalSky.List   # Selected Sky list</li>
+</ul>
+<p><strong>4: Combine dither frames, Sky subtract , Flat correct, bp mask ::</strong>  Combined images in each dither position by DITHERCOMB method. Then subtract Sky, Apply Flat fielding and also do badpixel mask interpolation.</p>
+<p>Input files</p>
+<ul>
+<li>OUTPUTDIR/directories   # Nights to run the pipeline</li>
+<li>OUTPUTDIR/night/AllObjects.List   # Created in step 1</li>
+<li>OUTPUTDIR/night/AllObjects2Combine.List   # Created in step 2</li>
+<li>OUTPUTDIR/night/AllObjects-FinalFlat.List  # Created in step 3</li>
+<li>OUTPUTDIR/night/AllObjects-FinalSky.List   # Created in step 3</li>
+<li>OUTPUTDIR/night/AllObjects-FinalArgon.List # Created in step 3</li>
+</ul>
+<p>Output files</p>
+<ul>
+<li>OUTPUTDIR/night/FirstoneANDcombinedImages.List  # List containing the first filename and the final combined image filename of this step (outputimage_FC.fits). A blank line separates the set of different dither position combined images.</li>
+</ul>
+<p>outputimage=firstimage_DITHERCOMB_lastimage</p>
+<ul>
+<li>OUTPUTDIR/night/outputimage.flatlist  # List of images used for flat for this outputimage</li>
+<li>OUTPUTDIR/night/outputimage.skylist  # List of images used for sky for this outputimage</li>
+<li>OUTPUTDIR/night/outputimage_flat.fits  # Flat obtained for this outputimage</li>
+<li>OUTPUTDIR/night/outputimage_Nflat.fits  # Normalised flat used for this outputimage</li>
+<li>OUTPUTDIR/night/outputimage_sky.fits  # Sky obtained for this outputimage</li>
+<li>OUTPUTDIR/night/outputimage_SS.fits  # Sky subtracted stage of outputimage</li>
+<li>OUTPUTDIR/night/outputimage*_FC.fits  # Flat fielded stage of outputimage</li>
+</ul>
+<p><strong>5: Align and Combine various dithers ::</strong> Aligns and combines, already combined images of different dither positions</p>
+<p>Input files</p>
+<ul>
+<li>OUTPUTDIR/directories   # Nights to run the pipeline</li>
+<li>OUTPUTDIR/night/AllObjects2Combine.List   # Created in step 2</li>
+<li>OUTPUTDIR/night/FirstoneANDcombinedImages.List  # Created in step 4</li>
+</ul>
+<p>Output files</p>
+<ul>
+<li>OUTPUTDIR/night/FirstoneANDalignNcombinedImages.List  # First image and name of combined outputimage (outputimage.fits)</li>
+</ul>
+<p>outputimage=firstimage_alignIMGCOMB_lastimage</p>
+<ul>
+<li>OUTPUTDIR/night/outputimage.GSCoo  # Good star coords used for aligning (imalign)</li>
+<li>OUTPUTDIR/night/outputimage.ditherList  # List of images in different dither positions used.</li>
+<li>OUTPUTDIR/night/outputimage.AlignedditherList  # List of aligned images from different dither positions.</li>
+</ul>
+<p><strong>6: Create list of images for photometry ::</strong> </p>
+<p>Input files</p>
+<ul>
+<li>OUTPUTDIR/directories   # Nights to run the pipeline</li>
+<li>OUTPUTDIR/night/AllObjects.List   # Created in step 1</li>
+<li>OUTPUTDIR/night/FirstoneANDcombinedImages.List  # Created in step 4</li>
+<li>OUTPUTDIR/night/FirstoneANDalignNcombinedImages.List  # Created in step 5</li>
+</ul>
+<p>Output files</p>
+<ul>
+<li>OUTPUTDIR/Images4Photo.in  # List of all final reduced images.</li>
+</ul>
+<p><strong>7: Choose Star, Sky region ::</strong> Askes user to select good stars, and good sky regions in first image.</p>
+<p>Input files</p>
+<ul>
+<li>OUTPUTDIR/Images4Photo.in  # Created in step 6</li>
+</ul>
+<p>Output files</p>
+<ul>
+<li>OUTPUTDIR/Sources.coo  # Coordinate of source of primary interest</li>
+<li>OUTPUTDIR/GoodStars.coo  # Coordinate of Good stars for PSF measurements</li>
+<li>OUTPUTDIR/BlankSky.coo  # Coordinate of Blank sky regions</li>
+<li>OUTPUTDIR/qphotinput.txt  # Coordinate and parameters for qphot photometry</li>
+</ul>
+<p><strong>8: Create Sextractor files and Bright star list ::</strong></p>
+<p>Input files</p>
+<ul>
+<li>OUTPUTDIR/Images4Photo.in  # Created in step 6</li>
+</ul>
+<p>Output files</p>
+<ul>
+<li>OUTPUTDIR/FirstImageTop30.coo  # List of first 30 bright stars in the field</li>
+<li>OUTPUTDIR/test.cat  # Raw sextractor output catalogue</li>
+<li>OUTPUTDIR/sextractor.sex  # New Sextractor config files, only if not already present.</li>
+<li>OUTPUTDIR/default.conv  # New Sextractor config files, only if not already present.</li>
+<li>OUTPUTDIR/default.param  # New Sextractor config files, only if not already present.</li>
+</ul>
+<p><strong>9: Photometry ::</strong></p>
+<p>Input files</p>
+<ul>
+<li>OUTPUTDIR/Images4Photo.in  # Created in step 6</li>
+<li>OUTPUTDIR/FirstImageTop30.coo  # Created in step 8</li>
+<li>OUTPUTDIR/sextractor.sex  # Created in step 8</li>
+<li>OUTPUTDIR/default.conv  # Created in step 8</li>
+<li>OUTPUTDIR/default.param  # Created in step 8</li>
+<li>OUTPUTDIR/Sources.coo  # Created in step 7</li>
+<li>OUTPUTDIR/GoodStars.coo  # Created in step 7</li>
+<li>OUTPUTDIR/BlankSky.coo  # Created in step 7</li>
+<li>OUTPUTDIR/qphotinput.txt  # Created in step 7</li>
+</ul>
+<p>Output files</p>
+<ul>
+<li>OUTPUTDIR/night/image+xymatch.out  # Output of xyxymatch iraf task</li>
+<li>OUTPUTDIR/night/image+Source.coo  # geoxytran transformed coordinates</li>
+<li>OUTPUTDIR/night/image+GoodStars.coo  # geoxytran transformed coordinates</li>
+<li>OUTPUTDIR/night/image+BlankSky.coo  # geoxytran transformed coordinates</li>
+<li>OUTPUTDIR/night/image+qphotinput.txt  # geoxytran transformed coordinates</li>
+<li>OUTPUTDIR/night/image+.mag*  # standard daophot .mag files , .als files etc</li>
+<li>OUTPUTDIR/OUTPUT # Output file containing the selected magnitudes of the important sources in Source.coo, GoodStars.coo and qphotinput.txt</li>
+</ul>
+<h4 id="spectroscopy">Spectroscopy</h4>
+<p>Spectroscopy pipeline stages are as shown in the figure below. <img alt="Spectroscopy pipeline stages" src="imgs/SpectroscopyPipeline.png" /></p>
+<p>Stages 0,1,2,3 and 4 are exactly same as already explained in the Photometry pipeline above. The steps differ only after these initial steps are over.</p>
+</div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            
+            <p>Documentation built with <a href="http://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+
+        
+
+        <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
+        <script src="../js/bootstrap-3.0.3.min.js"></script>
+        <script src="../js/prettify-1.0.min.js"></script>
+        <script src="../js/base.js"></script>
+        
+    </body>
+</html>
