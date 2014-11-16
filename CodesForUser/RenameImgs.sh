@@ -15,8 +15,8 @@ read -p "Press enter to continue :" junk
 cp SlopeimagesLog.txt SlopeimagesLog-NEW.txt
 $TEXTEDITOR SlopeimagesLog-NEW.txt
 
-gawk '{print $1}' SlopeimagesLog.txt > temp1rename.txt
-gawk '{print $1}' SlopeimagesLog-NEW.txt > temp2rename.txt
+awk '{print $1}' SlopeimagesLog.txt > temp1rename.txt
+awk '{print $1}' SlopeimagesLog-NEW.txt > temp2rename.txt
 diff --side-by-side --suppress-common-lines temp1rename.txt temp2rename.txt > diff2rename.txt
 
 while read -r line
