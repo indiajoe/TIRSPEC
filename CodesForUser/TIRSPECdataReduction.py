@@ -1529,6 +1529,7 @@ def InitialTest():
 
     #Check the "set     stdimage        = imt1024" is present in login.cl file.
     with open(os.path.expanduser('~/iraf/login.cl')) as clfile:
+        clstdimage = None
         for line in clfile:
             line=line.rstrip().split()
             if len(line) >= 3:
