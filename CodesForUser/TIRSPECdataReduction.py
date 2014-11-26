@@ -1797,6 +1797,6 @@ ___________._____________  _______________________________________
     except KeyboardInterrupt :
         KeyboardInterrupt_handler()
 
-    print("All tasks over....Enjoy!!!_________indiajoe@gmail.com")
+    print("All tasks over....Enjoy!!!")
             
 
