@@ -5,4 +5,5 @@ pages:
 - ['Getting-Started.md', 'User Guide', 'Getting Started']
 - ['Cookbook-of-Tips-and-Tricks.md', 'User Guide', 'Cookbook']
 - ['Understanding-various-I-O-files-of-pipeline.md', 'User Guide', 'Advanced']
+- ['Photometry-Tutorial.md', 'User Guide', 'Photometry Tutorial']
 - ['FAQ.md', 'FAQ']
