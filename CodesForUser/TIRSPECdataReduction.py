@@ -1540,7 +1540,7 @@ def InitialTest():
             print('Please set the following line in {0} file.'.format(os.path.expanduser('~/iraf/login.cl')))
             print('set     stdimage        = imt1024')
             print('This is to avoid a certain bug in new version of IRAF and ds9')
-            raise Exception('Image size 1024 not set in login.cl file')
+            print('This will be an issue while you open tirspec images from pyraf')
             
     #Check for SExtractor installation
     if TODO == 'P':
