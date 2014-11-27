@@ -2,6 +2,7 @@
 #This script will help in telluric correction of spectra with standard star spectra interactively.
 import readline
 import sys
+import os
 import numpy as np
 import numpy.ma
 import scipy.interpolate as interp
@@ -794,6 +795,11 @@ def is_number(s):   # A funtion to check wheter string s is a number or not.
 
 def main():
     """ Asks user for the standard star spectra and science target spectra files and start telluric correction """
+    VegaTemplateFile = 'Vega_R2000_WR9000to30000_RS10_Norm.txt'
+    if not os.path.isfile(VegaTemplateFile) :
+        print('Cannot find the file {0} in {1}'.format(VegaTemplateFile,os.getcwd()))
+        print('Please extract {0} from CodesForUser/data.tar.gz and copy to {1} before proceeding.'.format(VegaTemplateFile,os.getcwd()))
+        sys.exit(1)
     StdStarRaw,stdfname=AskAndLoadData(toask="Enter the name of standard star spectrum file : ",Skipascii=69)
     ScienceStarRaw,scifname=AskAndLoadData(toask="Enter the name of science star spectrum file : ",Skipascii=69)
     CorrSci,CorrSciWL,Telluric=TelluricCorrect(ScienceStarRaw,StdStarRaw)

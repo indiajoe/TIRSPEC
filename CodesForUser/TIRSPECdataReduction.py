@@ -1559,6 +1559,7 @@ def InitialTest():
     if TODO == 'S':
         if not os.path.exists(LAMPREPODIR):
             print('Lamp Repository directory not found: {0}'.format(LAMPREPODIR))
+            print('You can obtain LampRepo directory by extracting CodesForUser/data.tar.gz')
             print('Please add the correct path to Lamp Repository before proceeding')
             raise IOError(LAMPREPODIR)
         
