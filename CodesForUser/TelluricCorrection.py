@@ -15,7 +15,7 @@ def NearestIndex(Array,value):
     """ Returns the index of element in numpy 1d Array nearest to value """
     return np.abs(Array-value).argmin()
 
-def FluxCalibrateSpectrumArray(Spectrum,Wavelengths,Flambdas,StatW=20):
+def FluxCalibrateSpectrumArray(Spectrum,Wavelengths,Flambdas,StatW=20,InterpWL=None):
     """ Returns a Flux calibrated spectrum based on input Wavelengths and Fluxs
     Input: Spectrum : The continumm corrected spctrum ot be scaled to flux calibrate.
                       It should be a 2D numpy array with 0th column wavelength and 1st column counts.
@@ -25,7 +25,10 @@ def FluxCalibrateSpectrumArray(Spectrum,Wavelengths,Flambdas,StatW=20):
                          are used to linearly interpolate lamda*F_lambda to find F_lambda at the center wavelength 
                          of the spectrum.
            Flambdas : F_lambda for corresponding wavelengths (in same per unit as wavelength)
-           StatW : Size of the pixel window around the wavelength to be used for mean flux calculation.
+           StatW (optional): Size of the pixel window around the wavelength to be used for mean flux calculation.
+           InterpWL (optional): Incase only outside wavelengths are provided then scaling is done by Interpolating 
+                     the F_Lambda at InterpWL wavelength. (Default: Central Wavelength of Spectrum)
+                      
     
     Output : Spectrum scaled to have F_lambda units of count in y axis """
 
@@ -36,8 +39,10 @@ def FluxCalibrateSpectrumArray(Spectrum,Wavelengths,Flambdas,StatW=20):
 
     if len(WaveIndexIn) == 0 : # All input wavelgnths are outside
         if NoOfWavelengths >= 2: #Atleast two points to fit straigth line to flux
-            print('No inside wavelengths given, using the outside wavelength fluxes to interpolate for the central wavelength of the spectrum')
-            WLToFit = [ Spectrum[len(Spectrum[:,0])/2,0] ]
+            if InterpWL is None: # No user input given, so set the central wavelength as the point of interpoaltion
+                InterpWL = Spectrum[len(Spectrum[:,0])/2,0]
+            print('No inside wavelengths given, using the outside wavelength fluxes to interpolate for the {0} wavelength Flux of the spectrum'.format(InterpWL))
+            WLToFit = [ InterpWL ]
             # We should interpolate  lambda*F_lambda quantity to find F_lambda at the central wavelength
             lF_l = [l*F_l for l,F_l in zip(Wavelengths,Flambdas)]
             Interp_lF_l= np.poly1d(np.polyfit(Wavelengths, lf_l , 1))  # 1d polynomial of 1 degree
@@ -101,6 +106,7 @@ def AskAndFluxCalibrate(WavelengthArray,CountsArray):
         print('Example : 14.56 12.67')
     Mag = raw_input("Enter 2MASS filter {0} Mag of star for flux calibration (to skip press enter): ".format(Order)).strip(' ')
     if is_number(Mag) or (Order == 'Y' and len(Mag.split()) == 2): #User entered Magnitude(s)
+        InterpWL = None
         if Order in ['J','H','Ks']:
             F_L, WaveL = ConvertMagtoFlambda(Order,float(Mag))
             Wavelengths = [WaveL]
@@ -110,9 +116,10 @@ def AskAndFluxCalibrate(WavelengthArray,CountsArray):
             F_LJ, WaveLJ = ConvertMagtoFlambda('J',float(Mag.split()[0]))
             Wavelengths = [WaveLI,WaveLJ]
             FLambdas= [F_LI,F_LJ]
+            InterpWL=10550.0  # A good region of Y to interpolate I and J fluxes
         # Do flux calibration
         Spectrum = np.vstack((WavelengthArray,CountsArray)).T
-        FluxCalibratedSpectrum = FluxCalibrateSpectrumArray(Spectrum,Wavelengths,FLambdas,StatW=20)
+        FluxCalibratedSpectrum = FluxCalibrateSpectrumArray(Spectrum,Wavelengths,FLambdas,StatW=20,InterpWL=InterpWL)
         FluxCalibrationDone = True
         print('Flux calibrated to W/m^2/Angstrom')
         return FluxCalibratedSpectrum[:,1],FluxCalibrationDone
