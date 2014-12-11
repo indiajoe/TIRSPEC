@@ -11,6 +11,117 @@ import scipy.optimize
 import matplotlib.pyplot as plt
 from astropy.io import fits  #Needed only to load fits spectra
 
+def NearestIndex(Array,value):
+    """ Returns the index of element in numpy 1d Array nearest to value """
+    return np.abs(Array-value).argmin()
+
+def FluxCalibrateSpectrumArray(Spectrum,Wavelengths,Flambdas,StatW=20):
+    """ Returns a Flux calibrated spectrum based on input Wavelengths and Fluxs
+    Input: Spectrum : The continumm corrected spctrum ot be scaled to flux calibrate.
+                      It should be a 2D numpy array with 0th column wavelength and 1st column counts.
+           Wavelengths : List of Wavelengths (in spectrum's wavelength unit) whose F_lambda is provided.
+                         Wavelength inside the range will be used to scale with equal weightage.
+                         If no inside wavelength is provided but if atleast 2 outside wavelegnths are given they 
+                         are used to linearly interpolate lamda*F_lambda to find F_lambda at the center wavelength 
+                         of the spectrum.
+           Flambdas : F_lambda for corresponding wavelengths (in same per unit as wavelength)
+           StatW : Size of the pixel window around the wavelength to be used for mean flux calculation.
+    
+    Output : Spectrum scaled to have F_lambda units of count in y axis """
+
+    NoOfWavelengths = len(Wavelengths)
+    assert (len(Wavelengths) == len(Flambdas)),"Number of input wavelengths:{0} does not match input flux:{1}".format(len(Wavelengths),len(Flambdas))
+    Wrange = (min(Spectrum[:,0]),max(Spectrum[:,0]))
+    WaveIndexIn = [i for i in range(Wavelengths) if Wrange[0] < Wavelengths[i] < Wrange[1]]
+
+    if len(WaveIndexIn) == 0 : # All input wavelgnths are outside
+        if NoOfWavelengths >= 2: #Atleast two points to fit straigth line to flux
+            print('No inside wavelengths given, using the outside wavelength fluxes to interpolate for the central wavelength of the spectrum')
+            WLToFit = [ Spectrum[len(Spectrum[:,0])/2,0] ]
+            # We should interpolate  lambda*F_lambda quantity to find F_lambda at the central wavelength
+            lF_l = [l*F_l for l,F_l in zip(Wavelengths,Flambdas)]
+            Interp_lF_l= np.poly1d(np.polyfit(Wavelengths, lf_l , 1))  # 1d polynomial of 1 degree
+            FlToFit = [ Interp_lF_l(WLToFit[0])/WLToFit[0] ]  # F_lambda at the central wavelength
+        else : 
+            print('Atleast two outside points are needed to interpolate')
+            raise
+    else: # one or more points inside the spectrum's range
+        WLToFit = [Wavelengths[i] for i in WaveIndexIn]
+        FlToFit = [Flambdas[i] for i in WaveIndexIn]
+
+    #Index of the positions of Wavelengths in spectrum
+    Cindexes = [NearestIndex(Spectrum[:,0],wav) for wav in WLToFit]
+    #Median value of counts in the StatWindow around these coordinate
+    RawMedianCounts = [np.median(Spectrum[i-StatW/2:i+StatW/2,1]) for i in Cindexes]
+    
+    ScaleFactor = [F_l/RawC for F_l,RawC in zip(FlToFit,RawMedianCounts)]
+    MeanScale = np.mean(ScaleFactor)
+    print('Scaling factors obtained : '+','.join(['{0}:{1}'.format(w,s) for w,s in zip(WLToFit,ScaleFactor)]))
+    print('Mean Scale factor: {0}'.format(MeanScale))
+    OutputSpectrum = Spectrum.copy()  # Copy to prevent original from getting affected
+    OutputSpectrum[:,1] *= MeanScale
+    return OutputSpectrum
+    
+def ConvertMagtoFlambda(band,Mag):
+    """ Returns the F_lambda in W/m^2/Angstrom for the input Mag in input band
+    Input:
+       band : 'U','B','V','R','I','J','H','Ks' 
+       Mag : Magnitude in Vega system 
+    Output:
+       FluxLambda : Flux_Lambda in W/m^2/Angstrom
+       EffWavelength : Effective Wavelength of the Band in Angstrom
+    """
+    # HCT optical color correction is done using Landolt Standards which has UBV in Johnson and RI in Cousins
+    # UBV are Johnson and RI in Cousins and JHKs is 2MASS Zero points taken from http://www.gemini.edu/?q=node/11119 
+    Zeropoints={'U':4.266*10**(-12),'B':6.822*10**(-12),'V':3.802*10**(-12),'R':2.254*10**(-12),'I':1.225*10**(-12),'J':3.133*10**(-13),'H':1.111*10**(-13),'Ks':4.288*10**(-14)}
+    EffWLs={'U':3650,'B':4330,'V':5500,'R':6400,'I':7900,'J':12350,'H':16620,'Ks':21590}
+    return Zeropoints[band]*10**(-1*Mag/2.5),EffWLs[band]
+
+
+
+def AskAndFluxCalibrate(WavelengthArray,CountsArray):
+    """ Ask user for 2MASS filter Mag of the source and calibrate the Counts in F_lambda W/m^2/A 
+    Returns : the Flux array, 
+              FluxCalibrationDone : a True or False Flag """
+    FluxCalibrationDone = False
+    CentralWL = WavelengthArray[len(WavelengthArray)/2]
+    if 10200 < CentralWL < 12000 : Order='Y'
+    elif 12100 < CentralWL < 14800  : Order='J'
+    elif 14900 < CentralWL < 17800 : Order='H'
+    elif 20400 < CentralWL < 23500 : Order='Ks'
+    else :
+        print('ERROR: Unknown Wavelength Order with central wavelength {0} Angstrom'.format(CentralWL))
+        print('ERROR: No flux calibration done')
+        FluxCalibrationDone = False
+        return CountsArray,FluxCalibrationDone 
+
+    Mag = 'SkipFluxCalib'
+    if Order == 'Y':
+        print('Since there is no Y mag, Enter I and J mag of the star instead space seperated')
+        print('Example : 14.56 12.67')
+    Mag = raw_input("Enter 2MASS filter {0} Mag of star for flux calibration (to skip press enter): ".format(Order)).strip(' ')
+    if is_number(Mag) or (Order == 'Y' and len(Mag.split()) == 2): #User entered Magnitude(s)
+        if Order in ['J','H','Ks']:
+            F_L, WaveL = ConvertMagtoFlambda(Order,float(Mag))
+            Wavelengths = [WaveL]
+            FLambdas= [F_L]
+        elif Order in ['Y']:
+            F_LI, WaveLI = ConvertMagtoFlambda('I',float(Mag.split()[0]))
+            F_LJ, WaveLJ = ConvertMagtoFlambda('J',float(Mag.split()[0]))
+            Wavelengths = [WaveLI,WaveLJ]
+            FLambdas= [F_LI,F_LJ]
+        # Do flux calibration
+        Spectrum = np.vstack((WavelengthArray,CountsArray)).T
+        FluxCalibratedSpectrum = FluxCalibrateSpectrumArray(Spectrum,Wavelengths,FLambdas,StatW=20)
+        FluxCalibrationDone = True
+        print('Flux calibrated to W/m^2/Angstrom')
+        return FluxCalibratedSpectrum[:,1],FluxCalibrationDone
+    else:
+        print("Not doing Flux calibration.")
+        FluxCalibrationDone = False
+        return CountsArray,FluxCalibrationDone 
+        
+
 def RichardsonLucy(Signal,PSF,IniKernel,niter):
     """ By Richardson-Lucy Algorithm, retrun the deconvolution of Signal using input PSF.
     Input: Signal : 1d numpy array, which is to be deconvolved
@@ -803,20 +914,24 @@ def main():
     StdStarRaw,stdfname=AskAndLoadData(toask="Enter the name of standard star spectrum file : ",Skipascii=69)
     ScienceStarRaw,scifname=AskAndLoadData(toask="Enter the name of science star spectrum file : ",Skipascii=69)
     CorrSci,CorrSciWL,Telluric=TelluricCorrect(ScienceStarRaw,StdStarRaw)
+    # Do optional Continumm correction and flux calibration
     BBtemp='SkipCC'
     BBtemp=raw_input("Enter Temperature of Std star (Kelvin) to correct continuum (to skip press enter): ")
     if is_number(BBtemp): #User entered the temperature of Std star
         T=float(BBtemp)
-        CorrSci=CorrSci*BlackBodyFlux(CorrSciWL,T)
+        CorrSci=CorrSci*BlackBodyFlux(CorrSciWL,T)  # Multiply BB curve to correct continuum
+        CorrSci,FluxCalibrationDone=AskAndFluxCalibrate(CorrSciWL,CorrSci)  # Ask user for Mag and if provided do Flux calibration
     else:
-        print("Not doing continuum correction using BB curve.")
+        print("Not doing continuum correction using BB curve and flux calibration.")
+
     plt.close()
     fig=plt.figure()
     fig.canvas.set_window_title('Final Spectrum')
     ax = fig.add_subplot(1,1,1)
     ax.plot(CorrSciWL/10000.0,CorrSci,drawstyle='steps',color='black')
     ax.set_xlabel(r'Wavelength ($\mu m$)')
-    ax.set_ylabel('Normalised counts')
+    if FluxCalibrationDone : ax.set_ylabel('W/m^2/Angstom')
+    else: ax.set_ylabel('Normalised Counts')
     print("Final spectrum will be saved after window is closed.")
     plt.show()
     #Save the generated spectras values as numpy arrays
@@ -832,6 +947,10 @@ def main():
         outfits=fits.open(scifname)
         outfits[0].data = np.array(CorrSci)
         outfits[0].header.add_history('Telluric and Instrumental Response Corrected')
+        if FluxCalibrationDone :
+            outfits[0].header.add_history('Flux calibrated to W/m^2/Angstom')
+            outfits[0].header['FLUXUNIT']=('W/m^2/Angstom','Y axis Flux calibration Unit')
+
         outfits.writeto(scifnameNew+'.fits')
         outfits.close()
         print(scifnameNew+'.fits')
