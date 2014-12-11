@@ -251,7 +251,9 @@ def FitGaussianLineProfile(XYDataToFit,absorption=True,displayfit=True):
         ax=fig.add_subplot(1,1,1)
         ax.plot(XYDataToFit[:,0],XYDataToFit[:,1],marker='.',alpha=0.5) 
         ax.plot(XYDataToFit[:,0],BestFitGaussian,color='k') 
-        ax.plot(XYDataToFit[:,0],XYDataToFit[:,1]-BestFitPureGaussian,color='red') 
+        ax.plot(XYDataToFit[:,0],XYDataToFit[:,1]-BestFitPureGaussian,color='red',label='residual') 
+        ax.legend(shadow=True)
+        print('Close the fit result plot to continue...')
         plt.show()
 
     return BestFitPureGaussian,p
