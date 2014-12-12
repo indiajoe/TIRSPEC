@@ -234,6 +234,11 @@ def FitGaussianLineProfile(XYDataToFit,absorption=True,displayfit=True):
     
     p,succ=FitGauss1D(Ydata,ip=None,FitBkgFromEdge=False)
 
+    if succ not in [1,2,3,4]:  # failed to converge and fit the curve
+        print('ALERT: Gaussian fitting failed.. Setting Amplitude to Zero')
+        p[0] = 0 # Set amplitude of the gaussian to zero.
+        p[1] = len(XYDataToFit[:,0])/2  # Keep Center at the center of the data
+        
     if absorption : 
         p[0]*=-1  #Amplitude
         p[3]*=-1  #Background
@@ -282,6 +287,7 @@ def FitGaussianToAllHLines(spec,absorption=True):
     for line,start,end in zip(HlinesInSpec,WindowStart,WindowEnd):
         print('Fitting H line at {0} A'.format(line))
         Gaussianline,params = FitGaussianLineProfile(spec[start:end,:],absorption=absorption)
+        print('If fitted peak is not centered at the central wavelength, Do not subtract!')
         confirm=raw_input("Do you want to subtract the fitted gaussian? (Enter y to subtract) : ").strip(' ')
         if confirm.lower() == 'y' :
             print("This best fit gaussian line profile will be subtracted.")
