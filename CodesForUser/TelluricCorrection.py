@@ -35,7 +35,7 @@ def FluxCalibrateSpectrumArray(Spectrum,Wavelengths,Flambdas,StatW=20,InterpWL=N
     NoOfWavelengths = len(Wavelengths)
     assert (len(Wavelengths) == len(Flambdas)),"Number of input wavelengths:{0} does not match input flux:{1}".format(len(Wavelengths),len(Flambdas))
     Wrange = (min(Spectrum[:,0]),max(Spectrum[:,0]))
-    WaveIndexIn = [i for i in range(Wavelengths) if Wrange[0] < Wavelengths[i] < Wrange[1]]
+    WaveIndexIn = [i for i in range(len(Wavelengths)) if Wrange[0] < Wavelengths[i] < Wrange[1]]
 
     if len(WaveIndexIn) == 0 : # All input wavelgnths are outside
         if NoOfWavelengths >= 2: #Atleast two points to fit straigth line to flux
