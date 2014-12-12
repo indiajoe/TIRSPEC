@@ -258,6 +258,40 @@ def FitGaussianLineProfile(XYDataToFit,absorption=True,displayfit=True):
 
     return BestFitPureGaussian,p
 
+
+def FitGaussianToAllHLines(spec,absorption=True):
+    """ Fits Gaussian to all Hydrogen lines in the spectrum 
+    Input: 
+         spec : 2 coulumn numpy array with X and Y data.
+         absorption : True to fit absorption line gaussian, and False to fit emission line gaussian 
+    Output:
+         BestFitPureGaussianDics : Dictionary of Best Fit pure gaussian of on the input data without any background
+         pDic                   : Dictionary of Full set of parameters of best fit Gaussian1D
+    """
+    
+    AllHlineList = [18756.1,12821.6,10941.1,10052.1,9548.6,9231.5,9017.4,21661.2,19450.9,18179.1,17366.9,16811.1,16411.7,16113.7,15884.9,15705,15560.7,15443.1,15346,15264.7,15196,15137.4]
+    AllHlineWindowSize = [150 if i < 16700 else 200 for i in AllHlineList] # Window width in Amstrong
+    
+    # First find the list of Hydrogen lines possible in the spectrum.
+    HlinesInSpec = [line for line in AllHlineList if spec[40,0] < line < spec[-40,0] ]
+    WindowStart = [NearestIndex(spec[:,0], line-AllHlineWindowSize[AllHlineList.index(line)]/2) for line in HlinesInSpec]
+    WindowEnd = [NearestIndex(spec[:,0], line+AllHlineWindowSize[AllHlineList.index(line)]/2) for line in HlinesInSpec]
+    print ('H lines in this spectrum at {0}'.format(HlinesInSpec))
+    BestFitPureGaussianDics = dict()
+    pDic = dict()
+    for line,start,end in zip(HlinesInSpec,WindowStart,WindowEnd):
+        print('Fitting H line at {0} A'.format(line))
+        Gaussianline,params = FitGaussianLineProfile(spec[start:end,:],absorption=absorption)
+        confirm=raw_input("Do you want to subtract the fitted gaussian? (Enter y to subtract) : ").strip(' ')
+        if confirm.lower() == 'y' :
+            print("This best fit gaussian line profile will be subtracted.")
+            BestFitPureGaussianDics[(start,end)]=Gaussianline   #Storing the line for subtracting in future
+            pDic[line]=params
+        else : print("Discarding the fitted gaussian line.")
+
+    return BestFitPureGaussianDics, pDic
+    
+
 def BlackBodyFlux(InWavelengths,Temp):
     """ Returns an array of median scaled flux from blackbody corresponding to the input list of wavelengths, and given Temperature 
     Input InWavelengths : a list or  numpy array of wavelengths in Angstrom
@@ -738,9 +772,13 @@ def AskAndCleanStellarLines(Inspec):
                     print('You have already choosen to do star template division, so this step is not allowed. \n However you can quit this section and return back to choose this process')
 
             elif choice[0] == 'g' and choice.split()[1].upper()=='H': #Gaussian fitting of all hydrogen lines
-                print('Not yet implemented..: Please use "gs start end" for each line.')
-                pass
-
+                if not StdConvolved:
+                    All_H_GaussianFits,paramsD = FitGaussianToAllHLines(spec,absorption=True)
+                    FittedGaussians.update(All_H_GaussianFits)
+                    GaussSubtracted=True
+                    print('Please use "gs start end" for any remaining stellar lines (if any).')
+                else:
+                    print('You have already choosen to do star template division, so this step is not allowed. \n However you can quit this section and return back to choose this process')                    
             elif choice[0] == 's': #Shifting of Telluric spectra
                 print("Previous spectral shift was %f points"%(WLshift))
                 WLshift+=float(choice.split()[1])
