@@ -24,3 +24,4 @@ for dir in $(cat "$NewDirsFile"); do
     echo "$dir $dirSize" >> "$ToBeCopiedFile"
     echo "$dir $dirSize" >> "$OldDirsFile"
     echo "$(date) : Added $dir :$dirSize to $ToBeCopiedFile" >> "$LogFile"
+done
