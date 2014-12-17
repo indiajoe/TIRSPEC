@@ -102,7 +102,10 @@ done
 # We shall run it in Idle mode so that it runs only when no other program is asking for disk access. 
 # For this we set ionice -c 3
 
-ionice -c3 rsync -avr --files-from="$ExternalHDISK"/ListofDirs.txt "$ExternalHDISK/"
+# It is a shame, we cannot use ionice -c3 as tirspec user since kernal (2.6.18) is older than 2.6.25 
+# Hence I am using "nice -n18 ionice -c2 -n7" instead
+#ionice -c3 rsync -avr --files-from="$ExternalHDISK"/ListofDirs.txt "$ExternalHDISK/"
+nice -n18 ionice -c2 -n7 rsync -avr --files-from="$ExternalHDISK"/ListofDirs.txt "$ExternalHDISK/"
 
 if [ $? ] ; then
     echo "$(date) : Succesfully copied all data  " | tee -a "$LogFile"
@@ -114,7 +117,8 @@ fi
 
 for dir in $(cat "$ExternalHDISK"/ListofDirs.txt) ; do
     echo "Calculating md5sum of "$dir
-    md5checksum=$(ionice -c3 find $dir -type f -exec md5sum {} + | awk '{print $1}' | sort | md5sum | cut -d' ' -f1)
+#    md5checksum=$(ionice -c3 find $dir -type f -exec md5sum {} + | awk '{print $1}' | sort | md5sum | cut -d' ' -f1)
+    md5checksum=$(nice -n18 ionice -c2 -n7 find $dir -type f -exec md5sum {} + | awk '{print $1}' | sort | md5sum | cut -d' ' -f1)
     echo $dir $md5checksum | tee -a "$ExternalHDISK/$DirAndChecksumFile"
 done
 
