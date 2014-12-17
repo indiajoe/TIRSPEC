@@ -20,7 +20,7 @@ find "$DataPath" -maxdepth 1 -mindepth 1 -type d -mtime +$Age -print | sort <( c
 #ALERT: Due to the previous line, directories are not allowed to have any space in their name
 
 for dir in $(cat "$NewDirsFile"); do
-    dirSize=$(du -s "$dir")
+    dirSize=$(du -s "$dir" | awk '{print $1}')
     echo "$dir $dirSize" >> "$ToBeCopiedFile"
     echo "$dir $dirSize" >> "$OldDirsFile"
     echo "$(date) : Added $dir :$dirSize to $ToBeCopiedFile" >> "$LogFile"
