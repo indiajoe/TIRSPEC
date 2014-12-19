@@ -10,6 +10,8 @@ ToBeCopiedFile='/data/DirsToBeCopied.txt'
 AlreadyCopiedFile='/data/DirsAlreadyCopiedButInTransit.txt'
 DirAndChecksumFile='DirAndChecksum.txt'
 
+OldDirsFile='/data/OldDirsList.txt'  # This file is not used in this script
+
 # First we have to make sure only one instance of this script is running using flock
 ScriptLock='/tmp/DataBackupScript.LOCK'
 exec 8> $ScriptLock  #I picked 8 arbitrarily as my file handle
@@ -28,14 +30,14 @@ PercentUse=($(df | awk '/^\/dev\/sd[^a]/{print $5}'))
 
 Lastsd=$(( ${#External[@]} -1))  # Index of Last external hdisk 
 
-if [[ ${#External[@]} == 0 ]] ; then #No external hardisk detected
+if [[ ${#External[@]} -eq 0 ]] ; then #No external hardisk detected
     echo "No external hardisk mounted to start backup."
     echo "Mount a new external hardisk and call this backup script again."
     echo "Press Enter to close..."
     read junk	
     exit 2
 
-elif [[ ${#External[@]} > 1 ]] ; then  # More than one external storage device mounted
+elif [[ ${#External[@]} -gt 1 ]] ; then  # More than one external storage device mounted
     echo "More than one external hardisk detected. Choose the hardisk to backup data."
     echo "---------------------------"
     for i in $(seq 0 $Lastsd) ; do
@@ -47,7 +49,8 @@ elif [[ ${#External[@]} > 1 ]] ; then  # More than one external storage device m
     echo -n "Enter Serial number of your choice:"
     while read -n 1 choice
     do
-	if [[ $choice < ${#External[@]} && $choice > -1 ]] ; then
+	echo
+	if [[ $choice -lt ${#External[@]} ]] && [[ $choice -gt -1 ]] ; then
 	    ExternalHDISK=${External[$choice]}
 	    ExternalHDISKFreeSpace=${FreeSpace[$choice]}
 	    break
@@ -66,6 +69,7 @@ ExternalHDISK=$(echo $ExternalHDISK | sed -e 's/^ *//' -e 's/ *$//')
 
 #### Check write permission in the hardisk ####
 if date > "$ExternalHDISK"/DateofCopying.txt ; then
+    echo "Write permission to $ExternalHDISK verified."
 else
     echo "Not able to write to external hardisk $ExternalHDISK"
     echo "Mount a new external hardisk and call this backup script again."
@@ -83,15 +87,22 @@ DirsToCopyArray=()
 { while read line
     do
     dirsize=$(echo $line | gawk '{print $NF}')
-    if [[ $(($FilledSize + $dirsize)) < $(($ExternalHDISKFreeSpace - 3000000)) ]] ; then  # We leave 3 GB free
+    if [[ $(($FilledSize + $dirsize)) -lt $(($ExternalHDISKFreeSpace - 3000000)) ]] ; then  # We leave 3 GB free
 	dir=$(echo $line | gawk '{print $1}')
 	DirsToCopyArray+=($dir)
+	FilledSize=$(($FilledSize + $dirsize))
     fi
     done } < "$ToBeCopiedFile"
 
+if [ ${#DirsToCopyArray[@]} -lt 1 ] ;then  # Not even one directory to copy is present
+    echo "No directories which will fit in $ExternalHDISK is there to Backup. Try again after few days."
+    echo "Press Enter to close..."
+    read junk	
+    exit 0
+fi
 
 #### Start copying the selected directories to external hardisk ####
-echo "$(date) : Directories being copied to $ExternalHDISK :: ${DirsToCopyArray[@]} " | tee -a "$LogFile"
+echo "$(date) : Directories being copied to $ExternalHDISK :: ${DirsToCopyArray[@]} ; Size = $FilledSize" | tee -a "$LogFile"
 
 echo > "$ExternalHDISK"/ListofDirs.txt
 for dir in ${DirsToCopyArray[@]} ; do
@@ -102,15 +113,24 @@ done
 # We shall run it in Idle mode so that it runs only when no other program is asking for disk access. 
 # For this we set ionice -c 3
 
-# It is a shame, we cannot use ionice -c3 as tirspec user since kernal (2.6.18) is older than 2.6.25 
+# UPDATE: It is a shame, we cannot use ionice -c3 as tirspec user since kernal (2.6.18) is older than 2.6.25 
 # Hence I am using "nice -n18 ionice -c2 -n7" instead
-#ionice -c3 rsync -avr --files-from="$ExternalHDISK"/ListofDirs.txt "$ExternalHDISK/"
-nice -n18 ionice -c2 -n7 rsync -avr --files-from="$ExternalHDISK"/ListofDirs.txt "$ExternalHDISK/"
 
-if [ $? ] ; then
+#ionice -c3 rsync -av --include-from="$ExternalHDISK"/ListofDirs.txt --include=/data/ --exclude='/data/*' --exclude='/*/' / "$ExternalHDISK/"
+#nice -n18 ionice -c2 -n7 rsync -av --include-from="$ExternalHDISK"/ListofDirs.txt --include=/data/ --exclude='/data/*' --exclude='/*/' / "$ExternalHDISK/"
+# Rsync command below is more simpler, understandable as well as general for any directory path
+
+nice -n18 ionice -c2 -n7 rsync -av --relative $(cat "$ExternalHDISK"/ListofDirs.txt) "$ExternalHDISK/"
+
+exitcode=$?
+
+if [ $exitcode -eq 0 ] ; then
     echo "$(date) : Succesfully copied all data  " | tee -a "$LogFile"
 else
-    echo "$(date) : ERROR: Rsync exitied with $? . Something went wrong.  " | tee -a "$LogFile"
+    echo "$(date) : ERROR: Rsync exitied with $exitcode . Something went wrong.  " | tee -a "$LogFile"
+    echo "ERROR: If there is incomplete data tansfer please add those directories and its size in $ToBeCopiedFile." 
+    echo "ERROR: Or copy paste the corresponding lines from $OldDirsFile to $ToBeCopiedFile."
+    echo "ERROR: Then those directories will be copied again next time."
 fi
 
 #### Calculate md5sum of the directories and stor them in external hardisk ####
@@ -128,7 +148,8 @@ cat "$ExternalHDISK/$DirAndChecksumFile" >> "$LogFile"
 
 for dir in $(cat "$ExternalHDISK"/ListofDirs.txt) ; do
     echo $dir >> $AlreadyCopiedFile
-    sed -i ":$dir:d" $ToBeCopiedFile
+    dirEscaped=${dir//\//\\\/}  # Escape all / with \/
+    sed -i "/^$dirEscaped /d" $ToBeCopiedFile
 done
 
 #### Ask Operator to unmount he external hardisk and call Hanle to replace Hardisk with a new one ####
@@ -139,7 +160,7 @@ for i in $(seq 20); do
 done
 
 # Check for free space in $ExternalHDISK/
-freespace=$(df | awk '$NF=="$ExternalHDISK"{print $4}')
+freespace=$(df | egrep "$ExternalHDISK$" | awk '{print $4}')
 
 echo "$ExternalHDISK has now only Free = ${freespace:0:$((${#freespace}-6))} GB" | tee -a "$LogFile"
 echo "If it is almost full, Please Unmount the hardisk."
@@ -147,7 +168,7 @@ echo "Wait for the hardisk to get safely unmounted."
 echo "Afterwards, call Hanle staff and ask them to replace with a new hardisk."
 echo "Press Enter to close..."
 read junk	
-
+exit 0
 #---------------------------------
 # Meaning of different exit codes
 # 0 : Everything went well
