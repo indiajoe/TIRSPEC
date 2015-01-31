@@ -1063,6 +1063,7 @@ def ImgCombineWithZeroFloating(imglistfname,outputfile,cmethod="median",czero="m
 def CombDith_FlatCorr_subrout(method="median",FullFlatStatSection='[200:800,200:800]',YJFlatStatSection='[200:800,200:800]',HKFlatStatSection='[307:335,658:716]',SSFlatStatSection='[200:800,200:800]'):
     """ This will combine (default=median) with avsigclip the images in single dither and also create corresponding normalized flats [,sky] and divide[,subtract] for flat [,sky] correction """
     iraf.imcombine.unlearn()
+    iraf.imstatistics.unlearn()
     directories=LoadDirectories(CONF=False)
     for night in directories:
         print('Working on night: '+night)
