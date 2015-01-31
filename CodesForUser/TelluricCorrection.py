@@ -1003,7 +1003,7 @@ def main():
         if FluxCalibrationDone :
             outfits[0].header.add_history('Flux calibrated to W/m^2/Angstom')
             outfits[0].header['FLUXUNIT']=('W/m^2/Angstom','Y axis Flux calibration Unit')
-
+            outfits[0].header['BUNIT']=('W/m^2/A','Y axis Flux calibration Unit')
         outfits.writeto(scifnameNew+'.fits')
         outfits.close()
         print(scifnameNew+'.fits')
