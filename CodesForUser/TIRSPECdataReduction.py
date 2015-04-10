@@ -1,7 +1,26 @@
 #!/usr/bin/env python
 #This script is to semi-automate basic data reduction of TIRSPEC data.
-# IMP:  Keep ds9 open 
-#---------------------------------------------indiajoe
+
+#------------------------------------Take a deep breath
+# There was this programmer, the story goes, who was
+# deeply mystified by a piece of code.  It had no comments
+# at all, and he couldn't for the life of him figure out
+# how it did what it did.  For years, he cursed the author
+# of that code, but it continued to fascinate and trouble him.
+# One day, it came to him in a flash.  He understood it all.
+# In fact, it was so obvious that he also understood why
+# it didn't need any comments!
+
+# -- _Advanced Perl Programming_, Sriram Srinivasan
+
+#----------------Relax, Don't PANIC, we will be coding in python..
+
+# Advice for brave souls reading this code. Start at the bottom.
+# And then slowly read functions one by one from bottom to top.
+# I apologize for this upside down code, 
+# I wish I could go back in time..
+#---------------------------------------------indiajoe@gmail.com
+
 import os
 import os.path
 import glob
@@ -1564,7 +1583,13 @@ def InitialTest():
             print('Please add the correct path to Lamp Repository before proceeding')
             raise IOError(LAMPREPODIR)
         
-#-----Main Program Begins here........
+#-----Main Program Calls Begins here........................
+# Alert:  Global variables definitions.....
+# At some point in history, I thought it was a good hack.
+# Now I regret and hate it more than you do.
+# Damn, I cannot even define a main function..
+# I need to invent a time machine to fix this mess!
+
 if __name__ == "__main__":
 
     Banner="""
