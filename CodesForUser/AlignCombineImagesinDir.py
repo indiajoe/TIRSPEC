@@ -8,6 +8,7 @@
 import os
 import sys, traceback 
 import glob
+import readline
 
 if len(sys.argv) < 3 or not os.path.isdir(sys.argv[1]):
     print("-"*30)
@@ -21,6 +22,11 @@ import astropy.io.fits as pyfits
 from pyraf import iraf
 iraf.imexamine.unlearn()
 
+# If zenity is not working on you machine, use the cat command instead by uncommnting it.
+DISPLAY_MENU_CMD = 'zenity --text-info --title "Images in {imgdir}" --filename={imglist} --width 600 --height 250 &' 
+#DISPLAY_MENU_CMD = 'echo "Images in {imgdir}" ; cat {imglist}' 
+
+IMGListFile = 'imgs.text'  # This file will be overwritten
 pwd=os.getcwd()
 wildcard=sys.argv[-1]
 dirs=sys.argv[1:-1]
@@ -30,7 +36,7 @@ for imgdir in dirs :
         print imgdir
         images=glob.glob(wildcard)
         images.sort()
-        imgs_txt=open('imgs.text','w')
+        imgs_txt=open(IMGListFile,'w')
         i=0
         for img in images:
             hdulist=pyfits.open(img)
@@ -44,8 +50,8 @@ for imgdir in dirs :
             i=i+1
     #   Now list is ready, continuing with what to do
         imgs_txt.close()
-    #  os.system('../../Display_img_list.sh  &')    # Uses kdialog to display the text file
-        os.system('zenity --text-info --title "Images in '+imgdir+'" --filename=imgs.text --width 600 --height 250 &')
+
+        junk = os.system(DISPLAY_MENU_CMD.format(**{"imgdir":imgdir,"imglist":IMGListFile}))
 
         print ('What do you want to do? Enter a = Align ; c = Combine ; s = Weighted average of Exptime ; i = Inspect ; e = Exit and go to Next filter directory')
         choice=raw_input('Enter your Choice (a,c,s,i or e) :')
@@ -154,4 +160,4 @@ for imgdir in dirs :
     print ('Moving to next directory\n')
     iraf.cd(pwd)
 
-print ("All alligning and combining of Images Done \n Now move required files to final directory \n And start photometry script \n Enjoy !!!----------- indiajoe@gmail.com \n")
+print ("All aligning and combining of Images Done \n Enjoy !!!----------- indiajoe@gmail.com \n")
