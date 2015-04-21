@@ -308,7 +308,7 @@ def Photometry():
 
         StartUTStr=pyfits.convenience.getval(img,UTHDR)  #Reading from Headers
         h,m,s=StartUTStr.split(':')
-        StartUT=int(h)*60*60+int(m)*60+int(s)   #Converting to seconds
+        StartUT=int(h)*60*60+int(m)*60+int(float(s))   #Converting to seconds
 
         obstime = Time('-'.join([Year,month,day])+' '+StartUTStr, format='iso', scale='utc')
         #Calculate the effective epadu gain for daophot's photometry error estimation
