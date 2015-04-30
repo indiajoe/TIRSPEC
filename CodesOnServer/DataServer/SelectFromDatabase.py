@@ -4,6 +4,9 @@
 DatabaseFilename = '~/TIRSPECDataLog.db'
 
 import sqlite3
+import os
+
+DatabaseFilename = os.path.expanduser(DatabaseFilename)  # Expand any ~
 
 with sqlite3.connect(DatabaseFilename) as con:
     c = con.cursor()
