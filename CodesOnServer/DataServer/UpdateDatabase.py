@@ -33,7 +33,7 @@ with sqlite3.connect(DatabaseFilename) as con:
                 c.execute('UPDATE DirectoryTable SET md5=? WHERE Directory = ?',(LogFileChecksum,D_Dir))
 
             # Now we proceed to create and load the new log file table    
-            c.execute("DROP TABLE IF EXISTS {} ".format(D_Dir))
+            c.execute("DROP TABLE IF EXISTS {0} ".format(D_Dir))
             c.execute("""CREATE TABLE {0:s}(fitsfile TEXT, time TEXT, target TEXT,
             ndrs INTEGER, itime REAL, upper TEXT, lower TEXT, slit TEXT, calm TEXT, 
             date TEXT, ra TEXT, dec TEXT, pid TEXT, comment TEXT)""".format(D_Dir))
