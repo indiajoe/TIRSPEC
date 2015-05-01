@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """ Run this code to update the SQL database of all the observation logs in the directory """
 
-DatabaseFilename = '~/TIRSPECDataLog.db' # Default db, incase db name was not provided as a second argument.
+DefaultDatabaseFilename = '~/TIRSPECDataLog.db' # Default db, incase db name was not provided as a second argument.
 
 LogFilename = 'SlopeimagesLog.txt'
 
@@ -11,14 +11,28 @@ import shlex
 import os
 import sys
 
+
+if len(sys.argv) < 2 or not os.path.isdir(sys.argv[1]):
+    print("-"*30)
+    print("Usage : "+sys.argv[0]+" Directory_ofAllNightsDataDirs [DatabaseFileName]")
+    print("Eg: "+sys.argv[0]+" /data/TIRSPEC/")
+    print('OR you can provide the db file as optional argument')
+    print("Eg: "+sys.argv[0]+" /data/TIRSPEC/  ~/TIRSPECDataLog.db")
+    print("-"*30)
+    sys.exit(1)
+
+
 DataDir = sys.argv[1]
 
 try:
     DatabaseFilename = sys.argv[2]
 except IndexError:
-    print('Using Default Database file : {0}'.format(DatabaseFilename))
+    DatabaseFilename = DefaultDatabaseFilename
 
 DatabaseFilename = os.path.expanduser(DatabaseFilename)  # Expand any ~
+
+print('Using Database file : {0}'.format(DatabaseFilename))
+
 # First obtain a sorted list of immediate sub-directories which has SlopeimagesLog.txt log in it.
 Directories = sorted([Dir for Dir in next(os.walk(DataDir))[1] if os.path.isfile(os.path.join(Dir,LogFilename))])
 
