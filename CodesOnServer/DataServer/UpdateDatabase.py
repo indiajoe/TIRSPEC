@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """ Run this code to update the SQL database of all the observation logs in the directory """
 
-DatabaseFilename = '~/TIRSPECDataLog.db'
+DatabaseFilename = '~/TIRSPECDataLog.db' # Default db, incase db name was not provided as a second argument.
 
 LogFilename = 'SlopeimagesLog.txt'
 
@@ -12,6 +12,12 @@ import os
 import sys
 
 DataDir = sys.argv[1]
+
+try:
+    DatabaseFilename = sys.argv[2]
+except IndexError:
+    print('Using Default Database file : {0}'.format(DatabaseFilename))
+
 DatabaseFilename = os.path.expanduser(DatabaseFilename)  # Expand any ~
 # First obtain a sorted list of immediate sub-directories which has SlopeimagesLog.txt log in it.
 Directories = sorted([Dir for Dir in next(os.walk(DataDir))[1] if os.path.isfile(os.path.join(Dir,LogFilename))])
@@ -33,10 +39,17 @@ with sqlite3.connect(DatabaseFilename) as con:
                 c.execute('UPDATE DirectoryTable SET md5=? WHERE Directory = ?',(LogFileChecksum,D_Dir))
 
             # Now we proceed to create and load the new log file table    
-            c.execute("DROP TABLE IF EXISTS {0} ".format(D_Dir))
+            try :
+                c.execute("DROP TABLE IF EXISTS {0} ".format(D_Dir))
+            except sqlite3.OperationalError:  # Catch some directories with - sign etc in their name.
+                print('Cannot create table with the name {0}'.format(D_Dir))
+                print('Rename the directory into a valid name SQL table name can have, And Run the updater again.')
+                c.execute('DELETE FROM DirectoryTable WHERE Directory = ?',(D_Dir,))
+                continue
+
             c.execute("""CREATE TABLE {0:s}(fitsfile TEXT, time TEXT, target TEXT,
             ndrs INTEGER, itime REAL, upper TEXT, lower TEXT, slit TEXT, calm TEXT, 
-            date TEXT, ra TEXT, dec TEXT, pid TEXT, comment TEXT)""".format(D_Dir))
+            date TEXT, datetime TEXT, ra TEXT, dec TEXT, pid TEXT, comment TEXT)""".format(D_Dir))
             
             # Now Read the Log file
             with open(os.path.join(Dir,LogFilename), 'r') as logfile:
@@ -66,20 +79,22 @@ with sqlite3.connect(DatabaseFilename) as con:
                     RowDataDic['slit'] = LineContentList[7].upper()
                     RowDataDic['calm'] = LineContentList[8].upper()
                     RowDataDic['date'] = LineContentList[9]
+                    #Add an extra datetime to help in searching by date in SQL YYYY-MM-DD HH:MM:SS
+                    RowDataDic['datetime'] = '-'.join(LineContentList[9].split('.'))+' '+LineContentList[1]
                     RowDataDic['ra'] = LineContentList[10] if Logtype == 'v1' else '-NA-'
                     RowDataDic['dec'] = LineContentList[11] if Logtype == 'v1' else '-NA-'
                     RowDataDic['pid'] = LineContentList[12] if Logtype == 'v1' else '-NA-'
                     RowDataDic['comment'] = LineContentList[13]  if Logtype == 'v1' else ' '.join(LineContentList[10:])
 
                     # Now write them to the databse table
-                    c.execute('INSERT INTO {0:s} VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)'.format(D_Dir),(RowDataDic['fitsfile'],
+                    c.execute('INSERT INTO {0:s} VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'.format(D_Dir),(RowDataDic['fitsfile'],
                                                                                 RowDataDic['time'], RowDataDic['target'],
                                                                                 RowDataDic['ndrs'], RowDataDic['itime'],
                                                                                 RowDataDic['upper'], RowDataDic['lower'],
                                                                                 RowDataDic['slit'], RowDataDic['calm'],
-                                                                                RowDataDic['date'], RowDataDic['ra'],
-                                                                                RowDataDic['dec'], RowDataDic['pid'],
-                                                                                   RowDataDic['comment']))
+                                                                                RowDataDic['date'], RowDataDic['datetime'],
+                                                                                RowDataDic['ra'], RowDataDic['dec'], 
+                                                                                RowDataDic['pid'], RowDataDic['comment']))
 
             con.commit()
         else:
