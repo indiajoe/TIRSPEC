@@ -38,10 +38,11 @@ import subprocess
 import time
 from astropy.time import Time
 
-# Other modules inserted inside the code are
-# pyraf.iraf
-# from astropy.io import ascii
-# import astropy.table as table  #IMP: Requires astropy version >= 0.3 for vstack function in Task #9 Photometry
+# Reguired for certain functions... Remove it if not needed for your module
+from pyraf import iraf
+from astropy.io import ascii
+import astropy.table as table  #Requires astropy version >= 0.3 for vstack function
+
 
 def SpectralExtraction_subrout(PC):
     """ Extracts spectra from 2d image and also applies wavelength calibration """
@@ -1773,13 +1774,8 @@ ___________._____________  _______________________________________
         todo=raw_input('Enter the list : ')
         todo=todo.split()
         if ("2" in todo) or ("3" in todo) or ("4" in todo) or ("5" in todo) or ("7" in todo) or ("9" in todo) or (("6" in todo) and (PC.TODO=='S')):
-            from pyraf import iraf
             iraf.imexamine.unlearn()
             iraf.set(stdimage="imt1024") #Setting the image size to 1024 for tirspec
-
-        if ("8" in todo) or ("9" in todo) :
-            from astropy.io import ascii
-            import astropy.table as table  #Requires astropy version >= 0.3 for vstack function
 
         for task in todo :
             print("Time now: {0}".format(time.strftime("%c")))
