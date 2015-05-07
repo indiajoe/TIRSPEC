@@ -2,7 +2,7 @@ TIRSPEC
 =================
 [![Gitter](https://badges.gitter.im/Join Chat.svg)](https://gitter.im/indiajoe/TIRSPEC?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-[![IRC Freenode]](https://webchat.freenode.net?channels=%23tirspec&uio=OT10cnVlde)
+[Ask for help in our TIRSPEC IRC Freenode channel](https://webchat.freenode.net?channels=%23tirspec&uio=OT10cnVlde)
 
 Contains the scripts which has to be used for the basic reduction of TIRSPEC data.
 And also some add-on scripts to assist during observation.
