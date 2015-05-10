@@ -43,6 +43,11 @@ from pyraf import iraf
 from astropy.io import ascii
 import astropy.table as table  #Requires astropy version >= 0.3 for vstack function
 
+try:
+    from scipy.ndimage import filters
+except ImportError:
+    print('Scipy module missing.')
+    print('You will need to install Scipy if and only if you need to do median filtered background subtraction')
 
 def SpectralExtraction_subrout(PC):
     """ Extracts spectra from 2d image and also applies wavelength calibration """
@@ -1034,6 +1039,27 @@ def AlignNcombine_subrout(PC,method="average"):
         outlogFILE.close()
     print('All nights over...')             
                                 
+def SubtractSmoothGradient(PC,inputimg,outputimg):
+    """ This will subract smooth gradients in image based on median filter smooting parameters in PC.
+        In the end it will return the output filename."""
+    hdulist = pyfits.open(inputimg)
+    inputimgdata = hdulist[0].data
+    print('Calculating median filtered gradient background using size : {0}'.format(PC.MEDSMOOTHSIZE))
+    try:
+        smoothGrad = filters.median_filter(inputimgdata,size=PC.MEDSMOOTHSIZE)
+    except MemoryError:
+        print('*** MEMORY ERROR : Skipping median filter Subtraction ***')
+        print('Try giving a smaller smooth size for median filter')
+        outputimg = inputimg  # Returning mack the input file name since no subtraction was done.
+    else:
+        prihdr= hdulist[0].header
+        hdulist[0].data = inputimgdata - smoothGrad
+        prihdr.add_history('Subtracted median filter Size:{0}'.format(PC.MEDSMOOTHSIZE))
+        hdulist.writeto(outputimg)
+    finally:
+        hdulist.close()
+    # Return the name of the output filename
+    return outputimg
                 
 def FixBadPixels(PC,images,nightdir):
     """ This will run iraf task proto.fixpix to interpolate badpixels """
@@ -1179,11 +1205,21 @@ def CombDith_FlatCorr_subrout(PC,method="median",FullFlatStatSection='[200:800,2
                 OutSSimg=OutCombimg[:-5]+'_SS.fits'
                 iraf.imarith(operand1=os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,OutCombimg),op="-",operand2=outskyname,result=os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,OutSSimg))
                 OutCombimg=OutSSimg  #Updating the new _SS appended input filename to continue as if nothing happened here.
+                
             #Now divide by flat...
             OutFCimg=OutCombimg[:-5]+'_FC.fits'
             iraf.imarith(operand1=os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,OutCombimg),op="/",operand2=Noutflatname,result=os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,OutFCimg))
             #Now interpolate the bad pixels in the final image.
             FixBadPixels(PC,os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,OutFCimg),night)
+
+            #If asked to do a smooth gradient removal in image, do it after everything is over now..
+            if PC.GRADREMOVE == 'Y':
+                OutGSimg = OutFCimg[:-5]+'_GS.fits'
+                #If Filter subtraciton was sucessfull ti will return the output filename
+                #Updating the possible new _GS appended input filename to continue as if nothing happened here.
+                OutFCimg = SubtractSmoothGradient(PC,os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,OutFCimg),
+                                                  os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,OutGSimg))
+
             if PC.TODO=='P':
                 Oldfiltset=NewFiltSet
                 NewFiltSet=Filtrfiledic[imglist[0]]
@@ -1617,6 +1653,10 @@ class PipelineConfig(object):
                         self.DITHERCOMBMETHOD = con.split()[1]
                     elif con.split()[0] == "SEPARATE_SKY=" :
                         self.SEPARATESKY = con.split()[1][0].upper()
+                    elif con.split()[0] == "GRADIENT_REMOVE=" :
+                        self.GRADREMOVE = con.split()[1][0].upper()
+                    elif con.split()[0] == "GRAD_FILT_SIZE=" :
+                        self.MEDSMOOTHSIZE = (int(con.split()[1]), int(con.split()[2]))
 
                     elif con.split()[0] == "BPMPHOTO=" :
                         self.PhotBadPixelMaskName = con.split()[1]
@@ -1754,7 +1794,7 @@ ___________._____________  _______________________________________
     print("1  Selection of object frames, Flats/Sky/Argons to reduce \n")
     print("2  Manually inspect and reject object images by displaying one by one to classify \n")
     print("3  Manually inspect and reject Flats/Sky/Argons by displaying one by one\n")
-    print("4  Combine images in a Dither [,subtract sky], apply Flat Correction and Bad pixel interpolation\n")
+    print("4  Combine images in a Dither [,subtract sky, grad], apply Flat Correction and Bad pixel interpolation\n")
     if PC.TODO=='P':print("5  Align and combine combined images of each Dither in Photometry data \n")
     elif PC.TODO=='S':print("5  Give Spectrum pair subtraction input \n")
     if PC.TODO=='P':print("6  Make the list of images, Images4Photo.in to do Photometry \n")
