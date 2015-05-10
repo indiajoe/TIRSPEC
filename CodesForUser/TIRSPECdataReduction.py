@@ -1136,16 +1136,17 @@ def CombDith_FlatCorr_subrout(PC,method="median",FullFlatStatSection='[200:800,2
                 if len(imgline.split()) == 0 and len(ListofLists[-1]) != 0 :  ListofLists.append([])  #Start a new list at end
                 elif len(imgline.split()) > 0 : ListofLists[-1].append(imgline.split()[0]) #Append to the last list
 
+        outlogFILEname = 'FirstoneANDcombinedImages.List'
         if len(ListofLists[0]) == 0 : #No images this night..
             print('No images to work on this night. skipping...')
             try :
-                os.remove(os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,'FirstoneANDcombinedImages.List'))
+                os.remove(os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,outlogFILEname))
             except OSError :
-                print('Not able to remove (if any) previous '+os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,'FirstoneANDcombinedImages.List'))
+                print('Not able to remove (if any) previous '+os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,outlogFILEname))
             continue
 
         #Now iterate through every list of images to combine
-        outlogFILE=open(os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,'FirstoneANDcombinedImages.List'),'w')
+        outlogFILE=open(os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,outlogFILEname),'w')
         for imglist in ListofLists:
             #First of all, If spectroscopy of short slit cross disperse mode : change the FlatStatSection
             if Filtrfiledic[imglist[0]][1:-1].split(',')[2].strip().strip("'")[0] == 'S' :
@@ -1215,10 +1216,11 @@ def CombDith_FlatCorr_subrout(PC,method="median",FullFlatStatSection='[200:800,2
             #If asked to do a smooth gradient removal in image, do it after everything is over now..
             if PC.GRADREMOVE == 'Y':
                 OutGSimg = OutFCimg[:-5]+'_GS.fits'
-                #If Filter subtraciton was sucessfull ti will return the output filename
-                #Updating the possible new _GS appended input filename to continue as if nothing happened here.
-                OutFCimg = SubtractSmoothGradient(PC,os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,OutFCimg),
+                #If Filter subtraciton was sucessfull it will return the output filename, else inputname
+                Outputimgfull = SubtractSmoothGradient(PC,os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,OutFCimg),
                                                   os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,OutGSimg))
+                #Updating the possible new _GS appended input filename to continue as if nothing happened here.
+                OutFCimg = os.path.split(Outputimgfull)[-1]
 
             if PC.TODO=='P':
                 Oldfiltset=NewFiltSet
@@ -1228,7 +1230,7 @@ def CombDith_FlatCorr_subrout(PC,method="median",FullFlatStatSection='[200:800,2
             #     outlogFILE.write('\n')  #Entering a blank line no matter what. We will ask user to change is they want to move and add.
             outlogFILE.write(imglist[0]+' '+OutFCimg+'\n')
         outlogFILE.close()
-        if PC.TODO=='P': print('Edit the spaces (if required) between image sets in file '+os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,'FirstoneANDcombinedImages.List')+' to align and combine them in next step.')
+        if PC.TODO=='P': print('Edit the spaces (if required) between image sets in file '+os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,outlogFILEname)+' to align and combine them in next step.')
     print('All nights over...')             
                 
                 
