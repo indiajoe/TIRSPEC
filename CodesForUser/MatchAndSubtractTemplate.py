@@ -141,17 +141,20 @@ def main():
         sys.exit(1)
 
     try : 
-        InputFilelist=open(sys.argv[1],'r')
+        InputFilelist = open(sys.argv[1],'r')
     except IOError :
         print ("Error: Cannot open the file "+sys.argv[1])
         sys.exit(1)
         
     for line in InputFilelist:
         line= line.rstrip()
-        TargetImg = line.split()[0]
-        Template = line.split()[1]
-        OutputImage = line.split()[2]
-        MatchNSubtract(TargetImg,Template,OutputImage)
+        if len(line.split()) == 3 and line[0] != '#':
+            TargetImg = line.split()[0]
+            Template = line.split()[1]
+            OutputImage = line.split()[2]
+            MatchNSubtract(TargetImg,Template,OutputImage)
+    
+    InputFilelist.close()
 
 if __name__ == "__main__":
     main()
