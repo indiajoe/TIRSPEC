@@ -16,7 +16,7 @@ if [ ! -f "$OldDirsFile" ]; then  # Atleast an empty file should be there
 fi
 
 #Create a list of new directories (older that $Age) which are not in $OldDirsFile file
-find "$DataPath" -maxdepth 1 -mindepth 1 -type d -mtime +$Age -print | sort <( cut -d' ' -f 1 "$OldDirsFile") - | uniq -u  > "$NewDirsFile"
+find "$DataPath" -maxdepth 1 -mindepth 1 -type d -mtime +$Age -print | grep -v -f  <( cut -d' ' -f 1 "$OldDirsFile")  > "$NewDirsFile"
 #ALERT: Due to the previous line, directories are not allowed to have any space in their name
 
 for dir in $(cat "$NewDirsFile"); do
