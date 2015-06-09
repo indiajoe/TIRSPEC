@@ -76,7 +76,6 @@ class AGtab(ttk.Frame):
         self.OutputText.set(u"Fill the boxes and press Calculate")
         
 
-        self.pack(fill='both', expand='yes')
 
 
         
@@ -203,7 +202,6 @@ class OStab(ttk.Frame):
         self.OutputText.set(u"Fill the boxes and press New Shift Values")
         
 
-        self.pack(fill='both', expand='yes')
 
 
         
@@ -476,8 +474,7 @@ class ToolTip:
         for opt in ('delay', 'follow_mouse', 'state'):
             del opts[opt]
         label = Tkinter.Label(self._tipwindow, **opts)
-        label.pack()
-
+        label.grid()
 ############
 #----------------------------------------------------------------ToolTip Addon END here----------------
 
@@ -493,7 +490,7 @@ class MainWindow(Tkinter.Tk):
         Tab4AG = AGtab(FullNotebook)
         FullNotebook.add(Tab4OS, text=Tab4OS.title)
         FullNotebook.add(Tab4AG, text=Tab4AG.title)
-        FullNotebook.pack(fill='both', expand='yes')
+        FullNotebook.grid()
         self.grid()
 
         self.update()
