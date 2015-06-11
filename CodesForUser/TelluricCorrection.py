@@ -26,8 +26,8 @@ def FluxCalibrateSpectrumArray(Spectrum,Wavelengths,Flambdas,StatW=20,InterpWL=N
                          of the spectrum.
            Flambdas : F_lambda for corresponding wavelengths (in same per unit as wavelength)
            StatW (optional): Size of the pixel window around the wavelength to be used for mean flux calculation.
-           InterpWL (optional): Incase only outside wavelengths are provided then scaling is done by Interpolating 
-                     the F_Lambda at InterpWL wavelength. (Default: Central Wavelength of Spectrum)
+           InterpWL (optional): If InterpWL is provided then scaling is done by Interpolating 
+                     the F_Lambda at InterpWL wavelength using other wavelengths (Default: Central Wavelength of Spectrum)
                       
     
     Output : Spectrum scaled to have F_lambda units of count in y axis """
@@ -35,17 +35,20 @@ def FluxCalibrateSpectrumArray(Spectrum,Wavelengths,Flambdas,StatW=20,InterpWL=N
     NoOfWavelengths = len(Wavelengths)
     assert (len(Wavelengths) == len(Flambdas)),"Number of input wavelengths:{0} does not match input flux:{1}".format(len(Wavelengths),len(Flambdas))
     Wrange = (min(Spectrum[:,0]),max(Spectrum[:,0]))
-    WaveIndexIn = [i for i in range(len(Wavelengths)) if Wrange[0] < Wavelengths[i] < Wrange[1]]
+    if InterpWL is None:
+        WaveIndexIn = [i for i in range(len(Wavelengths)) if Wrange[0] < Wavelengths[i] < Wrange[1]]
+    else :
+        WaveIndexIn = []
 
-    if len(WaveIndexIn) == 0 : # All input wavelgnths are outside
+    if len(WaveIndexIn) == 0 : # All input wavelgnths are outside OR we want to interpolate only to InterpWL
         if NoOfWavelengths >= 2: #Atleast two points to fit straigth line to flux
             if InterpWL is None: # No user input given, so set the central wavelength as the point of interpoaltion
                 InterpWL = Spectrum[len(Spectrum[:,0])/2,0]
-            print('No inside wavelengths given, using the outside wavelength fluxes to interpolate for the {0} wavelength Flux of the spectrum'.format(InterpWL))
+            print('Using the outside wavelength fluxes to interpolate for the {0} wavelength Flux of the spectrum'.format(InterpWL))
             WLToFit = [ InterpWL ]
             # We should interpolate  lambda*F_lambda quantity to find F_lambda at the central wavelength
             lF_l = [l*F_l for l,F_l in zip(Wavelengths,Flambdas)]
-            Interp_lF_l= np.poly1d(np.polyfit(Wavelengths, lf_l , 1))  # 1d polynomial of 1 degree
+            Interp_lF_l= np.poly1d(np.polyfit(Wavelengths, lF_l , 1))  # 1d polynomial of 1 degree
             FlToFit = [ Interp_lF_l(WLToFit[0])/WLToFit[0] ]  # F_lambda at the central wavelength
         else : 
             print('Atleast two outside points are needed to interpolate')
@@ -61,6 +64,7 @@ def FluxCalibrateSpectrumArray(Spectrum,Wavelengths,Flambdas,StatW=20,InterpWL=N
     
     ScaleFactor = [F_l/RawC for F_l,RawC in zip(FlToFit,RawMedianCounts)]
     MeanScale = np.mean(ScaleFactor)
+    print('Fluxes used to fit : '+','.join(['{0}:{1}'.format(w,s) for w,s in zip(WLToFit,FlToFit)]))
     print('Scaling factors obtained : '+','.join(['{0}:{1}'.format(w,s) for w,s in zip(WLToFit,ScaleFactor)]))
     print('Mean Scale factor: {0}'.format(MeanScale))
     OutputSpectrum = Spectrum.copy()  # Copy to prevent original from getting affected
@@ -976,6 +980,7 @@ def main():
         CorrSci,FluxCalibrationDone=AskAndFluxCalibrate(CorrSciWL,CorrSci)  # Ask user for Mag and if provided do Flux calibration
     else:
         print("Not doing continuum correction using BB curve and flux calibration.")
+        FluxCalibrationDone = False
 
     plt.close()
     fig=plt.figure()
