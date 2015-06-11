@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 #This script will help in telluric correction of spectra with standard star spectra interactively.
+""" Usage: TellusicCorrection.py [ScienceStarSpectrum [StandardStarSpectrum [StdStarTemp]]] """
+
 import readline
 import sys
 import os
@@ -932,24 +934,27 @@ def LoadAsciiSpectra(filename,Skipascii=69):
     return Data
     
 
-def AskAndLoadData(toask="Enter Filename : ",Skipascii=69):
+def AskAndLoadData(toask="Enter Filename : ",Skipascii=69, inpfilename=None):
     """ Asks user to enter filename and return the table loaded as numpy array. 
     User can input, a fits file, ascii spectra or even a numpy .npy array.
     toask is string which contains the prompt to ask. 
     Skipasciii is an integer which tells the number of initial lines of header to skip, incase user inputs an ascii spectra file instead of a fits data file """
 
     while True:  #Keep asking till a file is properly loaded
+        filename = raw_input(toask).strip(' ') if inpfilename is None else inpfilename
         try :
-            filename=raw_input(toask).strip(' ')
             if os.path.splitext(filename)[1] == '.fits' : #User has inputed a fits file
                 Data=LoadFitsSpectra(filename)
             elif os.path.splitext(filename)[1] == '.npy' : #User has inputed a numpy .npy array file
                 Data=np.load(filename)
             else:   #We assume it is an ascii spectra
                 Data=LoadAsciiSpectra(filename,Skipascii=Skipascii)
-            break
         except IOError :
             print("Error: Cannot find the file %s, Please give the correct file name."%(filename))
+            inpfilename = None
+        else:
+            break
+
 
     return Data,filename
 
@@ -957,7 +962,7 @@ def is_number(s):   # A funtion to check wheter string s is a number or not.
     try:
         float(s)
         return True
-    except ValueError:
+    except (ValueError,TypeError):
         return False
 
 
@@ -968,14 +973,30 @@ def main():
         print('Cannot find the file {0} in {1}'.format(VegaTemplateFile,os.getcwd()))
         print('Please extract {0} from CodesForUser/data.tar.gz and copy to {1} before proceeding.'.format(VegaTemplateFile,os.getcwd()))
         sys.exit(1)
-    StdStarRaw,stdfname=AskAndLoadData(toask="Enter the name of standard star spectrum file : ",Skipascii=69)
-    ScienceStarRaw,scifname=AskAndLoadData(toask="Enter the name of science star spectrum file : ",Skipascii=69)
+
+    # Setting the optional input arguments
+    scifname, stdfname, BBtemp = None, None, None
+
+    if len(sys.argv) > 1:
+        scifname = sys.argv[1] if os.path.isfile(sys.argv[1]) else None
+    if len(sys.argv) > 2:
+        stdfname = sys.argv[2] if os.path.isfile(sys.argv[2]) else None 
+    if len(sys.argv) > 3:
+        BBtemp = sys.argv[3] if is_number(sys.argv[3]) else None 
+
+    ScienceStarRaw,scifname = AskAndLoadData(toask="Enter the name of science star spectrum file : ",
+                                             Skipascii=69,inpfilename=scifname)
+    StdStarRaw,stdfname = AskAndLoadData(toask="Enter the name of standard star spectrum file : ",
+                                         Skipascii=69,inpfilename=stdfname)
     CorrSci,CorrSciWL,Telluric=TelluricCorrect(ScienceStarRaw,StdStarRaw)
     # Do optional Continumm correction and flux calibration
-    BBtemp='SkipCC'
-    BBtemp=raw_input("Enter Temperature of Std star (Kelvin) to correct continuum (to skip press enter): ")
+    if BBtemp is None:
+        BBtemp = 'SkipCC'
+        BBtemp = raw_input("Enter Temperature of Std star (Kelvin) to correct continuum (to skip press enter): ")
+
     if is_number(BBtemp): #User entered the temperature of Std star
         T=float(BBtemp)
+        print('Correcting the Continuum of Standard star using BB Temperature = {0} K'.format(BBtemp))
         CorrSci=CorrSci*BlackBodyFlux(CorrSciWL,T)  # Multiply BB curve to correct continuum
         CorrSci,FluxCalibrationDone=AskAndFluxCalibrate(CorrSciWL,CorrSci)  # Ask user for Mag and if provided do Flux calibration
     else:
