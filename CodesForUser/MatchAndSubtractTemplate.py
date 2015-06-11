@@ -23,10 +23,10 @@ def CreateMatchingXYCoords(TargetImg,Template,MatchingXYcoordsFile):
     print('First Select maximum number of stars from this Target image by pressing _a_ on good stars. Press q to finish.')
     imxTarget = iraf.imexam(Stdout=1)
     iraf.display(Template,1)
-    print('Press q to read from '+Template[:-5]+'_TemplXY.coo'+'. OR Select exactly same stars in same order from this Template image by pressing _a_ and then press q to finish.')
+    print('Press q to read from '+os.path.splitext(Template)[0]+'_TemplXY.coo'+'. OR Select exactly same stars in same order from this Template image by pressing _a_ and then press q to finish.')
     imxTemplate = iraf.imexam(Stdout=1)
     if len(imxTemplate) == 0: # Default to the predefinted coo file
-        with open(Template[:-5]+'_TemplXY.coo') as defaultcoo:
+        with open(os.path.splitext(Template)[0]+'_TemplXY.coo') as defaultcoo:
             imxTemplate = [line.rstrip() for line in defaultcoo]
 
     with open(MatchingXYcoordsFile,'w') as foo :    #Creating XYXY file
@@ -39,13 +39,13 @@ def CreateMatchingXYCoords(TargetImg,Template,MatchingXYcoordsFile):
 
 def AlignImage(TargetImg,Template,AlignedImageName):
     """Align Template Image to TargetImage to create output image AlignedImageName"""
-    MatchingXYcoordsFile = AlignedImageName[:-5]+'.XYXY'
+    MatchingXYcoordsFile = os.path.splitext(AlignedImageName)[0]+'.XYXY'
     if not os.path.isfile(MatchingXYcoordsFile) :
         CreateMatchingXYCoords(TargetImg,Template,MatchingXYcoordsFile)
     else:
         print('Using Old {0} file'.format(MatchingXYcoordsFile))
 
-    XYtranformdb = AlignedImageName[:-5]+'rtran.db'
+    XYtranformdb = os.path.splitext(AlignedImageName)[0]+'rtran.db'
     iraf.geomap(input=MatchingXYcoordsFile, database=XYtranformdb, xmin=1, xmax=1024, ymin=1, ymax=1024, interactive=0,fitgeometry="general")
     #Now geotran the Template image to match the TargetImg
     iraf.geotran(input=Template,output=AlignedImageName,database=XYtranformdb,transforms=MatchingXYcoordsFile)
@@ -79,11 +79,11 @@ def SkySubtractImage(Img,OutputFitsFile,SkyCoordsFile):
 def MatchNSubtract(TargetImg,Template,OutputImage):
     """ Creates OutputImage =  TargetImg - Template after scaling and matching Template to TargetImg """
     
-    AlignedImg = TargetImg[:-5]+"_"+Template
+    AlignedImg = os.path.splitext(TargetImg)[0]+"_"+Template
     TransformDBfile = AlignImage(TargetImg,Template,AlignedImg)
     
     # Now get the Good sky region coordinates
-    SkyCoordsFile = TargetImg[:-5]+'_BlankSky.coo'
+    SkyCoordsFile = os.path.splitext(TargetImg)[0]+'_BlankSky.coo'
     if not os.path.isfile(SkyCoordsFile) :
         iraf.display(TargetImg,1)
         print ('For taking coordinates of good sky. Press _x_ over blank sky areas.')
@@ -93,7 +93,7 @@ def MatchNSubtract(TargetImg,Template,OutputImage):
                 foo.write(line.split()[0] +'  '+line.split()[1]+'\n')
 
     # Now get the regions in the image whose brightness has to be cancelled by scaling
-    FluxCoordsFile = TargetImg[:-5]+'_FluxRegions.coo'
+    FluxCoordsFile = os.path.splitext(TargetImg)[0]+'_FluxRegions.coo'
     if not os.path.isfile(FluxCoordsFile) :
         iraf.display(TargetImg,1)
         print ('Press _x_ over areas you want to minimise the residual flux after subtraction')
@@ -103,13 +103,13 @@ def MatchNSubtract(TargetImg,Template,OutputImage):
                 foo.write(line.split()[0] +'  '+line.split()[1]+'\n')
 
     #Now we first has to remove background from both the images.
-    TargetSkySubtractedFile = TargetImg[:-5]+'_SkyS.fits'
+    TargetSkySubtractedFile = os.path.splitext(TargetImg)[0]+'_SkyS.fits'
     if not os.path.isfile(TargetSkySubtractedFile):
         skyvalue = SkySubtractImage(TargetImg,TargetSkySubtractedFile,SkyCoordsFile)
     else:
         print('Warning: Using old {0} file'.format(TargetSkySubtractedFile))
 
-    AlignedSkySubtractedFile = AlignedImg[:-5]+'_SkyS.fits'
+    AlignedSkySubtractedFile = os.path.splitext(AlignedImg)[0]+'_SkyS.fits'
     if not os.path.isfile(AlignedSkySubtractedFile):
         skyvalue = SkySubtractImage(AlignedImg,AlignedSkySubtractedFile,SkyCoordsFile)
     else:
@@ -125,9 +125,9 @@ def MatchNSubtract(TargetImg,Template,OutputImage):
     res = scipy.optimize.minimize_scalar(DiffSquareSum)
     Scale = res.x
     print('Scaling to match the fluxes is {0}'.format(Scale))
-    iraf.imarith(operand1=AlignedSkySubtractedFile,op="*",operand2=Scale,result=AlignedSkySubtractedFile[:-5]+'M.fits')
+    iraf.imarith(operand1=AlignedSkySubtractedFile,op="*",operand2=Scale,result=os.path.splitext(AlignedSkySubtractedFile)[0]+'M.fits')
 
-    iraf.imarith(operand1=TargetSkySubtractedFile,op="-",operand2=AlignedSkySubtractedFile[:-5]+'M.fits',result=OutputImage)
+    iraf.imarith(operand1=TargetSkySubtractedFile,op="-",operand2=os.path.splitext(AlignedSkySubtractedFile)[0]+'M.fits',result=OutputImage)
     
 
 def main():

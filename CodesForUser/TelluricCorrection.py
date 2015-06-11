@@ -941,9 +941,9 @@ def AskAndLoadData(toask="Enter Filename : ",Skipascii=69):
     while True:  #Keep asking till a file is properly loaded
         try :
             filename=raw_input(toask).strip(' ')
-            if filename[-5:] == '.fits' : #User has inputed a fits file
+            if os.path.splitext(filename)[1] == '.fits' : #User has inputed a fits file
                 Data=LoadFitsSpectra(filename)
-            elif filename[-4:] == '.npy' : #User has inputed a numpy .npy array file
+            elif os.path.splitext(filename)[1] == '.npy' : #User has inputed a numpy .npy array file
                 Data=np.load(filename)
             else:   #We assume it is an ascii spectra
                 Data=LoadAsciiSpectra(filename,Skipascii=Skipascii)
@@ -994,14 +994,14 @@ def main():
     plt.show()
     #Save the generated spectras values as numpy arrays
     fnameSuffix=raw_input("Enter any suffix, you want to add to the output spectra file names: ")
-    scifnameNew=scifname.split('.')[0]+'_'+fnameSuffix
-    stdfnameNew=stdfname.split('.')[0]+'_'+fnameSuffix
+    scifnameNew = os.path.splitext(scifname)[0]+'_'+fnameSuffix
+    stdfnameNew = os.path.splitext(stdfname)[0]+'_'+fnameSuffix
     np.save(scifnameNew+'_Y_',np.array(np.ma.compressed(CorrSci)))  #Adding extra np.array to fix the bug in numpy till a fix 
     np.save(scifnameNew+'_X_',np.array(np.ma.compressed(CorrSciWL)))
     np.save(stdfnameNew+'_XY_',np.array(np.ma.compress_rows(Telluric)))
     print('The spectra saved by the following names')
     print(scifnameNew+'_Y_.npy',scifnameNew+'_X_.npy',stdfnameNew+'_XY_.npy')
-    if scifname[-5:] == '.fits': #Also save the final spectrum in fits
+    if os.path.splitext(scifname)[1] == '.fits': #Also save the final spectrum in fits
         outfits=fits.open(scifname)
         outfits[0].data = np.array(CorrSci)
         outfits[0].header.add_history('Telluric and Instrumental Response Corrected')

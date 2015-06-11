@@ -11,6 +11,7 @@ import numpy.ma
 import pyfits
 import glob
 import gc
+import os
 
 RampNDRsuffix='-debug*.fits'   # If changed, change in the function LoadDataCube() (line #38) also where we extract integer.
 FullTile=(0,1024,0,1024)
@@ -35,7 +36,7 @@ def filelist(inputstring):
 def CheckNDRexist(imgname,RampNDRsuffix,NoofNDRs=None):
     """ Checks the Non distructive Readouts (NDR) exists in the current directory for given image.
         Only if they exist we should proceed with Slope calculation from them """
-    NDRfiles=glob.glob(imgname[:-5]+RampNDRsuffix)
+    NDRfiles=glob.glob(os.path.splitext(imgname)[0]+RampNDRsuffix)
     if NoofNDRs is None : 
         try :
             NoofNDRs=pyfits.convenience.getval(imgname,'NDRS')
@@ -53,7 +54,7 @@ def LoadDataCube(imgname,RampNDRsuffix,NoofNDRs=None,tile=FullTile):
     """ Loads the up-the-ramp readout of the input image tile to a single ndarray cube 
         Cube's coordinates are (time,X,Y)
         NoofNDRs is the number of NDRs to load into cube (type =int). By default everything is loaded."""
-    NDRfilesT=glob.glob(imgname[:-5]+RampNDRsuffix)
+    NDRfilesT=glob.glob(os.path.splitext(imgname)[0]+RampNDRsuffix)
     NDRfiles=sorted(NDRfilesT, key=lambda k: int(k[len(imgname)-5+7:-5]))
     if NoofNDRs is None : NoofNDRs=len(NDRfiles)
     datacube=np.empty((NoofNDRs,tile[1]-tile[0],tile[3]-tile[2]),dtype=np.float32)
@@ -551,7 +552,6 @@ def ApplyNonLinearityCorrection(image,NLcoeffs,LThresh,UThresh,tile=FullTile):
 
     
 def main():
-    import os
     import os.path
     import sys
     import re

@@ -43,7 +43,7 @@ def filelist(inputstring):
 def CheckNDRexist(imgname,RampNDRsuffix,NoofNDRs=None):
     """ Checks the Non distructive Readouts (NDR) exists in the current directory for given image.
         Only if they exist we should proceed with Slope calculation from them """
-    NDRfiles=glob.glob(imgname[:-5]+RampNDRsuffix)
+    NDRfiles=glob.glob(os.path.splitext(imgname)[0]+RampNDRsuffix)
     if NoofNDRs==None : NoofNDRs=pyfits.convenience.getval(imgname,'NDRS')
     if len(NDRfiles) == NoofNDRs :
         return True
@@ -54,7 +54,7 @@ def LoadDataCube(imgname,RampNDRsuffix,NoofNDRs=None,tile=FullTile):
     """ Loads the up-the-ramp readout of the input image tile to a single ndarray cube 
         Cube's coordinates are (time,X,Y)
         NoofNDRs is the number of NDRs to load into cube (type =int). By default everything is loaded."""
-    NDRfilesT=glob.glob(imgname[:-5]+RampNDRsuffix)
+    NDRfilesT=glob.glob(os.path.splitext(imgname)[0]+RampNDRsuffix)
     NDRfiles=sorted(NDRfilesT, key=lambda k: int(k[len(imgname)-5+7:-5]))
     if NoofNDRs==None : NoofNDRs=len(NDRfiles)
 

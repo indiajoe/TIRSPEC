@@ -92,8 +92,8 @@ def SpectralExtraction_subrout(PC):
 
         for img in AllImglist:
             print("Working on image "+night+" "+img)
-            leftover=glob.glob(img[:-5]+'_*.fits')  #Clean up of some previous attempts if any..
-            leftover+=glob.glob(img[:-5]+'.ms.fits')
+            leftover = glob.glob(os.path.splitext(img)[0]+'_*.fits')  #Clean up of some previous attempts if any..
+            leftover += glob.glob(os.path.splitext(img)[0]+'.ms.fits')
             if len(leftover) > 0 :
                 if not os.path.isdir('Leftover'): os.makedirs('Leftover') 
                 for lft in leftover :
@@ -110,16 +110,16 @@ def SpectralExtraction_subrout(PC):
             # Running apall
             iraf.apall(input=img,nfind=1,lower=-15,upper=15,llimit=-15,ulimit=15,b_sample=PC.BACKGROUND,background ='fit',weights ='none',readnoi=PC.READNOISE,gain=EffectiveGain,t_function=PC.TRACEFUNC,t_order=PC.TRACEORDER,t_niterate=1,ylevel=PC.SPECAPERTURE,interactive=PC.VER)  #weights= 'variance' seems to be unstable for our high effective gain
             #Extracting the Argon arc for this spectra as img_arc.fits
-            iraf.apall(input=os.path.join(PC.MOTHERDIR,night,Img2Argon[img]),reference=img,out=img[:-5]+'_arc',recenter='no',trace='no',background='none',interactive='no')
+            iraf.apall(input=os.path.join(PC.MOTHERDIR,night,Img2Argon[img]),reference=img,out=os.path.splitext(img)[0]+'_arc',recenter='no',trace='no',background='none',interactive='no')
             #Now reidentify the lines in this spectra
             RepoLamp='RepoArgon_'+Img2Filt[img]+'.fits'
-            iraf.reidentify(reference=RepoLamp, images=img[:-5]+'_arc',verbose='yes',interactive=PC.VER)
+            iraf.reidentify(reference=RepoLamp, images=os.path.splitext(img)[0]+'_arc',verbose='yes',interactive=PC.VER)
             #Edit the header of img to add ref lamp
-            iraf.hedit(img[:-4]+'ms.fits', "REFSPEC1",img[:-5]+'_arc.fits', add=1, ver=0)
+            iraf.hedit(os.path.splitext(img)[0]+'.ms.fits', "REFSPEC1",os.path.splitext(img)[0]+'_arc.fits', add=1, ver=0)
             # dispcor to apply the calibration
-            iraf.dispcor(input=img[:-4]+'ms.fits',output=img[:-5]+'_wc.ms.fits')
+            iraf.dispcor(input=os.path.splitext(img)[0]+'.ms.fits',output=os.path.splitext(img)[0]+'_wc.ms.fits')
             #Saving the output file for future
-            Filt2finalspecs[Img2Filt[img]].append(img[:-5]+'_wc.ms.fits')
+            Filt2finalspecs[Img2Filt[img]].append(os.path.splitext(img)[0]+'_wc.ms.fits')
         
         #At the end of the night Appending the name to the final spectra list of each band
         for filt in Filt2finalspecs.keys():
@@ -991,8 +991,8 @@ def AlignNcombine_subrout(PC,method="average"):
             if len(imglist) == 1 : #Single image. nothing to align and combine
                 OutCombimg=imglist[0]
             elif len(imglist) > 1 :
-                OutCombimg=imglist[0][:-5]+'_align'+method+'_'+imglist[-1][:-5]+'.fits'
-                OutCoofile=OutCombimg[:-5]+'.GScoo'
+                OutCombimg = os.path.splitext(imglist[0])[0]+'_align'+method+'_'+os.path.splitext(imglist[-1])[0]+'.fits'
+                OutCoofile = os.path.splitext(OutCombimg)[0]+'.GScoo'
                 Refimage=imglist[0]
                 Xref=eval(XYfiledic[Comb2Firstdic[Refimage]][0])
                 Yref=eval(XYfiledic[Comb2Firstdic[Refimage]][1])
@@ -1007,9 +1007,9 @@ def AlignNcombine_subrout(PC,method="average"):
 
                 #Now enter the crude shifts for other images from our dic in the file. And also create text files containing images to align and aligned output
                 with open(os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,'shifts.in'),'w') as foo2 :
-                    alignInpfname=os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,OutCombimg[:-5]+'.ditherList')
-                    alignOutfname=os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,OutCombimg[:-5]+'.AlignedditherList')
-                    imcombineInputfname=os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,OutCombimg[:-5]+'.imcombineInputList')
+                    alignInpfname = os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,os.path.splitext(OutCombimg)[0]+'.ditherList')
+                    alignOutfname = os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,os.path.splitext(OutCombimg)[0]+'.AlignedditherList')
+                    imcombineInputfname = os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,os.path.splitext(OutCombimg)[0]+'.imcombineInputList')
                     imgs2align=open(alignInpfname,'w')    #Once the world migrates to Python 2.7+, these files also should be opened in the same with command above...
                     imgs2alignOUT=open(alignOutfname,'w')
                     imcombineInputFILE=open(imcombineInputfname,'w')
@@ -1164,7 +1164,7 @@ def CombDith_FlatCorr_subrout(PC,method="median",FullFlatStatSection='[200:800,2
                 OutCombimg=imglist[0][6:]   #Removing the Slope- prefix
                 shutil.copy2(night+'/'+imglist[0],os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,OutCombimg))  #Copying the file dito..
             elif len(imglist) > 1 :
-                OutCombimg=imglist[0][6:-5]+'_'+method+'_'+imglist[-1][6:-5]+'.fits'  #Removing the Slope- prefix
+                OutCombimg = os.path.splitext(imglist[0][6:])[0]+'_'+method+'_'+os.path.splitext(imglist[-1][6:])[0]+'.fits'  #Removing the Slope- prefix
                 with open(os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,OutCombimg+'.imcombine.List'),'w') as imcombineinputFile:
                     imcombineinputFile.write('\n'.join([night+'/'+img for img in imglist])+'\n')
                 ImgCombineWithZeroFloating(os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,OutCombimg+'.imcombine.List'),os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,OutCombimg),cmethod=method,czero="median",creject="sigclip",cstatsection=FlatStatSection)
@@ -1175,7 +1175,7 @@ def CombDith_FlatCorr_subrout(PC,method="median",FullFlatStatSection='[200:800,2
                 Flats2Comb+=Flatfiledic[img]  #Adding all the flat lists
             Flats2Comb=set(Flats2Comb)  #Making a set to remove duplicates
             #Write all these flat names to a file.
-            imgflatlistfname=os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,OutCombimg[:-5]+'.flatlist')
+            imgflatlistfname = os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,os.path.splitext(OutCombimg)[0]+'.flatlist')
             with open(imgflatlistfname,'w') as imgflatlistFILE :
                 imgflatlistFILE.write('\n'.join([night+'/'+fla for fla in Flats2Comb])+'\n')
 
@@ -1185,37 +1185,37 @@ def CombDith_FlatCorr_subrout(PC,method="median",FullFlatStatSection='[200:800,2
                     Skys2Comb+=Skyfiledic[img]  #Adding all the sky lists
                 Skys2Comb=set(Skys2Comb)  #Making a set to remove duplicates
                 #Write all these Sky names to a file.
-                imgskylistfname=os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,OutCombimg[:-5]+'.skylist')
+                imgskylistfname = os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,os.path.splitext(OutCombimg)[0]+'.skylist')
                 with open(imgskylistfname,'w') as imgskylistFILE :
                     imgskylistFILE.write('\n'.join([night+'/'+sky for sky in Skys2Comb])+'\n')
 
 
             print('Image section used for normalising Flat is '+FlatStatSection)
-            outflatname=os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,OutCombimg[:-5]+'_flat.fits')
+            outflatname = os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,os.path.splitext(OutCombimg)[0]+'_flat.fits')
             iraf.imcombine(input='@'+imgflatlistfname, output=outflatname, combine="median", scale="median",reject="sigclip", statsec=FlatStatSection)
             statout=iraf.imstatistics(outflatname+FlatStatSection,fields='mode',Stdout=1)
             mode=float(statout[1])
             #We will normalise this flat with the mode of pixels in FlatStatSection
-            Noutflatname=os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,OutCombimg[:-5]+'_Nflat.fits')
+            Noutflatname = os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,os.path.splitext(OutCombimg)[0]+'_Nflat.fits')
             iraf.imarith(operand1=outflatname,op="/",operand2=mode,result=Noutflatname)
             #If we are subtracting sky, doing it before flat fielding.
             if PC.SEPARATESKY=='Y':
-                outskyname=os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,OutCombimg[:-5]+'_sky.fits')
+                outskyname = os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,os.path.splitext(OutCombimg)[0]+'_sky.fits')
                 ImgCombineWithZeroFloating(imgskylistfname,outskyname,cmethod="median",czero="median",creject="pclip",cstatsection=FlatStatSection)
                 #Now subtract the sky form the science frame
-                OutSSimg=OutCombimg[:-5]+'_SS.fits'
+                OutSSimg = os.path.splitext(OutCombimg)[0]+'_SS.fits'
                 iraf.imarith(operand1=os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,OutCombimg),op="-",operand2=outskyname,result=os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,OutSSimg))
                 OutCombimg=OutSSimg  #Updating the new _SS appended input filename to continue as if nothing happened here.
                 
             #Now divide by flat...
-            OutFCimg=OutCombimg[:-5]+'_FC.fits'
+            OutFCimg = os.path.splitext(OutCombimg)[0]+'_FC.fits'
             iraf.imarith(operand1=os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,OutCombimg),op="/",operand2=Noutflatname,result=os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,OutFCimg))
             #Now interpolate the bad pixels in the final image.
             FixBadPixels(PC,os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,OutFCimg),night)
 
             #If asked to do a smooth gradient removal in image, do it after everything is over now..
             if PC.GRADREMOVE == 'Y':
-                OutGSimg = OutFCimg[:-5]+'_GS.fits'
+                OutGSimg = os.path.splitext(OutFCimg)[0]+'_GS.fits'
                 #If Filter subtraciton was sucessfull it will return the output filename, else inputname
                 Outputimgfull = SubtractSmoothGradient(PC,os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,OutFCimg),
                                                   os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,OutGSimg))
