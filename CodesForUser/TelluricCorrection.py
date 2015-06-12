@@ -119,7 +119,7 @@ def AskAndFluxCalibrate(WavelengthArray,CountsArray):
             FLambdas= [F_L]
         elif Order in ['Y']:
             F_LI, WaveLI = ConvertMagtoFlambda('I',float(Mag.split()[0]))
-            F_LJ, WaveLJ = ConvertMagtoFlambda('J',float(Mag.split()[0]))
+            F_LJ, WaveLJ = ConvertMagtoFlambda('J',float(Mag.split()[1]))
             Wavelengths = [WaveLI,WaveLJ]
             FLambdas= [F_LI,F_LJ]
             InterpWL=10550.0  # A good region of Y to interpolate I and J fluxes
