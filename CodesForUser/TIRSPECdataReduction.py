@@ -1525,7 +1525,7 @@ def LoadDirectories(PC,CONF=False):
         directoriesF=open(os.path.join(PC.MOTHERDIR,PC.OUTDIR,'directories'),'r')
 
     #Load directories list from the file
-    directories=[dirs.rstrip().strip(' ').rstrip('/') for dirs in directoriesF] #Removing spaces or trailing /
+    directories = [dirs.rstrip().strip(' ').rstrip('/') for dirs in directoriesF if dirs.strip()] #Removing spaces or trailing / and ignore Blank empty lines
     directoriesF.close()
 
     if CONF == True :
