@@ -1038,6 +1038,29 @@ def AlignNcombine_subrout(PC,method="average"):
             outlogFILE.write(imglist[0]+' '+OutCombimg+'\n')
         outlogFILE.close()
     print('All nights over...')             
+
+
+def DivideSmoothGradient(PC,inputimg,outputimg):
+    """ This will divide the smooth gradient in image based on median filter smooting parameters in PC.
+        In the end it will return the output filename."""
+    hdulist = pyfits.open(inputimg)
+    inputimgdata = hdulist[0].data
+    print('Calculating median filtered gradient background using size : {0}'.format(PC.DVDMEDSMOOTHSIZE))
+    try:
+        smoothGrad = filters.median_filter(inputimgdata,size=PC.DVDMEDSMOOTHSIZE)
+    except MemoryError:
+        print('*** MEMORY ERROR : Skipping median filter Division ***')
+        print('Try giving a smaller smooth size for median filter insted of {0}'.format(PC.DVDMEDSMOOTHSIZE))
+        outputimg = inputimg  # Returning mack the input file name since no subtraction was done.
+    else:
+        prihdr = hdulist[0].header
+        hdulist[0].data = inputimgdata / smoothGrad
+        prihdr.add_history('Divided median filter Size:{0}'.format(PC.DVDMEDSMOOTHSIZE))
+        hdulist.writeto(outputimg)
+    finally:
+        hdulist.close()
+    # Return the name of the output filename
+    return outputimg
                                 
 def SubtractSmoothGradient(PC,inputimg,outputimg):
     """ This will subract smooth gradients in image based on median filter smooting parameters in PC.
@@ -1195,9 +1218,15 @@ def CombDith_FlatCorr_subrout(PC,method="median",FullFlatStatSection='[200:800,2
             iraf.imcombine(input='@'+imgflatlistfname, output=outflatname, combine="median", scale="median",reject="sigclip", statsec=FlatStatSection)
             statout=iraf.imstatistics(outflatname+FlatStatSection,fields='mode',Stdout=1)
             mode=float(statout[1])
-            #We will normalise this flat with the mode of pixels in FlatStatSection
+
             Noutflatname = os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,os.path.splitext(OutCombimg)[0]+'_Nflat.fits')
-            iraf.imarith(operand1=outflatname,op="/",operand2=mode,result=Noutflatname)
+            if (PC.TODO == 'S') and (self.CONTINUUMGRADREMOVE == 'Y'):
+                # We will normalise this continuum flat using its median smoothed version
+                Noutflatname = DivideSmoothGradient(PC,outflatname,Noutflatname)
+            else:
+                #We will normalise this flat with the mode of pixels in FlatStatSection
+                iraf.imarith(operand1=outflatname,op="/",operand2=mode,result=Noutflatname)
+
             #If we are subtracting sky, doing it before flat fielding.
             if PC.SEPARATESKY=='Y':
                 outskyname = os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,os.path.splitext(OutCombimg)[0]+'_sky.fits')
@@ -1725,6 +1754,10 @@ class PipelineConfig(object):
                         self.SCOMBINE = con.split()[1]
                     elif con.split()[0] == "DISPAXIS=" :
                         self.DISPAXIS = con.split()[1]
+                    elif con.split()[0] == "REMOVE_CONTINUUM_GRAD=" :
+                        self.CONTINUUMGRADREMOVE = con.split()[1][0].upper()
+                    elif con.split()[0] == "CONT_GRAD_FILT_SIZE=" :
+                        self.DVDMEDSMOOTHSIZE = (int(con.split()[1]), int(con.split()[2]))
 
 
         
