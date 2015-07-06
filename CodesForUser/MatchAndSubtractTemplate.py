@@ -79,7 +79,7 @@ def SkySubtractImage(Img,OutputFitsFile,SkyCoordsFile):
 def MatchNSubtract(TargetImg,Template,OutputImage):
     """ Creates OutputImage =  TargetImg - Template after scaling and matching Template to TargetImg """
     
-    AlignedImg = os.path.splitext(TargetImg)[0]+"_"+Template
+    AlignedImg = os.path.splitext(TargetImg)[0]+"_"+os.path.basename(Template)
     TransformDBfile = AlignImage(TargetImg,Template,AlignedImg)
     
     # Now get the Good sky region coordinates
