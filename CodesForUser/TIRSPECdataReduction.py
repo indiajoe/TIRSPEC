@@ -108,7 +108,7 @@ def SpectralExtraction_subrout(PC):
             EffectiveGain=PC.EPADU*ImagesAveraged*ImageScaleFactor
 
             # Running apall
-            iraf.apall(input=img,nfind=1,lower=-15,upper=15,llimit=-15,ulimit=15,b_sample=PC.BACKGROUND,background ='fit',weights ='none',readnoi=PC.READNOISE,gain=EffectiveGain,t_function=PC.TRACEFUNC,t_order=PC.TRACEORDER,t_niterate=1,ylevel=PC.SPECAPERTURE,interactive=PC.VER)  #weights= 'variance' seems to be unstable for our high effective gain
+            iraf.apall(input=img,nfind=1,lower=-15,upper=15,llimit=PC.SPECAPERTURE_LLIMIT,ulimit=PC.SPECAPERTURE_ULIMIT,b_sample=PC.BACKGROUND,background ='fit',weights ='none',readnoi=PC.READNOISE,gain=EffectiveGain,t_function=PC.TRACEFUNC,t_order=PC.TRACEORDER,t_niterate=1,ylevel=PC.SPECAPERTURE,interactive=PC.VER)  #weights= 'variance' seems to be unstable for our high effective gain
             #Extracting the Argon arc for this spectra as img_arc.fits
             iraf.apall(input=os.path.join(PC.MOTHERDIR,night,Img2Argon[img]),reference=img,out=os.path.splitext(img)[0]+'_arc',recenter='no',trace='no',background='none',interactive='no')
             #Now reidentify the lines in this spectra
@@ -1740,6 +1740,12 @@ class PipelineConfig(object):
                         self.LAMPREPODIR = con.split()[1]
                     elif con.split()[0] == "SPECAPERTURE=" :
                         self.SPECAPERTURE = con.split()[1]
+                    elif con.split()[0] == "SPECAPERTURE_LLIMIT=" :
+                        self.SPECAPERTURE_LLIMIT = con.split()[1]
+                    elif con.split()[0] == "SPECAPERTURE_ULIMIT=" :
+                        self.SPECAPERTURE_ULIMIT = con.split()[1]
+
+
                     elif con.split()[0] == "BACKGROUND=" :
                         self.BACKGROUND = con.split()[1]
                     elif con.split()[0] == "TRACEFUNC=" :
