@@ -37,8 +37,10 @@ def CreateMatchingXYCoords(TargetImg,Template,MatchingXYcoordsFile):
     print("Xref Yref X Y Table created in "+MatchingXYcoordsFile)
 
 
-def AlignImage(TargetImg,Template,AlignedImageName):
-    """Align Template Image to TargetImage to create output image AlignedImageName"""
+def AlignImage(TargetImg,Template,AlignedImageName,fitgeometry="general"):
+    """Align Template Image to TargetImage to create output image AlignedImageName.
+    fitgeometry can be set to 'rotate' when the Template is also TIRSPEC data
+    Otherwise if Template is 2MASS or other instrument set it as 'general'  """
     MatchingXYcoordsFile = os.path.splitext(AlignedImageName)[0]+'.XYXY'
     if not os.path.isfile(MatchingXYcoordsFile) :
         CreateMatchingXYCoords(TargetImg,Template,MatchingXYcoordsFile)
@@ -46,7 +48,7 @@ def AlignImage(TargetImg,Template,AlignedImageName):
         print('Using Old {0} file'.format(MatchingXYcoordsFile))
 
     XYtranformdb = os.path.splitext(AlignedImageName)[0]+'rtran.db'
-    iraf.geomap(input=MatchingXYcoordsFile, database=XYtranformdb, xmin=1, xmax=1024, ymin=1, ymax=1024, interactive=0,fitgeometry="general")
+    iraf.geomap(input=MatchingXYcoordsFile, database=XYtranformdb, xmin=1, xmax=1024, ymin=1, ymax=1024, interactive=0,fitgeometry=fitgeometry)
     #Now geotran the Template image to match the TargetImg
     iraf.geotran(input=Template,output=AlignedImageName,database=XYtranformdb,transforms=MatchingXYcoordsFile)
     #return the transfgorm .db filename just incase it is needed for the user
@@ -76,11 +78,14 @@ def SkySubtractImage(Img,OutputFitsFile,SkyCoordsFile):
     iraf.imarith(operand1=Img,op="-",operand2=MedianSky,result=OutputFitsFile)
     return MedianSky
 
-def MatchNSubtract(TargetImg,Template,OutputImage):
-    """ Creates OutputImage =  TargetImg - Template after scaling and matching Template to TargetImg """
+def MatchNSubtract(TargetImg,Template,OutputImage,fitgeometry="general"):
+    """ Creates OutputImage =  TargetImg - Template after scaling and matching Template to TargetImg.
+    fitgeometry can be set to 'rotate' when the Template is also TIRSPEC data
+    Otherwise if Template is 2MASS or other instrument set it as 'general'  """
     
     AlignedImg = os.path.splitext(TargetImg)[0]+"_"+os.path.basename(Template)
-    TransformDBfile = AlignImage(TargetImg,Template,AlignedImg)
+    AlignedImg = os.path.splitext(AlignedImg)[0][:115]+'.fits' # Reduce filename length for iraf geopmap
+    TransformDBfile = AlignImage(TargetImg,Template,AlignedImg,fitgeometry=fitgeometry)
     
     # Now get the Good sky region coordinates
     SkyCoordsFile = os.path.splitext(TargetImg)[0]+'_BlankSky.coo'
@@ -135,7 +140,9 @@ def main():
         print('-'*10)
         print('Usage : {0} InputImageTemplate.txt'.format(sys.argv[0]))
         print('where,')
-        print('     InputImageTemplate.txt is a three column file containing Target, Template and subtracted output filename')
+        print('     InputImageTemplate.txt is a four column file containing Target, Template, fitgeometry and subtracted output filename')
+        print(' If both Target and Template are TIRSPEC images then fitgeometry can be simply -> rotate ')
+        print(' else use the keyword -> general')
         print(' ')
         print('-'*10)
         sys.exit(1)
@@ -148,11 +155,13 @@ def main():
         
     for line in InputFilelist:
         line= line.rstrip()
-        if len(line.split()) == 3 and line[0] != '#':
+        if len(line.split()) == 4 and line[0] != '#':
             TargetImg = line.split()[0]
             Template = line.split()[1]
-            OutputImage = line.split()[2]
-            MatchNSubtract(TargetImg,Template,OutputImage)
+            fitgeometry = line.split()[2]
+            OutputImage = line.split()[3]
+            
+            MatchNSubtract(TargetImg,Template,OutputImage,fitgeometry=fitgeometry)
     
     InputFilelist.close()
 
