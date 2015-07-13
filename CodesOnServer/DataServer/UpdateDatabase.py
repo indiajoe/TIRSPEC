@@ -41,7 +41,7 @@ with sqlite3.connect(DatabaseFilename) as con:
     c.execute('CREATE TABLE IF NOT EXISTS DirectoryTable (Directory TEXT PRIMARY KEY, md5 TEXT)')
     con.commit()
     for Dir in Directories:
-        LogFileChecksum = hashlib.md5(open(os.path.join(Dir,LogFilename), 'rb').read()).hexdigest()
+        LogFileChecksum = hashlib.md5(open(os.path.join(DataDir,Dir,LogFilename), 'rb').read()).hexdigest()
         D_Dir = 'D_'+Dir  # Prefixing D_ charater to make it valid table name incase directry name starts with number
         Md5Table = c.execute('SELECT md5 FROM DirectoryTable WHERE Directory = ?',(D_Dir,)).fetchone()
         if (not Md5Table) or Md5Table[0] != LogFileChecksum :
@@ -66,7 +66,7 @@ with sqlite3.connect(DatabaseFilename) as con:
             date TEXT, datetime TEXT, ra TEXT, dec TEXT, pid TEXT, comment TEXT)""".format(D_Dir))
             
             # Now Read the Log file
-            with open(os.path.join(Dir,LogFilename), 'r') as logfile:
+            with open(os.path.join(DataDir,Dir,LogFilename), 'r') as logfile:
                 Logtype = None
                 for logline in logfile:
                     logline = logline.rstrip()
