@@ -34,7 +34,7 @@ DatabaseFilename = os.path.expanduser(DatabaseFilename)  # Expand any ~
 print('Using Database file : {0}'.format(DatabaseFilename))
 
 # First obtain a sorted list of immediate sub-directories which has SlopeimagesLog.txt log in it.
-Directories = sorted([Dir for Dir in next(os.walk(DataDir))[1] if os.path.isfile(os.path.join(Dir,LogFilename))])
+Directories = sorted([Dir for Dir in next(os.walk(DataDir))[1] if os.path.isfile(os.path.join(DataDir,Dir,LogFilename))])
 
 with sqlite3.connect(DatabaseFilename) as con:
     c = con.cursor()
