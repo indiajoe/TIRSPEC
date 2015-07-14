@@ -1220,7 +1220,7 @@ def CombDith_FlatCorr_subrout(PC,method="median",FullFlatStatSection='[200:800,2
             mode=float(statout[1])
 
             Noutflatname = os.path.join(PC.MOTHERDIR,PC.OUTDIR,night,os.path.splitext(OutCombimg)[0]+'_Nflat.fits')
-            if (PC.TODO == 'S') and (self.CONTINUUMGRADREMOVE == 'Y'):
+            if (PC.TODO == 'S') and (PC.CONTINUUMGRADREMOVE == 'Y'):
                 # We will normalise this continuum flat using its median smoothed version
                 Noutflatname = DivideSmoothGradient(PC,outflatname,Noutflatname)
             else:
