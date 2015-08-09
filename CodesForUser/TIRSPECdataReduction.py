@@ -107,8 +107,15 @@ def SpectralExtraction_subrout(PC):
             ImageScaleFactor=int(pyfits.convenience.getval(img,'NDRS'))-1  #Since ADU is flux/ single NDR; -1 because effective integration time is No# of NDRS -1
             EffectiveGain=PC.EPADU*ImagesAveraged*ImageScaleFactor
 
+            # Number of apertures
+            if Img2Filt[img] in ['GHKX','GYJX']:
+                napert = 2
+                print('Tracing 2 apertures. Left aperture should be 1 and right aperture should be 2.')
+            else:
+                napert = 1
+
             # Running apall
-            iraf.apall(input=img,nfind=1,lower=-15,upper=15,llimit=PC.SPECAPERTURE_LLIMIT,ulimit=PC.SPECAPERTURE_ULIMIT,b_sample=PC.BACKGROUND,background ='fit',weights ='none',readnoi=PC.READNOISE,gain=EffectiveGain,t_function=PC.TRACEFUNC,t_order=PC.TRACEORDER,t_niterate=1,ylevel=PC.SPECAPERTURE,interactive=PC.VER)  #weights= 'variance' seems to be unstable for our high effective gain
+            iraf.apall(input=img,nfind=napert,lower=-15,upper=15,llimit=PC.SPECAPERTURE_LLIMIT,ulimit=PC.SPECAPERTURE_ULIMIT,b_sample=PC.BACKGROUND,background ='fit',weights ='none',readnoi=PC.READNOISE,gain=EffectiveGain,t_function=PC.TRACEFUNC,t_order=PC.TRACEORDER,t_niterate=1,ylevel=PC.SPECAPERTURE,extras='yes',interactive=PC.VER)  #weights= 'variance' seems to be unstable for our high effective gain
             #Extracting the Argon arc for this spectra as img_arc.fits
             iraf.apall(input=os.path.join(PC.MOTHERDIR,night,Img2Argon[img]),reference=img,out=os.path.splitext(img)[0]+'_arc',recenter='no',trace='no',background='none',interactive='no')
             #Now reidentify the lines in this spectra
