@@ -11,7 +11,8 @@ import scipy.interpolate as interp
 import scipy.constants
 import scipy.optimize
 import matplotlib.pyplot as plt
-from astropy.io import fits  #Needed only to load fits spectra
+from astropy.io import fits  
+import specutils.io as specio #Needed only to load fits spectra
 
 def NearestIndex(Array,value):
     """ Returns the index of element in numpy 1d Array nearest to value """
@@ -896,26 +897,23 @@ def TelluricCorrect(InSci,InStd):
     return CorrectedSci,Sci[:,0],Std
             
 
-def LoadFitsSpectra(filename):
+def LoadFitsSpectra(filename,aperture=0):
     """Load and return the wavelength calibrated input fits spectra as 2 column numpy array. """
-    fitsfile=fits.open(filename)
-    flux=fitsfile[0].data
-
-    try :
-        ref_pixel = fitsfile[0].header['CRPIX1']
-        coord_ref_pixel = fitsfile[0].header['CRVAL1']
-        wave_per_pixel = fitsfile[0].header['CDELT1']
-    except KeyError as e :
-        print('Error: Missing keywords in fits header to do wavelength calibration')
-        print(e)
-        print('You might have entered wrong file name. Hence I am raising IOError')
-        print('Enter the fits file name which is wavelength calibrated.')
-        raise IOError
+    fitsfile = specio.read_fits.read_fits_spectrum1d(filename)
+    # It returns a list incase of multispec
+    if isinstance(fitsfile,list):
+        try :
+            spectrum = fitsfile[aperture]
+        except IndexError:
+            raise ValueError('ERROR: Fits file {0} has only {1} apertures. aperture={2} is invalid'.format(filename,len(filename),aperture))
     else:
-        w_start=coord_ref_pixel - ((ref_pixel-1) * wave_per_pixel)  #Starting wavelength
-        Wavelengths=w_start+np.arange(len(flux))*wave_per_pixel
+        # Oridinary single 1d spectrum
+        spectrum = fitsfile
+        
+    flux = fitsfile.flux
+    Wavelengths = fitsfile.dispersion
 
-        return np.vstack((Wavelengths,flux)).T
+    return np.vstack((Wavelengths,flux)).T
     
 
 def LoadAsciiSpectra(filename,Skipascii=69):
