@@ -940,9 +940,17 @@ def AskAndLoadData(toask="Enter Filename : ",Skipascii=69, inpfilename=None):
 
     while True:  #Keep asking till a file is properly loaded
         filename = raw_input(toask).strip(' ') if inpfilename is None else inpfilename
+        # In case of multispec user may provide "filename.fits aperture" 
+        if len(filename.split()) == 2:
+            # Aperture also provided
+            aperture= int(filename.split()[1])
+            filename = filename.split()[0]
+        else:
+            aperture = 0
+
         try :
             if os.path.splitext(filename)[1] == '.fits' : #User has inputed a fits file
-                Data=LoadFitsSpectra(filename)
+                Data=LoadFitsSpectra(filename,aperture=aperture)
             elif os.path.splitext(filename)[1] == '.npy' : #User has inputed a numpy .npy array file
                 Data=np.load(filename)
             else:   #We assume it is an ascii spectra
@@ -1022,7 +1030,11 @@ def main():
     print(scifnameNew+'_Y_.npy',scifnameNew+'_X_.npy',stdfnameNew+'_XY_.npy')
     if os.path.splitext(scifname)[1] == '.fits': #Also save the final spectrum in fits
         outfits=fits.open(scifname)
-        outfits[0].data = np.array(CorrSci)
+        if len(outfits[0].data.shape) == 1:
+            outfits[0].data = np.array(CorrSci)
+        else: # Temperory fix: Fill all apertures of the fits file with the new flux data
+            outfits[0].data[:,:] = np.array(CorrSci)[np.newaxis,:]
+
         outfits[0].header.add_history('Telluric and Instrumental Response Corrected')
         if FluxCalibrationDone :
             outfits[0].header.add_history('Flux calibrated to W/m^2/Angstrom')
