@@ -12,6 +12,8 @@ import pyfits
 import glob
 import gc
 import os
+import re
+import pyfits.convenience
 
 RampNDRsuffix='-debug*.fits'   # If changed, change in the function LoadDataCube() (line #38) also where we extract integer.
 FullTile=(0,1024,0,1024)
@@ -550,15 +552,60 @@ def ApplyNonLinearityCorrection(image,NLcoeffs,LThresh,UThresh,tile=FullTile):
     imgcube=np.ma.array(imgcube,mask=UpperMask)
     return imgcube
 
+def GetSubArrayHeaderKeys(img):
+    """ Returns a tuple of keys from header to uniquely identify which portion of subarry was image observed in """
+    Keys = ('XVAL','YVAL','WIDTH','HEIGHT','SKIPS','WAITS','ANWAITS')
+    prihdr = pyfits.getheader(img)
+    for hkeys in  ['XVAL','YVAL','SKIPS','WAITS','ANWAITS']:   #To capture old files which didn't have these in header
+        if hkeys not in prihdr : prihdr[hkeys] = 0
+    for hkeys in  ['WIDTH','HEIGHT']:  #To capture old files which didn't have these in header
+        if hkeys not in prihdr : prihdr[hkeys] = 512
+
+    return tuple([prihdr[hkeys] for hkeys in Keys])
+    
+class DarkManager(object):
+    """ This class is to manage all things to do with dark. Finding files, combining etc. """
+    def __init__(self,imagelist):
+        """ image list of the list of file names in the current directory """
+        Darklist = [f for f in imagelist if re.match(r'^[Dd][Aa][Rr][Kk]-.*', f)]
+        self.Darkfiles = {} # Dictionary to hold list of each type of darks
+        self.UpdateDarkDictionary(Darklist)
+        self.AveragedDarkCube = {} # Dictionary to hold averaged cube of each type of darks
+
+    def UpdateDarkDictionary(self,darklist):
+        """ Updates the DarkDictionary from the input list of new dark files """
+        for dark in darklist:
+            self.Darkfiles.setdefault(GetSubArrayHeaderKeys(dark), []).append(dark)
+
+    def GetDarkCube(self,subarraykey):
+        """ Returns the average combined dark cube for the input subarray key """
+        tile = (0, 2*subarraykey[3], 0, 2*subarraykey[2])  # Fulltile of this subarray (0,2*height,0,2*width)
+        try:  # Return avg cube, if not present create it, store it, and return it..
+            return self.AveragedDarkCube.setdefault(subarraykey, 
+                                                    self.AverageDarkFiles(self.Darkfiles[subarraykey],tile=tile))
+        except KeyError:  # no darks exist in the self.Darkfiles for the requested key
+            print('ERROR: No dark found for the settings: {0}'.format(str(subarraykey)))
+            return None
+            
+    def AverageDarkFiles(self,darklist,tile=FullTile):
+        """ Returns the averaged cube of input dark list """
+        NoOfNDRlist = [ int(pyfits.convenience.getval(dark,'NDRS')) for dark in darklist ]
+        # We shall combine and create the dark cube with most common NDRs
+        DarkNDRS = max(set(NoOfNDRlist), key=NoOfNDRlist.count)  # Returns value of NDR with maximum occurence
+            
+        print('Darks with atleast {0} NDRS used for averaging.'.format(DarkNDRS))
+        DarksToCombine = [ dark for dark,ndr in zip(darklist,NoOfNDRlist) if ndr >= DarkNDRS ]
+        if DarkNDRS > 100:
+            return AverageWithCRrej(DarksToCombine,NoofNDRs=DarkNDRS,tile=tile) #Average Dark with CR hits rejected
+        else: # Do ordinary average.
+            return AverageDataCube(DarksToCombine,RampNDRsuffix,NoofNDRs=DarkNDRS,tile=tile)
+        
     
 def main():
     import os.path
     import sys
-    import re
-    import pyfits.convenience
 
-    DarkNDRS=112    # Specify the number of NDRS to be loaded for average Dark cube HERE....
-    FullframeMax=46   # Maximum NDRS we can load as a single frame within memory constrains
+    FullframeMax = 46*4*512*512   # Maximum pixels we can load as a single frame within memory constrains
     UthreshFactor=0.9   #Fraction of Uthresh to be actually used as upper cuttoff
     Uthreshnpyfile='/media/PlanetX/TIRSPEC1strun/ReductionWorkarea/20130620/UpperThreshold.npy'
 
@@ -574,22 +621,24 @@ def main():
     for lostimgs in list(set(listOFimgsT)-set(listOFimgs)) :
         print('Warning: Discarded %s because of missing NDR files'%lostimgs)
 
-    Darklist=[f for f in listOFimgs if re.match(r'^[Dd][Aa][Rr][Kk]-.*', f)]
-    Darks=[]
-    #For Specific NDR long darks
-    print('Darks with %d NDRS used for averaging'%DarkNDRS)
-    for i in Darklist :
-        if int(pyfits.convenience.getval(i,'NDRS'))>=DarkNDRS : 
-            Darks.append(i)
-            print(i,pyfits.convenience.getval(i,'NDRS'),pyfits.convenience.getval(i,'ITIME'))
-    DarkAvgcube=AverageWithCRrej(Darks,NoofNDRs=DarkNDRS) #Average Dark with CR hits rejected
+    DarkM = DarkManager(listOFimgs) # Dark Manager for this night.
+
     #Load the latest saturation levels. (Upper threshold file)
     Uthresh=np.load(Uthreshnpyfile)  
     listwithoutdark=[f for f in listOFimgs if not re.match(r'^[Dd][Aa][Rr][Kk]-.*', f) ]
     sortedlist=sorted(listwithoutdark, key=lambda k: int(k[:-5].split('-')[-1]))
     logfile=open('SlopeimagesLog.txt','w')
     for img in sortedlist:
-        print(img)
+        imgkey = GetSubArrayHeaderKeys(img) # key to identify subarry settings
+        print('{0} :{1}'.format(img,str(imgkey)))
+        DarkAvgcube = DarkM.GetDarkCube(imgkey)
+        if DarkAvgcube is None:
+            print('ERROR: No compatible dark found for {0}'.format(img))
+            print('Warning: Discarded image {0} for want of dark'.format(img))
+            continue
+
+        DarkNDRS = DarkAvgcube.shape[0]
+
         hdulist=pyfits.open(img)
         prihdr= hdulist[0].header
         NDRS2read=min(prihdr['NDRS'],DarkNDRS)
@@ -600,26 +649,47 @@ def main():
         prihdr['OBSTIME']=(prihdr['TIME'],'UT of observation')   #To preserve OBS time in fits header
         prihdr['OBSDATE']=(prihdr['DATE'],'DATE of observation')   #To preserve OBS Date in fits header
 
-        logfile.write('%s %s "%s" %d %.2f %s %s %s %s %s "%s" "%s" "%s" "%s" \n'%('Slope-'+img,prihdr['TIME'],prihdr['TARGET'],prihdr['NDRS'],prihdr['ITIME'],prihdr['UPPER'],prihdr['LOWER'],prihdr['SLIT'],prihdr['CALMIR'],prihdr['DATE'],prihdr['TCSRA'],prihdr['TCSDEC'],prihdr['PROGID'],prihdr['TCOMMENT']))
-        if NDRS2read <= FullframeMax :
-            tilelist=[(0,1024,0,1024)]  #Loading out as a single frame ; else we load each quadrent seperately
-        else: tilelist=[(0,512,0,512),(0,512,512,1024),(512,1024,0,512),(512,1024,512,1024)]
+        QuadWidth = imgkey[2]
+        QuadHeight = imgkey[3]
+        subarrayRegion = '{0},{1},{2},{3}'.format(imgkey[0],imgkey[1],imgkey[2],imgkey[3]) #XVAL,YVAL,WIDTH,HEIGHT
+
+        try:
+            NDRtimeGap = prihdr['NDRRDTM'] + prihdr['ANWAITS'] # each NDR readout plus after NDR wait
+        except KeyError:
+            NDRtimeGap = 0.9 # If headers are missiing, moght be old data, so assume 0.9 sec
+
+        logfile.write('%s %s "%s" %d %.2f %s %s %s %s %s "%s" "%s" "%s" %s %0.4f "%s" \n'%('Slope-'+img,prihdr['TIME'],
+                                                                                     prihdr['TARGET'],prihdr['NDRS'],
+                                                                                     prihdr['ITIME'],prihdr['UPPER'],
+                                                                                     prihdr['LOWER'],prihdr['SLIT'],
+                                                                                     prihdr['CALMIR'],prihdr['DATE'],
+                                                                                     prihdr['TCSRA'],prihdr['TCSDEC'],
+                                                                                     prihdr['PROGID'],subarrayRegion,
+                                                                                     NDRtimeGap,prihdr['TCOMMENT']))
+        if NDRS2read*4*QuadWidth*QuadHeight <= FullframeMax :
+            tilelist=[(0,2*QuadHeight,0,2*QuadWidth)]  #Loading out as a single frame 
+        else: # else we load each quadrent seperately
+            tilelist=[(0,QuadHeight,0,QuadWidth),(0,QuadHeight,QuadWidth,2*QuadWidth),
+                      (QuadHeight,2*QuadHeight,0,QuadWidth),(QuadHeight,2*QuadHeight,QuadWidth,2*QuadWidth)]
+
+        FullFrameImage = True if ((QuadHeight == 512) and (QuadWidth == 512)) else False
         for sec in tilelist:
             gc.collect()
-            print("Working on tile :"+str(sec))
+            print("Working on tile :{0}, NDR:{1}".format(str(sec),NDRS2read))
             imgcube=LoadDataCube(img,RampNDRsuffix,NoofNDRs=NDRS2read,tile=sec)
             imgcube=np.ma.masked_greater(imgcube,Uthresh[sec[0]:sec[1],sec[2]:sec[3]]*UthreshFactor)
             imgcube-=DarkAvgcube[:NDRS2read,sec[0]:sec[1],sec[2]:sec[3]]  #Dark subtraction
-            if imgcube.shape[0] >= 60 :  #Throw away first 5 pixels before fitting slope
+            if (imgcube.shape[0] >= 60) and FullFrameImage :  #Throw away first 5 pixels before fitting slope
                 imgcube=imgcube[5:,:,:]
                 prihdr.add_history('Discarded first 5 NDRS')
-            elif imgcube.shape[0] >= 20 and prihdr['LOWER']=='G' : #Spectras more than 20 NDRS
+            elif (imgcube.shape[0] >= 20) and (prihdr['LOWER']=='G') and FullFrameImage : #Spectras more than 20 NDRS
                 imgcube=imgcube[5:,:,:]
                 prihdr.add_history('Discarded first 5 NDRS') 
             elif imgcube.shape[0] >= 15 : #Atleast 15 NDRS are there...
                 imgcube[:5,np.ma.count(imgcube,axis=0) >= 15]=np.ma.masked
                 prihdr.add_history('Discarded first 5 NDRS of non saturating pixels')
-            time=np.arange(imgcube.shape[0],dtype=np.int)
+            
+            time = np.arange(imgcube.shape[0],dtype=np.int) * NDRtimeGap
             beta,alpha=FitSlope(imgcube,time)#, CRcorr=True)
             hdulist[0].data[sec[0]:sec[1],sec[2]:sec[3]]=beta.data
             del imgcube
