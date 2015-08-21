@@ -579,13 +579,20 @@ class DarkManager(object):
 
     def GetDarkCube(self,subarraykey):
         """ Returns the average combined dark cube for the input subarray key """
-        tile = (0, 2*subarraykey[3], 0, 2*subarraykey[2])  # Fulltile of this subarray (0,2*height,0,2*width)
-        try:  # Return avg cube, if not present create it, store it, and return it..
-            return self.AveragedDarkCube.setdefault(subarraykey, 
-                                                    self.AverageDarkFiles(self.Darkfiles[subarraykey],tile=tile))
-        except KeyError:  # no darks exist in the self.Darkfiles for the requested key
-            print('ERROR: No dark found for the settings: {0}'.format(str(subarraykey)))
-            return None
+        try:  # Return avg cube, 
+            return self.AveragedDarkCube[subarraykey] 
+        except KeyError: # if not present create it, store it, and return it..
+            try :
+                compatibleDarkList = self.Darkfiles[subarraykey]
+            except KeyError:  # no darks exist in the self.Darkfiles for the requested key
+                print('ERROR: No dark found for the settings: {0}'.format(str(subarraykey)))
+                return None
+            else:
+                tile = (0, 2*subarraykey[3], 0, 2*subarraykey[2])  # Fulltile of this subarray (0,2*height,0,2*width)
+                Avgdarkcube = self.AverageDarkFiles(compatibleDarkList,tile=tile)
+                # store it for future calls
+                self.AveragedDarkCube[subarraykey] = Avgdarkcube
+                return Avgdarkcube
             
     def AverageDarkFiles(self,darklist,tile=FullTile):
         """ Returns the averaged cube of input dark list """
@@ -595,6 +602,7 @@ class DarkManager(object):
             
         print('Darks with atleast {0} NDRS used for averaging.'.format(DarkNDRS))
         DarksToCombine = [ dark for dark,ndr in zip(darklist,NoOfNDRlist) if ndr >= DarkNDRS ]
+        print('\n'.join(DarksToCombine)+'\n')
         if DarkNDRS > 100:
             return AverageWithCRrej(DarksToCombine,NoofNDRs=DarkNDRS,tile=tile) #Average Dark with CR hits rejected
         else: # Do ordinary average.
