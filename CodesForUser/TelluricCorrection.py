@@ -910,8 +910,8 @@ def LoadFitsSpectra(filename,aperture=0):
         # Oridinary single 1d spectrum
         spectrum = fitsfile
         
-    flux = spectrum.flux
-    Wavelengths = spectrum.dispersion
+    flux = np.array(spectrum.flux)
+    Wavelengths = np.array(spectrum.dispersion)
 
     return np.vstack((Wavelengths,flux)).T
     
