@@ -167,6 +167,12 @@ def moments1D(inpData):
     Data=np.ma.masked_less(inpData-(bkgC+bkgSlope*np.arange(len(inpData))),0)   #Removing the background for calculating moments of pure gaussian
     #We also masked any negative values before measuring moments
 
+    if np.ma.count(Data) < 3 : # Atlest 3 points should be there for a good estimate
+        # Use median as bkg, with zero slope. since fiting bkg from edge failed.
+        bkgC = np.median(inpData)
+        bkgSlope = 0
+        Data = np.ma.masked_less(inpData-(bkgC+bkgSlope*np.arange(len(inpData))),0)
+
     amplitude=Data.max()
 
     total=float(Data.sum())
