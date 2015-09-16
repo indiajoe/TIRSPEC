@@ -5,6 +5,7 @@
 import readline
 import sys
 import os
+import re
 import numpy as np
 import numpy.ma
 import scipy.interpolate as interp
@@ -946,13 +947,16 @@ def AskAndLoadData(toask="Enter Filename : ",Skipascii=69, inpfilename=None):
 
     while True:  #Keep asking till a file is properly loaded
         filename = raw_input(toask).strip(' ') if inpfilename is None else inpfilename
-        # In case of multispec user may provide "filename.fits aperture" 
-        if len(filename.split()) == 2:
-            # Aperture also provided
-            aperture= int(filename.split()[1])
-            filename = filename.split()[0]
+        # In case of multispec user may provide "filename.fits[aperture]" 
+        m = re.search(r'\[([0-9]+)\]$',filename.strip()) # search for [app] ending in file name
+        
+        if m is not None:
+            # Aperture provided in [] brackets.
+            aperture = int(m.group(1))
+            filename = filename.split(m.group(0))[0]
         else:
             aperture = 0
+            filename = filename.strip()
 
         try :
             if os.path.splitext(filename)[1] == '.fits' : #User has inputed a fits file
