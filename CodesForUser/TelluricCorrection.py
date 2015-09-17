@@ -15,6 +15,71 @@ import matplotlib.pyplot as plt
 from astropy.io import fits  
 import specutils.io as specio #Needed only to load fits spectra
 
+class AstronomyData(object):
+    """ Class to store astronomy data and tables """
+    def __init__(self):
+        self.SpecTempDic = self.LoadTemperatureTable(filename='TemperatureTable_KRLang.txt')
+
+
+    def LoadTemperatureTable(self,filename='TemperatureTable_KRLang.txt'):
+        """ Loads and return spectral type temperature dictionary from file """
+        SpecTypeTempDic = dict()
+
+        try:
+            with open(filename,'r') as tablefile:
+                linelist = [line.rstrip() for line in tablefile if (line.strip() and (line[0] != '#'))]
+
+        except IOError:
+            print('ERROR: Temperature Table file not found: {0}'.format(filename))
+            print('Please extract {0} from CodesForUser/data.tar.gz and copy to {1}'
+                  'if Spec Type to temperature conversion is needed'.format(filename,os.getcwd()))
+            print("You can ignore this error if you don't need Spec Type to Temperature conversion.")
+            # We will return the empty dictionary
+
+        else:
+            for line in linelist:
+                try:
+                    SpecTypeTempDic[line.split()[0]] = float(line.split()[1])
+                except IndexError:
+                    print('WARNING: Two entires missing in line {0}'.format(line))
+                except ValueError:
+                    print('WARNING: None float invalid temperature entry in line {0}'.format(line))
+
+        return SpecTypeTempDic
+
+    def getTemp(self,spectype,interp=False):
+        """ Return the temperature of the input spectral type.
+        spectype : str
+                   Input spectral type Eg: B3III
+        interp : (default False)
+                If set to True will interpolate the Temperature if spectral type is not in dictionary.
+        """
+        speckey = self._ParseInputSpecType(spectype)
+        try:
+            temp = self.SpecTempDic[speckey]
+        except KeyError:
+            print('ERROR: Input spectral type {0} ie. {1} not in table.'.format(spectype,speckey))
+            temp = None
+            if interp:
+                print('Interpolation not yet implemented.')
+            
+        return temp
+
+    def _ParseInputSpecType(self,INPspectype):
+        """ Parses Input spectral type string to format consistant with the key
+        it refers to in the SpecTempDic.
+        Returns None if unable to parse and understand the input string."""
+
+        m = re.search(r'([OBAFGKM])\s*([0-9]*\.?[0-9]*)\s*(III|II|IV|V|I).*',INPspectype)
+
+        if m is None:
+            print('ERROR: Unable to recognise input spectype :{0}'.format(INPspectype))
+            return None
+        else:
+            return '{0}{1}{2}'.format(m.group(1),m.group(2),m.group(3))
+        
+        
+
 def NearestIndex(Array,value):
     """ Returns the index of element in numpy 1d Array nearest to value """
     return np.abs(Array-value).argmin()
@@ -990,6 +1055,8 @@ def main():
         print('Please extract {0} from CodesForUser/data.tar.gz and copy to {1} before proceeding.'.format(VegaTemplateFile,os.getcwd()))
         sys.exit(1)
 
+    AstroData = AstronomyData() # Data containing Temperature
+
     # Setting the optional input arguments
     scifname, stdfname, BBtemp = None, None, None
 
@@ -998,7 +1065,11 @@ def main():
     if len(sys.argv) > 2:
         stdfname = sys.argv[2] if os.path.isfile(re.split(r'\[([0-9]+)\]$',sys.argv[2])[0]) else None 
     if len(sys.argv) > 3:
-        BBtemp = sys.argv[3] if is_number(re.split(r'\[([0-9]+)\]$',sys.argv[3])[0]) else None 
+        if is_number(sys.argv[3]):
+            BBtemp = float(sys.argv[3])
+        else:  # Probably provided spectral type
+            BBtemp = AstroData.getTemp(sys.argv[3])  # Will return None if not in discionary
+            
 
     ScienceStarRaw,scifname = AskAndLoadData(toask="Enter the name of science star spectrum file : ",
                                              Skipascii=69,inpfilename=scifname)
@@ -1007,8 +1078,9 @@ def main():
     CorrSci,CorrSciWL,Telluric=TelluricCorrect(ScienceStarRaw,StdStarRaw)
     # Do optional Continumm correction and flux calibration
     if BBtemp is None:
-        BBtemp = 'SkipCC'
         BBtemp = raw_input("Enter Temperature of Std star (Kelvin) to correct continuum (to skip press enter): ")
+        if (not is_number(BBtemp)) and BBtemp.rstrip():
+            BBtemp = AstroData.getTemp(BBtemp)
 
     if is_number(BBtemp): #User entered the temperature of Std star
         T=float(BBtemp)
