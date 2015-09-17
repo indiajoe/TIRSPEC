@@ -994,11 +994,11 @@ def main():
     scifname, stdfname, BBtemp = None, None, None
 
     if len(sys.argv) > 1:
-        scifname = sys.argv[1] if os.path.isfile(sys.argv[1]) else None
+        scifname = sys.argv[1] if os.path.isfile(re.split(r'\[([0-9]+)\]$',sys.argv[1])[0]) else None
     if len(sys.argv) > 2:
-        stdfname = sys.argv[2] if os.path.isfile(sys.argv[2]) else None 
+        stdfname = sys.argv[2] if os.path.isfile(re.split(r'\[([0-9]+)\]$',sys.argv[2])[0]) else None 
     if len(sys.argv) > 3:
-        BBtemp = sys.argv[3] if is_number(sys.argv[3]) else None 
+        BBtemp = sys.argv[3] if is_number(re.split(r'\[([0-9]+)\]$',sys.argv[3])[0]) else None 
 
     ScienceStarRaw,scifname = AskAndLoadData(toask="Enter the name of science star spectrum file : ",
                                              Skipascii=69,inpfilename=scifname)
