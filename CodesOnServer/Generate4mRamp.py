@@ -579,6 +579,11 @@ class DarkManager(object):
 
     def GetDarkCube(self,subarraykey):
         """ Returns the average combined dark cube for the input subarray key """
+        if subarraykey[-1] == 0 :# ANWAITS, ie. After NDR waits are zero
+            RejectCRhits = True
+        else:   # The CR reject algorithm might fail. So we shall not do CR rejection if After NDR wait was not Zero
+            RejectCRhits = False
+
         try:  # Return avg cube, 
             return self.AveragedDarkCube[subarraykey] 
         except KeyError: # if not present create it, store it, and return it..
@@ -589,12 +594,12 @@ class DarkManager(object):
                 return None
             else:
                 tile = (0, 2*subarraykey[3], 0, 2*subarraykey[2])  # Fulltile of this subarray (0,2*height,0,2*width)
-                Avgdarkcube = self.AverageDarkFiles(compatibleDarkList,tile=tile)
+                Avgdarkcube = self.AverageDarkFiles(compatibleDarkList,DoCRrejection=RejectCRhits,tile=tile)
                 # store it for future calls
                 self.AveragedDarkCube[subarraykey] = Avgdarkcube
                 return Avgdarkcube
             
-    def AverageDarkFiles(self,darklist,tile=FullTile):
+    def AverageDarkFiles(self,darklist,DoCRrejection=True,MinNDRforCRrejection=100,tile=FullTile):
         """ Returns the averaged cube of input dark list """
         NoOfNDRlist = [ int(pyfits.convenience.getval(dark,'NDRS')) for dark in darklist ]
         # We shall combine and create the dark cube with most common NDRs
@@ -603,9 +608,11 @@ class DarkManager(object):
         print('Darks with atleast {0} NDRS used for averaging.'.format(DarkNDRS))
         DarksToCombine = [ dark for dark,ndr in zip(darklist,NoOfNDRlist) if ndr >= DarkNDRS ]
         print('\n'.join(DarksToCombine)+'\n')
-        if DarkNDRS > 100:
+        if DoCRrejection and (DarkNDRS > MinNDRforCRrejection):
+            print('Darks averaged using CR rejection algorithm..')
             return AverageWithCRrej(DarksToCombine,NoofNDRs=DarkNDRS,tile=tile) #Average Dark with CR hits rejected
         else: # Do ordinary average.
+            print('Darks averaged without CR rejection algorithm....')
             return AverageDataCube(DarksToCombine,RampNDRsuffix,NoofNDRs=DarkNDRS,tile=tile)
         
     
