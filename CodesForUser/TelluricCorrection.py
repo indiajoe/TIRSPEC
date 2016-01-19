@@ -31,8 +31,8 @@ class AstronomyData(object):
 
         except IOError:
             print('ERROR: Temperature Table file not found: {0}'.format(filename))
-            print('Please extract {0} from CodesForUser/data.tar.gz and copy to {1}'
-                  'if Spec Type to temperature conversion is needed'.format(filename,os.getcwd()))
+            print('If Spec Type to temperature conversion is needed,')
+            print(' Please extract {0} from CodesForUser/data.tar.gz and copy to {1}'.format(filename,os.getcwd()))
             print("You can ignore this error if you don't need Spec Type to Temperature conversion.")
             # We will return the empty dictionary
 
