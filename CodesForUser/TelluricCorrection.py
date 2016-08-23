@@ -313,7 +313,7 @@ def FitGaussianLineProfile(XYDataToFit,absorption=True,displayfit=True):
     
     p,succ=FitGauss1D(Ydata,ip=None,FitBkgFromEdge=False)
 
-    if succ not in [1,2,3,4]:  # failed to converge and fit the curve
+    if (succ not in [1,2,3,4]) or (not (0 < p[1] < len(Ydata))):  # failed to converge and fit the curve, or fitted outside the range
         print('ALERT: Gaussian fitting failed.. Setting Amplitude to Zero')
         p[0] = 0 # Set amplitude of the gaussian to zero.
         p[1] = len(XYDataToFit[:,0])/2  # Keep Center at the center of the data
