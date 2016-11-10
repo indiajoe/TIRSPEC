@@ -565,13 +565,14 @@ def GetSubArrayHeaderKeys(img):
     
 class DarkManager(object):
     """ This class is to manage all things to do with dark. Finding files, combining etc. """
-    def __init__(self,imagelist):
-        """ image list of the list of file names in the current directory """
+    def __init__(self,imagelist,MinimumMemory=False):
+        """ image list of the list of file names in the current directory.
+        To store not more than one dark cube at a time to save system memory, set MinimumMemory=True """
         Darklist = [f for f in imagelist if re.match(r'^[Dd][Aa][Rr][Kk]-.*', f)]
         self.Darkfiles = {} # Dictionary to hold list of each type of darks
         self.UpdateDarkDictionary(Darklist)
         self.AveragedDarkCube = {} # Dictionary to hold averaged cube of each type of darks
-
+        self.MinimumMemory = MinimumMemory 
     def UpdateDarkDictionary(self,darklist):
         """ Updates the DarkDictionary from the input list of new dark files """
         for dark in darklist:
@@ -584,6 +585,10 @@ class DarkManager(object):
         else:   # The CR reject algorithm might fail. So we shall not do CR rejection if After NDR wait was not Zero
             RejectCRhits = False
 
+        #### Temperory fix for MKIR memory Segfault problem
+        ## Uncomment the follow lines on MKIR PC to not remove CR hits if already a dark is loaded
+        # if self.AveragedDarkCube : RejectCRhits = False
+
         try:  # Return avg cube, 
             return self.AveragedDarkCube[subarraykey] 
         except KeyError: # if not present create it, store it, and return it..
@@ -593,6 +598,9 @@ class DarkManager(object):
                 print('ERROR: No dark found for the settings: {0}'.format(str(subarraykey)))
                 return None
             else:
+                if self.MinimumMemory:   # If minimum memory is to be used.
+                    self.AveragedDarkCube = {}  # Delete any previous stored DarkCubes
+
                 tile = (0, 2*subarraykey[3], 0, 2*subarraykey[2])  # Fulltile of this subarray (0,2*height,0,2*width)
                 Avgdarkcube = self.AverageDarkFiles(compatibleDarkList,DoCRrejection=RejectCRhits,tile=tile)
                 # store it for future calls
