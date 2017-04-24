@@ -323,7 +323,7 @@ def FitGaussianLineProfile(XYDataToFit,absorption=True,displayfit=True):
         p[3]*=-1  #Background
         p[4]*=-1  #Background's Slope
 
-    centerW=XYDataToFit[p[1],0]
+    centerW=XYDataToFit[int(round(p[1])),0]
     sigma=p[2]*(XYDataToFit[1,0]-XYDataToFit[0,0])
     print('Amplitude:{0}, Center:{1}, Sigma:{2}, Bkg:{3}, Bkg Slope:{4}'.format(p[0],centerW,sigma,p[3],p[4]))
     pureGauss=[p[0],p[1],p[2],0,0]  # ie. with Bkg and Bkg Slope set to Zero
